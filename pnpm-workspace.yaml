@@ -1,0 +1,9 @@
+packages:
+  - '.'
+allowBuilds:
+  '@tailwindcss/oxide': true
+  esbuild: true
+overrides:
+  vite: 6.3.5
+  '@types/react': 18.3.1
+  '@types/react-dom': 18.3.1
