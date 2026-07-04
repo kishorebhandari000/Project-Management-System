@@ -29,6 +29,7 @@ import ManageUsers from "./pages/admin/ManageUsers";
 import AdminManageProjects from "./pages/admin/ManageProjects";
 import CreateProject from "./pages/admin/CreateProject";
 import ManageAllocation from "./pages/admin/ManageAllocation";
+import AdminAssessments from "./pages/admin/Assessments";
 import Reports from "./pages/admin/Reports";
 import ManageForum from "./pages/admin/ManageForum";
 import NewForumPost from "./pages/admin/NewForumPost";
@@ -168,6 +169,10 @@ export const router = createBrowserRouter([
   {
     path: "/admin/allocation",
     Component: ManageAllocation,
+  },
+  {
+    path: "/admin/assessments",
+    Component: AdminAssessments,
   },
   {
     path: "/admin/reports",

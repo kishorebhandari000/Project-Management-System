@@ -31,6 +31,7 @@ export default function Sidebar({ role }: SidebarProps) {
     { to: '/admin/users', label: 'Manage Users' },
     { to: '/admin/projects', label: 'Manage Projects' },
     { to: '/admin/allocation', label: 'Manage Allocation' },
+    { to: '/admin/assessments', label: 'Assessments' },
     { to: '/admin/reports', label: 'Reports' },
     { to: '/admin/forum', label: 'Public Forum' },
     { to: '/admin/messages', label: 'Messages' },
