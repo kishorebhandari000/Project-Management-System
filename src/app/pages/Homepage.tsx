@@ -1,5 +1,6 @@
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
+import GetStartedButton from '../components/GetStartedButton';
 import { Link } from 'react-router';
 
 export default function Homepage() {
@@ -15,9 +16,9 @@ export default function Homepage() {
             A comprehensive platform for students, supervisors, and administrators to streamline project selection,
             assessment submission, and feedback management.
           </p>
-          <Link to="/login" className="inline-block bg-white text-[#2563a8] px-8 py-3 rounded-md text-lg hover:bg-gray-100">
+          <GetStartedButton as={Link} to="/login">
             Get Started
-          </Link>
+          </GetStartedButton>
         </div>
       </section>
 
