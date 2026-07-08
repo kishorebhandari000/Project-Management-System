@@ -1,23 +1,81 @@
 import Sidebar from '../../components/Sidebar';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router';
+import { api } from '../../lib/api';
+
+interface ApiUser {
+  id: string;
+  name: string;
+  email: string;
+  role: 'admin' | 'supervisor' | 'student';
+  createdAt?: string;
+}
 
 export default function ManageUsers() {
   const [activeTab, setActiveTab] = useState<'students' | 'supervisors'>('students');
+  const [students, setStudents] = useState<ApiUser[]>([]);
+  const [supervisors, setSupervisors] = useState<ApiUser[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
-  const students = [
-    { id: 1, name: 'John Doe', email: 'john.doe@university.edu', project: 'AI-Based Recommendation System', status: 'Active' },
-    { id: 2, name: 'Jane Smith', email: 'jane.smith@university.edu', project: 'E-commerce Platform', status: 'Active' },
-    { id: 3, name: 'Mike Johnson', email: 'mike.j@university.edu', project: 'Mobile Health App', status: 'Active' },
-    { id: 4, name: 'Alice Williams', email: 'alice.w@university.edu', project: 'Not Assigned', status: 'Inactive' },
-  ];
+  const [showModal, setShowModal] = useState(false);
+  const [formName, setFormName] = useState('');
+  const [formEmail, setFormEmail] = useState('');
+  const [formPassword, setFormPassword] = useState('');
+  const [formRole, setFormRole] = useState<'student' | 'supervisor'>('student');
+  const [formError, setFormError] = useState('');
+  const [submitting, setSubmitting] = useState(false);
 
-  const supervisors = [
-    { id: 1, name: 'Dr. Sarah Johnson', email: 'sarah.j@university.edu', students: 3, projects: 5 },
-    { id: 2, name: 'Prof. Michael Brown', email: 'michael.b@university.edu', students: 4, projects: 6 },
-    { id: 3, name: 'Dr. Emily Chen', email: 'emily.c@university.edu', students: 2, projects: 4 },
-    { id: 4, name: 'Dr. Robert Lee', email: 'robert.l@university.edu', students: 5, projects: 7 },
-  ];
+  const loadUsers = async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const [studentRes, supervisorRes] = await Promise.all([
+        api.get('/users?role=student'),
+        api.get('/users?role=supervisor'),
+      ]);
+      setStudents(studentRes.users);
+      setSupervisors(supervisorRes.users);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load users');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadUsers();
+  }, []);
+
+  const openModal = () => {
+    setFormName('');
+    setFormEmail('');
+    setFormPassword('');
+    setFormRole(activeTab === 'students' ? 'student' : 'supervisor');
+    setFormError('');
+    setShowModal(true);
+  };
+
+  const handleCreateUser = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setFormError('');
+    setSubmitting(true);
+
+    try {
+      await api.post('/users', {
+        name: formName,
+        email: formEmail,
+        password: formPassword,
+        role: formRole,
+      });
+      setShowModal(false);
+      await loadUsers();
+    } catch (err) {
+      setFormError(err instanceof Error ? err.message : 'Failed to create user');
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   return (
     <div className="flex">
@@ -30,7 +88,10 @@ export default function ManageUsers() {
               <p className="text-gray-600">Manage students and supervisors</p>
             </div>
             <div className="flex items-center gap-4">
-              <button className="bg-[#2563a8] text-white px-5 py-2 rounded-md hover:bg-[#1e4a8a]">
+              <button
+                onClick={openModal}
+                className="bg-[#2563a8] text-white px-5 py-2 rounded-md hover:bg-[#1e4a8a]"
+              >
                 Add User
               </button>
               <Link to="/admin/notifications" className="relative">
@@ -47,7 +108,6 @@ export default function ManageUsers() {
         </div>
 
         <div className="p-8">
-          {/* Tab Buttons */}
           <div className="mb-6 flex gap-3">
             <button
               onClick={() => setActiveTab('students')}
@@ -71,34 +131,35 @@ export default function ManageUsers() {
             </button>
           </div>
 
-          {/* Students Table */}
-          {activeTab === 'students' && (
+          {loading && <p className="text-gray-500">Loading users...</p>}
+          {error && (
+            <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-md px-4 py-3 mb-4">
+              {error}
+            </div>
+          )}
+
+          {!loading && activeTab === 'students' && (
             <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
               <table className="w-full">
                 <thead className="bg-gray-100">
                   <tr>
                     <th className="text-left px-6 py-4 border-b border-gray-200">Name</th>
                     <th className="text-left px-6 py-4 border-b border-gray-200">Email</th>
-                    <th className="text-left px-6 py-4 border-b border-gray-200">Project</th>
-                    <th className="text-left px-6 py-4 border-b border-gray-200">Status</th>
                     <th className="text-left px-6 py-4 border-b border-gray-200">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
+                  {students.length === 0 && (
+                    <tr>
+                      <td colSpan={3} className="px-6 py-6 text-center text-gray-500">
+                        No students yet. Click "Add User" to create one.
+                      </td>
+                    </tr>
+                  )}
                   {students.map((student) => (
                     <tr key={student.id} className="border-b border-gray-200">
                       <td className="px-6 py-4">{student.name}</td>
                       <td className="px-6 py-4">{student.email}</td>
-                      <td className="px-6 py-4">
-                        <span className={student.project === 'Not Assigned' ? 'text-gray-500' : ''}>
-                          {student.project}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4">
-                        <span className={student.status === 'Active' ? 'text-green-600' : 'text-gray-500'}>
-                          {student.status}
-                        </span>
-                      </td>
                       <td className="px-6 py-4">
                         <div className="flex gap-2">
                           <button className="bg-gray-200 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-300">
@@ -116,26 +177,28 @@ export default function ManageUsers() {
             </div>
           )}
 
-          {/* Supervisors Table */}
-          {activeTab === 'supervisors' && (
+          {!loading && activeTab === 'supervisors' && (
             <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
               <table className="w-full">
                 <thead className="bg-gray-100">
                   <tr>
                     <th className="text-left px-6 py-4 border-b border-gray-200">Name</th>
                     <th className="text-left px-6 py-4 border-b border-gray-200">Email</th>
-                    <th className="text-left px-6 py-4 border-b border-gray-200">Students</th>
-                    <th className="text-left px-6 py-4 border-b border-gray-200">Projects</th>
                     <th className="text-left px-6 py-4 border-b border-gray-200">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
+                  {supervisors.length === 0 && (
+                    <tr>
+                      <td colSpan={3} className="px-6 py-6 text-center text-gray-500">
+                        No supervisors yet. Click "Add User" to create one.
+                      </td>
+                    </tr>
+                  )}
                   {supervisors.map((supervisor) => (
                     <tr key={supervisor.id} className="border-b border-gray-200">
                       <td className="px-6 py-4">{supervisor.name}</td>
                       <td className="px-6 py-4">{supervisor.email}</td>
-                      <td className="px-6 py-4">{supervisor.students}</td>
-                      <td className="px-6 py-4">{supervisor.projects}</td>
                       <td className="px-6 py-4">
                         <div className="flex gap-2">
                           <button className="bg-gray-200 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-300">
@@ -154,6 +217,85 @@ export default function ManageUsers() {
           )}
         </div>
       </div>
+
+      {showModal && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-lg p-8 w-full max-w-md">
+            <h2 className="text-xl mb-5">Add New User</h2>
+
+            <form onSubmit={handleCreateUser} className="space-y-4">
+              {formError && (
+                <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-md px-4 py-3">
+                  {formError}
+                </div>
+              )}
+
+              <div>
+                <label className="block text-gray-700 mb-1">Full Name</label>
+                <input
+                  type="text"
+                  value={formName}
+                  onChange={(e) => setFormName(e.target.value)}
+                  className="w-full border border-gray-300 rounded-md px-4 py-2 focus:outline-none focus:border-[#2563a8]"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-gray-700 mb-1">Email</label>
+                <input
+                  type="email"
+                  value={formEmail}
+                  onChange={(e) => setFormEmail(e.target.value)}
+                  className="w-full border border-gray-300 rounded-md px-4 py-2 focus:outline-none focus:border-[#2563a8]"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-gray-700 mb-1">Temporary Password</label>
+                <input
+                  type="text"
+                  value={formPassword}
+                  onChange={(e) => setFormPassword(e.target.value)}
+                  className="w-full border border-gray-300 rounded-md px-4 py-2 focus:outline-none focus:border-[#2563a8]"
+                  minLength={6}
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-gray-700 mb-1">Role</label>
+                <select
+                  value={formRole}
+                  onChange={(e) => setFormRole(e.target.value as 'student' | 'supervisor')}
+                  className="w-full border border-gray-300 rounded-md px-4 py-2 focus:outline-none focus:border-[#2563a8]"
+                >
+                  <option value="student">Student</option>
+                  <option value="supervisor">Supervisor</option>
+                </select>
+              </div>
+
+              <div className="flex gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowModal(false)}
+                  className="flex-1 bg-gray-200 text-gray-700 px-5 py-2 rounded-md hover:bg-gray-300"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={submitting}
+                  className="flex-1 bg-[#2563a8] text-white px-5 py-2 rounded-md hover:bg-[#1e4a8a] disabled:opacity-60"
+                >
+                  {submitting ? 'Creating...' : 'Create User'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
