@@ -1,6 +1,8 @@
 const Task = require('../models/Task');
 const Project = require('../models/Project');
 const asyncHandler = require('../utils/asyncHandler');
+const sendNotification = require('../utils/notify');
+   const User = require('../models/User');
 
 async function assertProjectAccess(projectId, userId) {
   const project = await Project.findById(projectId);
@@ -79,6 +81,8 @@ const updateTask = asyncHandler(async (req, res) => {
 
   await assertProjectAccess(task.project, req.user._id);
 
+  const previousAssignee = task.assignee ? String(task.assignee) : null;
+
   const { title, description, status, priority, dueDate, assignee } = req.body;
   if (title !== undefined) task.title = title;
   if (description !== undefined) task.description = description;
@@ -88,6 +92,19 @@ const updateTask = asyncHandler(async (req, res) => {
   if (assignee !== undefined) task.assignee = assignee;
 
   await task.save();
+
+  if (assignee !== undefined && String(assignee) !== previousAssignee) {
+    const assignedUser = await User.findById(assignee);
+    if (assignedUser) {
+      await sendNotification(req.app, {
+        userId: assignedUser._id,
+        email: assignedUser.email,
+        title: 'New task assigned',
+        message: `You've been assigned "${task.title}"`,
+      });
+    }
+  }
+
   res.json(task);
 });
 
