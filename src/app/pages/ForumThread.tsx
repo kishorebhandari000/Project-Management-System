@@ -13,11 +13,12 @@ export default function ForumThread() {
   // Mock data - in real app this would be fetched based on id
   const post = {
     id: 1,
-    title: 'Welcome to PMS - Getting Started Guide',
+    // Renamed brand text from "PMS" to full name
+    title: 'Welcome to Project Management System - Getting Started Guide',
     category: 'Announcement',
-    content: `Welcome to the Project Management System (PMS)! We're excited to have you here.
+    content: `Welcome to the Project Management System! We're excited to have you here.
 
-This comprehensive guide will help you navigate through the platform and make the most of its features. Whether you're a student looking for your perfect final year project, a supervisor managing multiple projects, or an administrator overseeing the entire system, PMS has tools designed specifically for you.
+This comprehensive guide will help you navigate through the platform and make the most of its features. Whether you're a student looking for your perfect final year project, a supervisor managing multiple projects, or an administrator overseeing the entire system, Project Management System has tools designed specifically for you.
 
 ## Key Features:
 

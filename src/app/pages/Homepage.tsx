@@ -57,9 +57,10 @@ export default function Homepage() {
         <div className="max-w-6xl mx-auto">
           <div className="grid grid-cols-2 gap-12 items-center">
             <div>
-              <h2 className="text-3xl mb-6">About PMS</h2>
+              {/* Renamed brand text from "PMS" to full name */}
+              <h2 className="text-3xl mb-6">About Project Management System</h2>
               <p className="text-gray-700 mb-4">
-                The Project Management System (PMS) is designed to simplify the management of final year projects
+                The Project Management System is designed to simplify the management of final year projects
                 at universities. It provides a centralized platform for students to select projects, submit assessments,
                 and receive feedback.
               </p>
@@ -89,7 +90,8 @@ export default function Homepage() {
                 <div className="flex justify-between items-start">
                   <div className="flex-1">
                     <div className="flex items-center gap-3 mb-2">
-                      <h3 className="text-xl">Welcome to PMS - Getting Started Guide</h3>
+                      {/* Renamed brand text from "PMS" to full name */}
+                      <h3 className="text-xl">Welcome to Project Management System - Getting Started Guide</h3>
                       <span className="bg-blue-100 text-blue-700 text-xs px-2 py-1 rounded">Announcement</span>
                     </div>
                     <p className="text-gray-600 mb-3">

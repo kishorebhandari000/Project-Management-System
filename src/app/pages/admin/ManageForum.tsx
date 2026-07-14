@@ -9,7 +9,8 @@ export default function ManageForum() {
   const forumPosts = [
     {
       id: 1,
-      title: 'Welcome to PMS - Getting Started Guide',
+      // Renamed brand text from "PMS" to full name
+      title: 'Welcome to Project Management System - Getting Started Guide',
       category: 'Announcement',
       excerpt: 'New to the Project Management System? This guide will help you navigate the platform...',
       status: 'Published',

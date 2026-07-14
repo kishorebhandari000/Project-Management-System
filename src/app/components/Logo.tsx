@@ -26,7 +26,8 @@ export default function Logo({ size = 'medium', color = 'default' }: LogoProps) 
       {/* Text */}
       <div className="flex flex-col">
         <span className={`${textColor} font-bold ${sizes[size]} leading-none`}>
-          PMS
+          {/* Renamed brand text from "PMS" to full name */}
+          Project Management System
         </span>
         <span className={`${color === 'white' ? 'text-gray-300' : 'text-gray-600'} ${size === 'small' ? 'text-[10px]' : 'text-xs'} mt-0.5`}>
           Project Management

@@ -49,7 +49,8 @@ export default function ColorPalette() {
     <div className="min-h-screen bg-[#f4f6f8] p-8">
       <div className="max-w-6xl mx-auto">
         <div className="bg-white rounded-lg p-8 border border-gray-200 shadow-sm mb-8">
-          <h1 className="text-3xl mb-2">PMS Color Palette</h1>
+          {/* Renamed brand text from "PMS" to full name */}
+          <h1 className="text-3xl mb-2">Project Management System Color Palette</h1>
           <p className="text-gray-600">University Project Management System - Design System Colors</p>
         </div>
 
