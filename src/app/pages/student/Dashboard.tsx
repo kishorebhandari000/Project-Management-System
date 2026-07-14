@@ -1,7 +1,12 @@
 import Sidebar from '../../components/Sidebar';
 import { Link } from 'react-router';
-
+import { useState, useEffect } from 'react';
 export default function StudentDashboard() {
+  const [userName, setUserName] = useState('');
+
+useEffect(() => {
+  setUserName(localStorage.getItem('userName') || 'Student');
+}, []);
   return (
     <div className="flex">
       <Sidebar role="student" />
@@ -11,7 +16,7 @@ export default function StudentDashboard() {
           <div className="flex justify-between items-center">
             <div>
               <h1 className="text-2xl">Student Dashboard</h1>
-              <p className="text-gray-600">Welcome back, John Doe</p>
+              <p className="text-gray-600">Welcome back, {userName}</p>
             </div>
             <div className="flex items-center gap-4">
               <Link to="/student/notifications" className="relative">
