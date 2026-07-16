@@ -18,7 +18,9 @@ app.get('/api/health', (req, res) => res.json({ status: 'ok' }));
 app.use('/api/auth', authRoutes);
 app.use('/api/users', require('./routes/userRoutes'));
 app.use('/api/projects', projectRoutes);
-app.use('/api/tasks', taskRoutes);app.use('/api/profile', require('./routes/profileRoutes'));
+app.use('/api/tasks', taskRoutes);
+app.use('/api/profile', require('./routes/profileRoutes'));
+app.use('/api/assessments', require('./routes/assessmentRoutes'));
 app.use(notFound);
 app.use(errorHandler);
 
