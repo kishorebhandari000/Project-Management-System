@@ -2,11 +2,20 @@ const mongoose = require('mongoose');
 
 const projectSchema = new mongoose.Schema(
   {
-    name: { type: String, required: true, trim: true },
-    description: { type: String, trim: true, default: '' },
-    status: { type: String, enum: ['planning', 'active', 'on_hold', 'completed'], default: 'planning' },
-    owner: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-    members: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
+    title: { type: String, required: true, trim: true },
+    description: { type: String, required: true },
+    category: { type: String, trim: true },
+    supervisor: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+    createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+    maxStudents: { type: Number, default: 1 },
+    status: { type: String, enum: ['open', 'allocated', 'closed'], default: 'open' },
+    files: [
+      {
+        url: { type: String, required: true },
+        name: { type: String, required: true },
+        uploadedAt: { type: Date, default: Date.now },
+      },
+    ],
   },
   { timestamps: true }
 );

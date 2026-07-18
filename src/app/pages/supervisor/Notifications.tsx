@@ -1,20 +1,69 @@
 import Sidebar from '../../components/Sidebar';
 import { Link } from 'react-router';
+import { useState, useEffect } from 'react';
+import { api } from '../../lib/api';
 
-const notifications = [
-  { id: 1, type: 'submission', message: 'John Doe has submitted "Project Proposal" for review', time: '1 hour ago', read: false },
-  { id: 2, type: 'submission', message: 'Jane Smith has submitted "Literature Review" for review', time: '3 hours ago', read: false },
-  { id: 3, type: 'message', message: 'New message from John Doe', time: '5 hours ago', read: false },
-  { id: 4, type: 'system', message: 'System: Assessment deadline reminder for May 15', time: '1 day ago', read: true },
-];
+interface ApiNotification {
+  _id: string;
+  type: string;
+  title: string;
+  message: string;
+  read: boolean;
+  createdAt: string;
+}
 
-const typeIcon: Record<string, string> = {
-  submission: '📋',
-  message: '💬',
-  system: '🔔',
-};
+function timeAgo(dateString: string) {
+  const diffMs = Date.now() - new Date(dateString).getTime();
+  const mins = Math.floor(diffMs / 60000);
+  if (mins < 1) return 'just now';
+  if (mins < 60) return `${mins} minute${mins > 1 ? 's' : ''} ago`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours} hour${hours > 1 ? 's' : ''} ago`;
+  const days = Math.floor(hours / 24);
+  return `${days} day${days > 1 ? 's' : ''} ago`;
+}
 
-export default function SupervisorNotifications() {
+function typeColor(type: string) {
+  if (type.startsWith('allocation')) return 'bg-blue-100 text-blue-700';
+  if (type.startsWith('assessment')) return 'bg-green-100 text-green-700';
+  return 'bg-gray-100 text-gray-700';
+}
+
+export default function Notifications() {
+  const [notifications, setNotifications] = useState<ApiNotification[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [filter, setFilter] = useState<'all' | 'unread'>('all');
+
+  const loadNotifications = async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const data = await api.get('/notifications');
+      setNotifications(data.notifications);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load notifications');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadNotifications();
+  }, []);
+
+  const unreadCount = notifications.filter((n) => !n.read).length;
+  const visibleNotifications = filter === 'unread' ? notifications.filter((n) => !n.read) : notifications;
+
+  const markAsRead = async (id: string) => {
+    try {
+      await api.put(`/notifications/${id}/read`, {});
+      setNotifications((prev) => prev.map((n) => (n._id === id ? { ...n, read: true } : n)));
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Failed to mark as read');
+    }
+  };
+
   return (
     <div className="flex">
       <Sidebar role="supervisor" />
@@ -23,33 +72,86 @@ export default function SupervisorNotifications() {
           <div className="flex justify-between items-center">
             <div>
               <h1 className="text-2xl">Notifications</h1>
-              <p className="text-gray-600">Stay updated on student activities</p>
+              <p className="text-gray-600">You have {unreadCount} unread notifications</p>
             </div>
-            <Link to="/supervisor/profile" className="w-12 h-12 bg-[#2563a8] rounded-full flex items-center justify-center text-white hover:bg-[#1e4a8a]">
-              SJ
-            </Link>
+            <div className="flex items-center gap-4">
+              <Link to="/supervisor/notifications" className="relative">
+                <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center text-gray-700 cursor-pointer hover:bg-gray-300">
+                  <span className="text-xl">🔔</span>
+                </div>
+                {unreadCount > 0 && (
+                  <div className="absolute top-0 right-0 w-3 h-3 bg-red-600 rounded-full"></div>
+                )}
+              </Link>
+              <Link to="/supervisor/profile" className="w-12 h-12 bg-[#2563a8] rounded-full flex items-center justify-center text-white hover:bg-[#1e4a8a] cursor-pointer">
+                SV
+              </Link>
+            </div>
           </div>
         </div>
 
-        <div className="p-8 max-w-3xl">
-          <div className="flex justify-between items-center mb-6">
-            <span className="text-gray-600">{notifications.filter(n => !n.read).length} unread</span>
-            <button className="text-[#2563a8] hover:underline text-sm">Mark all as read</button>
-          </div>
-          <div className="space-y-3">
-            {notifications.map((n) => (
-              <div
-                key={n.id}
-                className={`bg-white rounded-lg p-5 border shadow-sm flex items-start gap-4 ${!n.read ? 'border-l-4 border-l-[#2563a8]' : 'border-gray-200'}`}
-              >
-                <span className="text-2xl">{typeIcon[n.type]}</span>
-                <div className="flex-1">
-                  <p className={`${!n.read ? 'text-gray-900' : 'text-gray-600'}`}>{n.message}</p>
-                  <p className="text-xs text-gray-400 mt-1">{n.time}</p>
-                </div>
-                {!n.read && <div className="w-2 h-2 bg-[#2563a8] rounded-full mt-2 shrink-0"></div>}
+        <div className="p-8">
+          <div className="max-w-4xl mx-auto">
+            {loading && <p className="text-gray-500">Loading notifications...</p>}
+            {error && (
+              <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-md px-4 py-3 mb-4">
+                {error}
               </div>
-            ))}
+            )}
+
+            {!loading && (
+              <>
+                <div className="mb-6 flex gap-3">
+                  <button
+                    onClick={() => setFilter('all')}
+                    className={filter === 'all' ? 'bg-[#2563a8] text-white px-5 py-2 rounded-md' : 'bg-gray-200 text-gray-700 px-5 py-2 rounded-md hover:bg-gray-300'}
+                  >
+                    All
+                  </button>
+                  <button
+                    onClick={() => setFilter('unread')}
+                    className={filter === 'unread' ? 'bg-[#2563a8] text-white px-5 py-2 rounded-md' : 'bg-gray-200 text-gray-700 px-5 py-2 rounded-md hover:bg-gray-300'}
+                  >
+                    Unread ({unreadCount})
+                  </button>
+                </div>
+
+                <div className="space-y-3">
+                  {visibleNotifications.length === 0 && (
+                    <p className="text-gray-500">No notifications to show.</p>
+                  )}
+                  {visibleNotifications.map((notification) => (
+                    <div
+                      key={notification._id}
+                      className={`bg-white rounded-lg p-5 border border-gray-200 shadow-sm ${
+                        !notification.read ? 'border-l-4 border-l-[#2563a8]' : ''
+                      }`}
+                    >
+                      <div className="flex justify-between items-start mb-2">
+                        <div className="flex items-center gap-3">
+                          <span className={`px-3 py-1 rounded-md text-sm ${typeColor(notification.type)}`}>
+                            {notification.type.replace(/_/g, ' ')}
+                          </span>
+                          <h3 className={`text-lg ${!notification.read ? 'font-bold' : ''}`}>
+                            {notification.title}
+                          </h3>
+                        </div>
+                        <span className="text-sm text-gray-500">{timeAgo(notification.createdAt)}</span>
+                      </div>
+                      <p className="text-gray-700 mb-3">{notification.message}</p>
+                      {!notification.read && (
+                        <button
+                          onClick={() => markAsRead(notification._id)}
+                          className="bg-gray-200 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-300 text-sm"
+                        >
+                          Mark as Read
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
           </div>
         </div>
       </div>
