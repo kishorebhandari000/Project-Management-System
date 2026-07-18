@@ -1,6 +1,7 @@
 const express = require('express');
 const { updateMe, changePassword } = require('../controllers/userController');
 const { protect } = require('../middleware/auth');
+const { uploadProjectFile } = require('../middleware/upload');
 
 const router = express.Router();
 

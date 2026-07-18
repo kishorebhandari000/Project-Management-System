@@ -1,16 +1,77 @@
 import Sidebar from '../../components/Sidebar';
 import { Link } from 'react-router';
+import { useState, useEffect, useRef } from 'react';
+import { api } from '../../lib/api';
+
+interface ProjectFile {
+  url: string;
+  name: string;
+}
+
+interface ApiProject {
+  _id: string;
+  title: string;
+  category?: string;
+  status: 'open' | 'allocated' | 'closed';
+  supervisor?: { name: string };
+  files?: ProjectFile[];
+}
 
 export default function ManageProjects() {
-  const projects = [
-    { id: 1, title: 'AI-Based Recommendation System', supervisor: 'Dr. Sarah Johnson', student: 'John Doe', status: 'Active', category: 'Machine Learning' },
-    { id: 2, title: 'E-commerce Platform', supervisor: 'Dr. Sarah Johnson', student: 'Jane Smith', status: 'Active', category: 'Web Development' },
-    { id: 3, title: 'Mobile Health App', supervisor: 'Dr. Sarah Johnson', student: 'Mike Johnson', status: 'Active', category: 'Mobile Apps' },
-    { id: 4, title: 'Machine Learning for Medical Diagnosis', supervisor: 'Dr. Emily Chen', student: 'Unassigned', status: 'Available', category: 'Machine Learning' },
-    { id: 5, title: 'Blockchain-Based Voting System', supervisor: 'Prof. Michael Brown', student: 'Unassigned', status: 'Available', category: 'Blockchain' },
-    { id: 6, title: 'IoT Smart Home Automation', supervisor: 'Dr. Sarah Johnson', student: 'Unassigned', status: 'Available', category: 'IoT' },
-    { id: 7, title: 'Natural Language Processing Chatbot', supervisor: 'Dr. Robert Lee', student: 'Unassigned', status: 'Available', category: 'Machine Learning' },
-  ];
+  const [projects, setProjects] = useState<ApiProject[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [uploadingId, setUploadingId] = useState<string | null>(null);
+  const fileInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
+
+  const loadProjects = async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const data = await api.get('/projects');
+      setProjects(data.projects);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load projects');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadProjects();
+  }, []);
+
+  const handleDelete = async (id: string) => {
+    if (!confirm('Delete this project?')) return;
+    try {
+      await api.delete(`/projects/${id}`);
+      await loadProjects();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Failed to delete project');
+    }
+  };
+
+  const triggerFilePicker = (projectId: string) => {
+    fileInputRefs.current[projectId]?.click();
+  };
+
+  const handleFileSelected = async (projectId: string, e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploadingId(projectId);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      await api.upload(`/projects/${projectId}/files`, formData);
+      await loadProjects();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Failed to upload file');
+    } finally {
+      setUploadingId(null);
+      e.target.value = '';
+    }
+  };
 
   return (
     <div className="flex">
@@ -40,126 +101,82 @@ export default function ManageProjects() {
         </div>
 
         <div className="p-8">
-          {/* Filter Section */}
-          <div className="bg-white rounded-lg p-5 border border-gray-200 shadow-sm mb-6">
-            <div className="grid grid-cols-4 gap-4">
-              <div>
-                <label className="block text-gray-700 mb-2">Search</label>
-                <input
-                  type="text"
-                  className="w-full border border-gray-300 rounded-md px-4 py-2 focus:outline-none focus:border-[#2563a8]"
-                  placeholder="Search projects..."
-                />
-              </div>
-              <div>
-                <label className="block text-gray-700 mb-2">Status</label>
-                <select className="w-full border border-gray-300 rounded-md px-4 py-2 focus:outline-none focus:border-[#2563a8]">
-                  <option>All Status</option>
-                  <option>Active</option>
-                  <option>Available</option>
-                  <option>Completed</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-gray-700 mb-2">Category</label>
-                <select className="w-full border border-gray-300 rounded-md px-4 py-2 focus:outline-none focus:border-[#2563a8]">
-                  <option>All Categories</option>
-                  <option>Machine Learning</option>
-                  <option>Web Development</option>
-                  <option>Mobile Apps</option>
-                  <option>IoT</option>
-                  <option>Blockchain</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-gray-700 mb-2">Supervisor</label>
-                <select className="w-full border border-gray-300 rounded-md px-4 py-2 focus:outline-none focus:border-[#2563a8]">
-                  <option>All Supervisors</option>
-                  <option>Dr. Sarah Johnson</option>
-                  <option>Dr. Emily Chen</option>
-                  <option>Prof. Michael Brown</option>
-                  <option>Dr. Robert Lee</option>
-                </select>
-              </div>
+          {loading && <p className="text-gray-500">Loading projects...</p>}
+          {error && (
+            <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-md px-4 py-3 mb-4">
+              {error}
             </div>
-          </div>
+          )}
 
-          {/* Projects Table */}
-          <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
-            <table className="w-full">
-              <thead className="bg-gray-100">
-                <tr>
-                  <th className="text-left px-6 py-4 border-b border-gray-200">Project Title</th>
-                  <th className="text-left px-6 py-4 border-b border-gray-200">Supervisor</th>
-                  <th className="text-left px-6 py-4 border-b border-gray-200">Student</th>
-                  <th className="text-left px-6 py-4 border-b border-gray-200">Category</th>
-                  <th className="text-left px-6 py-4 border-b border-gray-200">Status</th>
-                  <th className="text-left px-6 py-4 border-b border-gray-200">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {projects.map((project) => (
-                  <tr key={project.id} className="border-b border-gray-200">
-                    <td className="px-6 py-4">{project.title}</td>
-                    <td className="px-6 py-4">{project.supervisor}</td>
-                    <td className="px-6 py-4">
-                      <span className={project.student === 'Unassigned' ? 'text-gray-500' : ''}>
-                        {project.student}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4">{project.category}</td>
-                    <td className="px-6 py-4">
-                      <span className={`${
-                        project.status === 'Active' ? 'text-green-600' :
-                        project.status === 'Available' ? 'text-blue-600' : 'text-gray-600'
-                      }`}>
-                        {project.status}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex gap-2">
-                        <button className="bg-gray-200 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-300">
-                          View
-                        </button>
-                        <button className="bg-gray-200 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-300">
-                          Edit
-                        </button>
-                        <button className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700">
-                          Delete
-                        </button>
+          {!loading && (
+            <div className="space-y-4">
+              {projects.length === 0 && (
+                <div className="bg-white rounded-lg border border-gray-200 shadow-sm px-6 py-6 text-center text-gray-500">
+                  No projects yet. Click "Create Project" to add one.
+                </div>
+              )}
+              {projects.map((project) => (
+                <div key={project._id} className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
+                  <div className="flex justify-between items-start mb-3">
+                    <div>
+                      <h3 className="text-lg">{project.title}</h3>
+                      <div className="text-sm text-gray-600 mt-1">
+                        {project.supervisor?.name || '-'} · {project.category || '-'} ·{' '}
+                        <span className={project.status === 'open' ? 'text-green-600' : 'text-gray-500'}>
+                          {project.status}
+                        </span>
                       </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <button className="bg-gray-200 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-300">
+                        Edit
+                      </button>
+                      <button
+                        onClick={() => handleDelete(project._id)}
+                        className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </div>
 
-          {/* Stats Summary */}
-          <div className="grid grid-cols-4 gap-6 mt-6">
-            <div className="bg-white rounded-lg p-5 border border-gray-200 shadow-sm">
-              <div className="text-gray-600 mb-1">Total Projects</div>
-              <div className="text-3xl text-[#2563a8]">{projects.length}</div>
+                  <div className="border-t border-gray-200 pt-3 mt-3">
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="text-sm text-gray-700">Files</span>
+                      <button
+                        onClick={() => triggerFilePicker(project._id)}
+                        disabled={uploadingId === project._id}
+                        className="text-sm bg-[#2563a8] text-white px-3 py-1.5 rounded-md hover:bg-[#1e4a8a] disabled:opacity-60"
+                      >
+                        {uploadingId === project._id ? 'Uploading...' : 'Upload File'}
+                      </button>
+                      <input
+                        type="file"
+                        ref={(el) => { fileInputRefs.current[project._id] = el; }}
+                        onChange={(e) => handleFileSelected(project._id, e)}
+                        className="hidden"
+                      />
+                    </div>
+
+                    {(!project.files || project.files.length === 0) && (
+                      <p className="text-sm text-gray-400">No files uploaded yet.</p>
+                    )}
+                    {project.files && project.files.length > 0 && (
+                      <ul className="space-y-1">
+                       {project.files.map((f, idx) => (
+                          <li key={idx}>
+                            <a href={f.url} target="_blank" rel="noopener noreferrer" className="text-[#2563a8] hover:underline text-sm">
+                              📎 {f.name}
+                            </a>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                </div>
+              ))}
             </div>
-            <div className="bg-white rounded-lg p-5 border border-gray-200 shadow-sm">
-              <div className="text-gray-600 mb-1">Active Projects</div>
-              <div className="text-3xl text-green-600">
-                {projects.filter(p => p.status === 'Active').length}
-              </div>
-            </div>
-            <div className="bg-white rounded-lg p-5 border border-gray-200 shadow-sm">
-              <div className="text-gray-600 mb-1">Available Projects</div>
-              <div className="text-3xl text-blue-600">
-                {projects.filter(p => p.status === 'Available').length}
-              </div>
-            </div>
-            <div className="bg-white rounded-lg p-5 border border-gray-200 shadow-sm">
-              <div className="text-gray-600 mb-1">Unassigned</div>
-              <div className="text-3xl text-orange-600">
-                {projects.filter(p => p.student === 'Unassigned').length}
-              </div>
-            </div>
-          </div>
+          )}
         </div>
       </div>
     </div>
