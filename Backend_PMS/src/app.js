@@ -19,6 +19,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/users', require('./routes/userRoutes'));
 app.use('/api/projects', projectRoutes);
 app.use('/api/tasks', taskRoutes);app.use('/api/profile', require('./routes/profileRoutes'));
+app.use('/api/forum', require('./routes/forumRoutes'));
 app.use(notFound);
 app.use(errorHandler);
 
