@@ -37,8 +37,20 @@ import NewForumPost from "./pages/admin/NewForumPost";
 import AdminMessages from "./pages/admin/Messages";
 import Notifications from "./pages/admin/Notifications";
 import Profile from "./pages/admin/Profile";
+import ForgotPassword from "./pages/ForgotPassword";
+import ResetPassword from "./pages/ResetPassword";
 
 export const router = createBrowserRouter([
+
+  {
+  path: "/forgot-password",
+  Component: ForgotPassword,
+},
+{
+  path: "/reset-password/:token",
+  Component: ResetPassword,
+},
+
   {
     path: "/",
     Component: Homepage,
