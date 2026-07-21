@@ -3,6 +3,7 @@ import Homepage from "./pages/Homepage";
 import Login from "./pages/Login";
 import ColorPalette from "./pages/ColorPalette";
 import ForumThread from "./pages/ForumThread";
+import ProtectedRoute from "./components/ProtectedRoute";
 import StudentDashboard from "./pages/student/Dashboard";
 import BrowseProjects from "./pages/student/BrowseProjects";
 import Assessments from "./pages/student/Assessments";
@@ -68,134 +69,134 @@ export const router = createBrowserRouter([
   },
   {
     path: "/student/dashboard",
-    Component: StudentDashboard,
+    Component: () => <ProtectedRoute role="student"><StudentDashboard /></ProtectedRoute>,
   },
   {
     path: "/student/projects",
-    Component: BrowseProjects,
+    Component: () => <ProtectedRoute role="student"><BrowseProjects /></ProtectedRoute>,
   },
   {
     path: "/student/assessments",
-    Component: Assessments,
+    Component: () => <ProtectedRoute role="student"><Assessments /></ProtectedRoute>,
   },
   {
     path: "/student/feedback",
-    Component: Feedback,
+    Component: () => <ProtectedRoute role="student"><Feedback /></ProtectedRoute>,
   },
   {
     path: "/student/discussions",
-    Component: StudentDiscussions,
+    Component: () => <ProtectedRoute role="student"><StudentDiscussions /></ProtectedRoute>,
   },
   {
     path: "/student/discussions/new",
-    Component: StudentNewDiscussion,
+    Component: () => <ProtectedRoute role="student"><StudentNewDiscussion /></ProtectedRoute>,
   },
   {
     path: "/student/discussions/:id",
-    Component: StudentDiscussionThread,
+    Component: () => <ProtectedRoute role="student"><StudentDiscussionThread /></ProtectedRoute>,
   },
   {
     path: "/student/messages",
-    Component: StudentMessages,
+    Component: () => <ProtectedRoute role="student"><StudentMessages /></ProtectedRoute>,
   },
   {
     path: "/student/notifications",
-    Component: StudentNotifications,
+    Component: () => <ProtectedRoute role="student"><StudentNotifications /></ProtectedRoute>,
   },
   {
     path: "/student/profile",
-    Component: StudentProfile,
+    Component: () => <ProtectedRoute role="student"><StudentProfile /></ProtectedRoute>,
   },
   {
     path: "/supervisor/dashboard",
-    Component: SupervisorDashboard,
+    Component: () => <ProtectedRoute role="supervisor"><SupervisorDashboard /></ProtectedRoute>,
   },
   {
     path: "/supervisor/projects",
-    Component: ManageProjects,
+    Component: () => <ProtectedRoute role="supervisor"><ManageProjects /></ProtectedRoute>,
   },
   {
     path: "/supervisor/assessments",
-    Component: SupervisorAssessments,
+    Component: () => <ProtectedRoute role="supervisor"><SupervisorAssessments /></ProtectedRoute>,
   },
   {
     path: "/supervisor/assessments/grade/:id",
-    Component: GradeSubmission,
+    Component: () => <ProtectedRoute role="supervisor"><GradeSubmission /></ProtectedRoute>,
   },
   {
     path: "/supervisor/feedback",
-    Component: SupervisorFeedback,
+    Component: () => <ProtectedRoute role="supervisor"><SupervisorFeedback /></ProtectedRoute>,
   },
   {
     path: "/supervisor/discussions",
-    Component: SupervisorDiscussions,
+    Component: () => <ProtectedRoute role="supervisor"><SupervisorDiscussions /></ProtectedRoute>,
   },
   {
     path: "/supervisor/discussions/new",
-    Component: SupervisorNewDiscussion,
+    Component: () => <ProtectedRoute role="supervisor"><SupervisorNewDiscussion /></ProtectedRoute>,
   },
   {
     path: "/supervisor/discussions/:id",
-    Component: SupervisorDiscussionThread,
+    Component: () => <ProtectedRoute role="supervisor"><SupervisorDiscussionThread /></ProtectedRoute>,
   },
   {
     path: "/supervisor/messages",
-    Component: SupervisorMessages,
+    Component: () => <ProtectedRoute role="supervisor"><SupervisorMessages /></ProtectedRoute>,
   },
   {
     path: "/supervisor/notifications",
-    Component: SupervisorNotifications,
+    Component: () => <ProtectedRoute role="supervisor"><SupervisorNotifications /></ProtectedRoute>,
   },
   {
     path: "/supervisor/profile",
-    Component: SupervisorProfile,
+    Component: () => <ProtectedRoute role="supervisor"><SupervisorProfile /></ProtectedRoute>,
   },
   {
     path: "/admin/dashboard",
-    Component: AdminDashboard,
+    Component: () => <ProtectedRoute role="admin"><AdminDashboard /></ProtectedRoute>,
   },
   {
     path: "/admin/users",
-    Component: ManageUsers,
+    Component: () => <ProtectedRoute role="admin"><ManageUsers /></ProtectedRoute>,
   },
   {
     path: "/admin/projects",
-    Component: AdminManageProjects,
+    Component: () => <ProtectedRoute role="admin"><AdminManageProjects /></ProtectedRoute>,
   },
   {
     path: "/admin/projects/create",
-    Component: CreateProject,
+    Component: () => <ProtectedRoute role="admin"><CreateProject /></ProtectedRoute>,
   },
   {
     path: "/admin/allocation",
-    Component: ManageAllocation,
+    Component: () => <ProtectedRoute role="admin"><ManageAllocation /></ProtectedRoute>,
   },
   {
     path: "/admin/assessments",
-    Component: AdminAssessments,
+    Component: () => <ProtectedRoute role="admin"><AdminAssessments /></ProtectedRoute>,
   },
   {
     path: "/admin/reports",
-    Component: Reports,
+    Component: () => <ProtectedRoute role="admin"><Reports /></ProtectedRoute>,
   },
   {
     path: "/admin/forum",
-    Component: ManageForum,
+    Component: () => <ProtectedRoute role="admin"><ManageForum /></ProtectedRoute>,
   },
   {
     path: "/admin/forum/new",
-    Component: NewForumPost,
+    Component: () => <ProtectedRoute role="admin"><NewForumPost /></ProtectedRoute>,
   },
   {
     path: "/admin/messages",
-    Component: AdminMessages,
+    Component: () => <ProtectedRoute role="admin"><AdminMessages /></ProtectedRoute>,
   },
   {
     path: "/admin/notifications",
-    Component: Notifications,
+    Component: () => <ProtectedRoute role="admin"><Notifications /></ProtectedRoute>,
   },
   {
     path: "/admin/profile",
-    Component: Profile,
+    Component: () => <ProtectedRoute role="admin"><Profile /></ProtectedRoute>,
   },
 ]);
