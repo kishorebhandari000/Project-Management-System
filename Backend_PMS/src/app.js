@@ -21,6 +21,7 @@ app.use('/api/projects', projectRoutes);
 app.use('/api/tasks', taskRoutes);app.use('/api/profile', require('./routes/profileRoutes'));
 app.use('/api/allocations', require('./routes/allocationRoutes'));
 app.use('/api/notifications', require('./routes/notificationRoutes'));
+app.use('/api/assessments', require('./routes/assessmentRoutes'));
 app.use(notFound);
 app.use(errorHandler);
 
