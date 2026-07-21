@@ -66,9 +66,9 @@ const getAllocations = asyncHandler(async (req, res) => {
 // @desc   Approve or reject a request
 // @route  PUT /api/allocations/:id/decision
 const decideAllocation = asyncHandler(async (req, res) => {
-  const { decision } = req.body; // 'approved' | 'rejected'
-  if (!['approved', 'rejected'].includes(decision)) {
-    return res.status(400).json({ message: "decision must be 'approved' or 'rejected'" });
+  const { decision } = req.body; // 'approved' | 'rejected' | 'pending'
+  if (!['approved', 'rejected', 'pending'].includes(decision)) {
+    return res.status(400).json({ message: "decision must be 'approved', 'rejected', or 'pending'" });
   }
 
   const allocation = await Allocation.findById(req.params.id).populate('project', 'title');
@@ -79,21 +79,29 @@ const decideAllocation = asyncHandler(async (req, res) => {
     return res.status(403).json({ message: 'Not authorized to decide on this allocation' });
   }
 
+  const wasApproved = allocation.status === 'approved';
+
   allocation.status = decision;
-  allocation.decidedAt = new Date();
+  allocation.decidedAt = decision === 'pending' ? undefined : new Date();
   await allocation.save();
 
   if (decision === 'approved') {
     await Project.findByIdAndUpdate(allocation.project._id, { status: 'allocated' });
+  } else if (wasApproved && decision !== 'approved') {
+    // Reverting a previously-approved allocation reopens the project
+    await Project.findByIdAndUpdate(allocation.project._id, { status: 'open' });
   }
 
-  await createNotification({
-    user: allocation.student,
-    type: 'allocation_decision',
-    title: `Allocation ${decision}`,
-    message: `Your request for "${allocation.project.title}" was ${decision}.`,
-    link: '/student/projects',
-  });
+  // Only notify the student on a real decision, not on undo
+  if (decision !== 'pending') {
+    await createNotification({
+      user: allocation.student,
+      type: 'allocation_decision',
+      title: `Allocation ${decision}`,
+      message: `Your request for "${allocation.project.title}" was ${decision}.`,
+      link: '/student/projects',
+    });
+  }
 
   res.json({ allocation });
 });
