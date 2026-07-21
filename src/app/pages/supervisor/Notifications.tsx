@@ -1,72 +1,66 @@
 import Sidebar from '../../components/Sidebar';
 import { Link } from 'react-router';
+import { useState, useEffect } from 'react';
+import { api } from '../../lib/api';
+
+interface ApiNotification {
+  _id: string;
+  type: string;
+  title: string;
+  message: string;
+  read: boolean;
+  createdAt: string;
+}
+
+function timeAgo(dateString: string) {
+  const diffMs = Date.now() - new Date(dateString).getTime();
+  const mins = Math.floor(diffMs / 60000);
+  if (mins < 1) return 'just now';
+  if (mins < 60) return `${mins} minute${mins > 1 ? 's' : ''} ago`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours} hour${hours > 1 ? 's' : ''} ago`;
+  const days = Math.floor(hours / 24);
+  return `${days} day${days > 1 ? 's' : ''} ago`;
+}
+
+function typeColor(type: string) {
+  if (type.startsWith('allocation')) return 'bg-blue-100 text-blue-700';
+  if (type.startsWith('assessment')) return 'bg-green-100 text-green-700';
+  return 'bg-gray-100 text-gray-700';
+}
 
 export default function Notifications() {
-  const notifications = [
-    {
-      id: 1,
-      type: 'submission',
-      title: 'New Submission',
-      message: 'John Doe submitted "Project Proposal" for review',
-      time: '1 hour ago',
-      read: false
-    },
-    {
-      id: 2,
-      type: 'submission',
-      title: 'New Submission',
-      message: 'Jane Smith submitted "Literature Review" for review',
-      time: '3 hours ago',
-      read: false
-    },
-    {
-      id: 3,
-      type: 'request',
-      title: 'Project Request',
-      message: 'Alice Williams has requested to work on "Machine Learning for Medical Diagnosis"',
-      time: '5 hours ago',
-      read: true
-    },
-    {
-      id: 4,
-      type: 'deadline',
-      title: 'Deadline Reminder',
-      message: 'Project Proposal deadline is in 2 days (May 10, 2026). 1 student has not submitted yet.',
-      time: '1 day ago',
-      read: true
-    },
-    {
-      id: 5,
-      type: 'system',
-      title: 'Student Progress Update',
-      message: 'Mike Johnson has updated project progress to 80%',
-      time: '1 day ago',
-      read: true
-    },
-    {
-      id: 6,
-      type: 'request',
-      title: 'Project Request',
-      message: 'Bob Chen has requested to work on "Blockchain-Based Voting System"',
-      time: '2 days ago',
-      read: true
-    },
-  ];
+  const [notifications, setNotifications] = useState<ApiNotification[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [filter, setFilter] = useState<'all' | 'unread'>('all');
 
-  const unreadCount = notifications.filter(n => !n.read).length;
+  const loadNotifications = async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const data = await api.get('/notifications');
+      setNotifications(data.notifications);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load notifications');
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  const getNotificationColor = (type: string) => {
-    switch (type) {
-      case 'submission':
-        return 'bg-green-100 text-green-700';
-      case 'request':
-        return 'bg-blue-100 text-blue-700';
-      case 'deadline':
-        return 'bg-orange-100 text-orange-700';
-      case 'system':
-        return 'bg-purple-100 text-purple-700';
-      default:
-        return 'bg-gray-100 text-gray-700';
+  useEffect(() => {
+    loadNotifications();
+  }, []);
+
+  const unreadCount = notifications.filter((n) => !n.read).length;
+  const visibleNotifications = filter === 'unread' ? notifications.filter((n) => !n.read) : notifications;
+
+  const markAsRead = async (id: string) => {
+    try {
+      await api.put(`/notifications/${id}/read`, {});
+      setNotifications((prev) => prev.map((n) => (n._id === id ? { ...n, read: true } : n)));
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Failed to mark as read');
     }
   };
 
@@ -81,9 +75,6 @@ export default function Notifications() {
               <p className="text-gray-600">You have {unreadCount} unread notifications</p>
             </div>
             <div className="flex items-center gap-4">
-              <button className="bg-gray-200 text-gray-700 px-5 py-2 rounded-md hover:bg-gray-300">
-                Mark All as Read
-              </button>
               <Link to="/supervisor/notifications" className="relative">
                 <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center text-gray-700 cursor-pointer hover:bg-gray-300">
                   <span className="text-xl">🔔</span>
@@ -93,7 +84,7 @@ export default function Notifications() {
                 )}
               </Link>
               <Link to="/supervisor/profile" className="w-12 h-12 bg-[#2563a8] rounded-full flex items-center justify-center text-white hover:bg-[#1e4a8a] cursor-pointer">
-                SJ
+                SV
               </Link>
             </div>
           </div>
@@ -101,69 +92,66 @@ export default function Notifications() {
 
         <div className="p-8">
           <div className="max-w-4xl mx-auto">
-            {/* Filter Tabs */}
-            <div className="mb-6 flex gap-3">
-              <button className="bg-[#2563a8] text-white px-5 py-2 rounded-md">
-                All
-              </button>
-              <button className="bg-gray-200 text-gray-700 px-5 py-2 rounded-md hover:bg-gray-300">
-                Unread ({unreadCount})
-              </button>
-              <button className="bg-gray-200 text-gray-700 px-5 py-2 rounded-md hover:bg-gray-300">
-                Submissions
-              </button>
-              <button className="bg-gray-200 text-gray-700 px-5 py-2 rounded-md hover:bg-gray-300">
-                Requests
-              </button>
-              <button className="bg-gray-200 text-gray-700 px-5 py-2 rounded-md hover:bg-gray-300">
-                Deadlines
-              </button>
-            </div>
+            {loading && <p className="text-gray-500">Loading notifications...</p>}
+            {error && (
+              <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-md px-4 py-3 mb-4">
+                {error}
+              </div>
+            )}
 
-            {/* Notifications List */}
-            <div className="space-y-3">
-              {notifications.map((notification) => (
-                <div
-                  key={notification.id}
-                  className={`bg-white rounded-lg p-5 border border-gray-200 shadow-sm ${
-                    !notification.read ? 'border-l-4 border-l-[#2563a8]' : ''
-                  }`}
-                >
-                  <div className="flex justify-between items-start mb-2">
-                    <div className="flex items-center gap-3">
-                      <span className={`px-3 py-1 rounded-md text-sm ${getNotificationColor(notification.type)}`}>
-                        {notification.type.charAt(0).toUpperCase() + notification.type.slice(1)}
-                      </span>
-                      <h3 className={`text-lg ${!notification.read ? 'font-bold' : ''}`}>
-                        {notification.title}
-                      </h3>
-                    </div>
-                    <span className="text-sm text-gray-500">{notification.time}</span>
-                  </div>
-                  <p className="text-gray-700 mb-3">{notification.message}</p>
-                  <div className="flex gap-2">
-                    {!notification.read && (
-                      <button className="bg-gray-200 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-300 text-sm">
-                        Mark as Read
-                      </button>
-                    )}
-                    {notification.type === 'submission' && (
-                      <button className="bg-[#2563a8] text-white px-4 py-2 rounded-md hover:bg-[#1e4a8a] text-sm">
-                        Review Submission
-                      </button>
-                    )}
-                    {notification.type === 'request' && (
-                      <button className="bg-[#2563a8] text-white px-4 py-2 rounded-md hover:bg-[#1e4a8a] text-sm">
-                        View Request
-                      </button>
-                    )}
-                    <button className="text-gray-500 hover:text-gray-700 px-4 py-2 text-sm">
-                      Delete
-                    </button>
-                  </div>
+            {!loading && (
+              <>
+                <div className="mb-6 flex gap-3">
+                  <button
+                    onClick={() => setFilter('all')}
+                    className={filter === 'all' ? 'bg-[#2563a8] text-white px-5 py-2 rounded-md' : 'bg-gray-200 text-gray-700 px-5 py-2 rounded-md hover:bg-gray-300'}
+                  >
+                    All
+                  </button>
+                  <button
+                    onClick={() => setFilter('unread')}
+                    className={filter === 'unread' ? 'bg-[#2563a8] text-white px-5 py-2 rounded-md' : 'bg-gray-200 text-gray-700 px-5 py-2 rounded-md hover:bg-gray-300'}
+                  >
+                    Unread ({unreadCount})
+                  </button>
                 </div>
-              ))}
-            </div>
+
+                <div className="space-y-3">
+                  {visibleNotifications.length === 0 && (
+                    <p className="text-gray-500">No notifications to show.</p>
+                  )}
+                  {visibleNotifications.map((notification) => (
+                    <div
+                      key={notification._id}
+                      className={`bg-white rounded-lg p-5 border border-gray-200 shadow-sm ${
+                        !notification.read ? 'border-l-4 border-l-[#2563a8]' : ''
+                      }`}
+                    >
+                      <div className="flex justify-between items-start mb-2">
+                        <div className="flex items-center gap-3">
+                          <span className={`px-3 py-1 rounded-md text-sm ${typeColor(notification.type)}`}>
+                            {notification.type.replace(/_/g, ' ')}
+                          </span>
+                          <h3 className={`text-lg ${!notification.read ? 'font-bold' : ''}`}>
+                            {notification.title}
+                          </h3>
+                        </div>
+                        <span className="text-sm text-gray-500">{timeAgo(notification.createdAt)}</span>
+                      </div>
+                      <p className="text-gray-700 mb-3">{notification.message}</p>
+                      {!notification.read && (
+                        <button
+                          onClick={() => markAsRead(notification._id)}
+                          className="bg-gray-200 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-300 text-sm"
+                        >
+                          Mark as Read
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
           </div>
         </div>
       </div>

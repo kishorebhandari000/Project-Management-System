@@ -1,214 +1,213 @@
-import Sidebar from '../../components/Sidebar';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router';
-import { notifyAssessmentSubmitted, notifySubmissionConfirmation } from '../../utils/emailService';
+import Sidebar from '../../components/Sidebar';
+import { api } from '../../lib/api';
+
+interface Assessment {
+  _id: string;
+  title: string;
+  description: string;
+  dueDate?: string;
+  submittedAt?: string;
+  status: 'not_submitted' | 'submitted' | 'graded';
+  mark: number | null;
+  feedback: string;
+  supervisor: { name: string; email: string };
+  project: { name: string };
+}
 
 export default function Assessments() {
-  const [showModal, setShowModal] = useState(false);
-  const [selectedAssessment, setSelectedAssessment] = useState('');
-  const [supervisorEmail, setSupervisorEmail] = useState('20032573@students.koi.edu.au');
-  const [studentEmail, setStudentEmail] = useState('20032573@students.koi.edu.au');
-  const [submitting, setSubmitting] = useState(false);
+  const [assessments, setAssessments] = useState<Assessment[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [submitting, setSubmitting] = useState<string | null>(null);
+  const [submitText, setSubmitText] = useState('');
+  const [activeSubmit, setActiveSubmit] = useState<string | null>(null);
+  const [toast, setToast] = useState('');
 
-  const assessments = [
-    { id: 1, title: 'Project Proposal', deadline: 'May 10, 2026', status: 'Pending' },
-    { id: 2, title: 'Literature Review', deadline: 'May 15, 2026', status: 'Pending' },
-    { id: 3, title: 'Requirements Document', deadline: 'April 28, 2026', status: 'Submitted' },
-    { id: 4, title: 'Design Specification', deadline: 'April 20, 2026', status: 'Graded' },
-    { id: 5, title: 'Mid-term Presentation', deadline: 'May 25, 2026', status: 'Not Started' },
-  ];
+  useEffect(() => {
+    api.get('/assessments/my')
+      .then((d) => setAssessments(d.assessments))
+      .catch((e) => setError(e.message))
+      .finally(() => setLoading(false));
+  }, []);
 
-  const handleSubmitClick = (title: string) => {
-    setSelectedAssessment(title);
-    setShowModal(true);
+  const showToast = (msg: string) => {
+    setToast(msg);
+    setTimeout(() => setToast(''), 3000);
   };
 
-  const handleSubmitAssessment = async () => {
-    setSubmitting(true);
+  const handleSubmit = async (id: string) => {
+    if (!submitText.trim()) return;
+    setSubmitting(id);
     try {
-      const submissionDate = new Date().toLocaleDateString();
-
-      // Send notification to supervisor
-      await notifyAssessmentSubmitted({
-        supervisorEmail,
-        studentName: 'John Doe',
-        assessmentTitle: selectedAssessment,
-        projectName: 'AI-Powered Healthcare System',
-        submissionDate,
-        viewUrl: window.location.origin + '/supervisor/assessments',
-      });
-
-      // Send confirmation to student
-      await notifySubmissionConfirmation({
-        studentEmail,
-        studentName: 'John Doe',
-        assessmentTitle: selectedAssessment,
-        submissionDate,
-        viewUrl: window.location.origin + '/student/assessments',
-      });
-
-      alert('✅ Assessment submitted successfully!\n\n📧 Confirmation emails sent to:\n- You (student)\n- Your supervisor\n\nCheck your email inbox!');
-      setShowModal(false);
-    } catch (error) {
-      console.error('Submission error:', error);
-      const errorMsg = error instanceof Error ? error.message : 'Unknown error';
-
-      if (errorMsg.includes('only send testing emails to your own email')) {
-        alert('⚠️ Assessment Submitted!\n\nEmail notifications failed due to Resend limitation.\nFor testing: Use 20032573@students.koi.edu.au for both email fields.\n\nYour supervisor can still view the submission in the system.');
-      } else {
-        alert('Assessment uploaded but email notifications failed. Your supervisor can still view it in the system.');
-      }
-      setShowModal(false);
+      const d = await api.put(`/assessments/${id}/submit`, { submissionText: submitText });
+      setAssessments((prev) => prev.map((a) => (a._id === id ? d.assessment : a)));
+      setActiveSubmit(null);
+      setSubmitText('');
+      showToast('Assessment submitted successfully!');
+    } catch (e: any) {
+      showToast(e.message);
     } finally {
-      setSubmitting(false);
+      setSubmitting(null);
     }
+  };
+
+  const statusBadge = (s: Assessment['status']) => {
+    if (s === 'graded') return <span className="text-green-600 font-medium">Graded</span>;
+    if (s === 'submitted') return <span className="text-blue-600 font-medium">Submitted</span>;
+    return <span className="text-orange-500 font-medium">Not Submitted</span>;
   };
 
   return (
     <div className="flex">
       <Sidebar role="student" />
       <div className="flex-1 bg-[#f4f6f8]">
+        {/* Top bar */}
         <div className="bg-white border-b border-gray-200 px-8 py-5">
           <div className="flex justify-between items-center">
             <div>
               <h1 className="text-2xl">Assessments</h1>
-              <p className="text-gray-600">Manage your project assessments</p>
+              <p className="text-gray-600">Submit and track your project assessments</p>
             </div>
             <div className="flex items-center gap-4">
               <Link to="/student/notifications" className="relative">
-                <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center text-gray-700 cursor-pointer hover:bg-gray-300">
+                <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center hover:bg-gray-300">
                   <span className="text-xl">🔔</span>
                 </div>
-                <div className="absolute top-0 right-0 w-3 h-3 bg-red-600 rounded-full"></div>
+                <div className="absolute top-0 right-0 w-3 h-3 bg-red-600 rounded-full" />
               </Link>
-              <Link to="/student/profile" className="w-12 h-12 bg-[#2563a8] rounded-full flex items-center justify-center text-white hover:bg-[#1e4a8a] cursor-pointer">
-                JD
+              <Link to="/student/profile" className="w-12 h-12 bg-[#2563a8] rounded-full flex items-center justify-center text-white hover:bg-[#1e4a8a]">
+                {localStorage.getItem('userName')?.[0] ?? 'S'}
               </Link>
             </div>
           </div>
         </div>
 
+        {/* Toast */}
+        {toast && (
+          <div className="fixed top-6 right-6 bg-[#2563a8] text-white px-5 py-3 rounded-lg shadow-lg z-50 transition-all">
+            {toast}
+          </div>
+        )}
+
         <div className="p-8">
-          <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
-            <table className="w-full">
-              <thead className="bg-gray-100">
-                <tr>
-                  <th className="text-left px-6 py-4 border-b border-gray-200">Assessment Title</th>
-                  <th className="text-left px-6 py-4 border-b border-gray-200">Deadline</th>
-                  <th className="text-left px-6 py-4 border-b border-gray-200">Status</th>
-                  <th className="text-left px-6 py-4 border-b border-gray-200">Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                {assessments.map((assessment) => (
-                  <tr key={assessment.id} className="border-b border-gray-200">
-                    <td className="px-6 py-4">{assessment.title}</td>
-                    <td className="px-6 py-4">{assessment.deadline}</td>
-                    <td className="px-6 py-4">
-                      <span className={`${
-                        assessment.status === 'Submitted' ? 'text-blue-600' :
-                        assessment.status === 'Graded' ? 'text-green-600' :
-                        assessment.status === 'Pending' ? 'text-orange-600' :
-                        'text-gray-500'
-                      }`}>
-                        {assessment.status}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4">
-                      {assessment.status === 'Pending' || assessment.status === 'Not Started' ? (
-                        <button
-                          onClick={() => handleSubmitClick(assessment.title)}
-                          className="bg-[#2563a8] text-white px-4 py-2 rounded-md hover:bg-[#1e4a8a]"
-                        >
-                          Submit
-                        </button>
+          {/* Stats */}
+          <div className="grid grid-cols-3 gap-6 mb-8">
+            <div className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm">
+              <div className="text-gray-600 mb-1">Total</div>
+              <div className="text-3xl">{assessments.length}</div>
+            </div>
+            <div className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm">
+              <div className="text-gray-600 mb-1">Submitted</div>
+              <div className="text-3xl text-blue-600">{assessments.filter((a) => a.status !== 'not_submitted').length}</div>
+            </div>
+            <div className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm">
+              <div className="text-gray-600 mb-1">Graded</div>
+              <div className="text-3xl text-green-600">{assessments.filter((a) => a.status === 'graded').length}</div>
+            </div>
+          </div>
+
+          {loading && <div className="text-center py-20 text-gray-500">Loading assessments...</div>}
+          {error && <div className="bg-red-50 border border-red-200 text-red-700 p-4 rounded-lg">{error}</div>}
+
+          {!loading && !error && assessments.length === 0 && (
+            <div className="bg-white rounded-lg p-16 border border-gray-200 text-center text-gray-500">
+              No assessments assigned yet.
+            </div>
+          )}
+
+          <div className="space-y-4">
+            {assessments.map((a) => (
+              <div key={a._id} className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
+                <div className="p-6">
+                  <div className="flex justify-between items-start mb-3">
+                    <div>
+                      <h3 className="text-lg mb-1">{a.title}</h3>
+                      <p className="text-sm text-gray-500">
+                        {a.project?.name} &bull; Supervisor: {a.supervisor?.name}
+                      </p>
+                      {a.description && <p className="text-sm text-gray-600 mt-1">{a.description}</p>}
+                    </div>
+                    <div className="text-right shrink-0 ml-4">
+                      {statusBadge(a.status)}
+                      {a.dueDate && (
+                        <div className="text-xs text-gray-400 mt-1">
+                          Due: {new Date(a.dueDate).toLocaleDateString()}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Graded result */}
+                  {a.status === 'graded' && (
+                    <div className="mt-4 bg-green-50 border border-green-200 rounded-lg p-4">
+                      <div className="flex items-center gap-4 mb-2">
+                        <span className="text-gray-600">Mark:</span>
+                        <span className="text-2xl text-green-600 font-semibold">{a.mark}/100</span>
+                      </div>
+                      <div className="bg-gray-200 h-2 rounded-full mb-3">
+                        <div className="bg-green-500 h-2 rounded-full" style={{ width: `${a.mark}%` }} />
+                      </div>
+                      {a.feedback && (
+                        <div>
+                          <div className="text-sm text-gray-600 mb-1">Feedback:</div>
+                          <p className="text-gray-700 text-sm bg-white p-3 rounded border border-green-100">{a.feedback}</p>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Submitted view */}
+                  {a.status === 'submitted' && (
+                    <div className="mt-3 bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm text-blue-700">
+                      ✓ Submitted {a.submittedAt ? `on ${new Date(a.submittedAt).toLocaleDateString()}` : ''} — awaiting review
+                    </div>
+                  )}
+
+                  {/* Submit form */}
+                  {a.status === 'not_submitted' && (
+                    <div className="mt-4">
+                      {activeSubmit === a._id ? (
+                        <div className="space-y-3">
+                          <textarea
+                            value={submitText}
+                            onChange={(e) => setSubmitText(e.target.value)}
+                            className="w-full border border-gray-300 rounded-md px-4 py-3 h-28 focus:outline-none focus:border-[#2563a8] text-sm"
+                            placeholder="Write your submission here..."
+                          />
+                          <div className="flex gap-3">
+                            <button
+                              onClick={() => handleSubmit(a._id)}
+                              disabled={submitting === a._id || !submitText.trim()}
+                              className="bg-[#2563a8] text-white px-5 py-2 rounded-md hover:bg-[#1e4a8a] disabled:opacity-50 text-sm"
+                            >
+                              {submitting === a._id ? 'Submitting...' : 'Submit'}
+                            </button>
+                            <button
+                              onClick={() => { setActiveSubmit(null); setSubmitText(''); }}
+                              className="bg-gray-200 text-gray-700 px-5 py-2 rounded-md hover:bg-gray-300 text-sm"
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        </div>
                       ) : (
-                        <button className="bg-gray-300 text-gray-600 px-4 py-2 rounded-md">
-                          View
+                        <button
+                          onClick={() => setActiveSubmit(a._id)}
+                          className="bg-[#2563a8] text-white px-5 py-2 rounded-md hover:bg-[#1e4a8a] text-sm"
+                        >
+                          Submit Assessment
                         </button>
                       )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       </div>
-
-      {/* Submit Modal */}
-      {showModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-6">
-          <div className="bg-white rounded-lg p-8 w-full max-w-lg">
-            <h2 className="text-2xl mb-6">Submit {selectedAssessment}</h2>
-
-            <div className="space-y-4 mb-6">
-              <div>
-                <label className="block text-gray-700 mb-2">Your Email (for confirmation) *</label>
-                <input
-                  type="email"
-                  value={studentEmail}
-                  onChange={(e) => setStudentEmail(e.target.value)}
-                  className="w-full border border-gray-300 rounded-md px-4 py-3 focus:outline-none focus:border-[#2563a8]"
-                  placeholder="your.email@university.edu"
-                  required
-                />
-                <p className="text-sm text-orange-600 mt-1">⚠️ Testing: Use 20032573@students.koi.edu.au</p>
-              </div>
-
-              <div>
-                <label className="block text-gray-700 mb-2">Supervisor Email (for notification) *</label>
-                <input
-                  type="email"
-                  value={supervisorEmail}
-                  onChange={(e) => setSupervisorEmail(e.target.value)}
-                  className="w-full border border-gray-300 rounded-md px-4 py-3 focus:outline-none focus:border-[#2563a8]"
-                  placeholder="supervisor@university.edu"
-                  required
-                />
-                <p className="text-sm text-orange-600 mt-1">⚠️ Testing: Use 20032573@students.koi.edu.au</p>
-              </div>
-
-              <div>
-                <label className="block text-gray-700 mb-3">Upload File</label>
-                <div className="border-2 border-dashed border-gray-300 rounded-lg p-10 text-center">
-                  <div className="text-gray-600 mb-2">Drag and drop your file here</div>
-                  <div className="text-gray-500 text-sm mb-3">or</div>
-                  <button type="button" className="bg-gray-200 text-gray-700 px-5 py-2 rounded-md hover:bg-gray-300">
-                    Browse Files
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-              <p className="text-sm text-blue-900">📧 You will receive:</p>
-              <ul className="text-sm text-blue-700 mt-2 space-y-1 list-disc list-inside">
-                <li>Submission confirmation email</li>
-                <li>Supervisor will be notified</li>
-                <li>Grade notification when marked</li>
-              </ul>
-            </div>
-
-            <div className="flex gap-3">
-              <button
-                onClick={() => setShowModal(false)}
-                className="flex-1 bg-gray-300 text-gray-700 px-6 py-3 rounded-md hover:bg-gray-400"
-                disabled={submitting}
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleSubmitAssessment}
-                className="flex-1 bg-[#2563a8] text-white px-6 py-3 rounded-md hover:bg-[#1e4a8a] disabled:bg-gray-400"
-                disabled={submitting}
-              >
-                {submitting ? 'Submitting...' : 'Submit & Notify'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

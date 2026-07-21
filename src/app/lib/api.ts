@@ -42,4 +42,22 @@ export const api = {
     request(path, { ...options, method: 'PUT', body: body ? JSON.stringify(body) : undefined }),
 
   delete: (path: string, options?: RequestOptions) => request(path, { ...options, method: 'DELETE' }),
+
+  upload: async (path: string, formData: FormData) => {
+    const token = localStorage.getItem('token');
+    const headers: Record<string, string> = {};
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+
+    const res = await fetch(`${API_URL}${path}`, {
+      method: 'POST',
+      headers, // no Content-Type - browser sets multipart boundary automatically
+      body: formData,
+    });
+
+    const data = await res.json().catch(() => null);
+    if (!res.ok) {
+      throw new Error(data?.message || `Request failed with status ${res.status}`);
+    }
+    return data;
+  },
 };

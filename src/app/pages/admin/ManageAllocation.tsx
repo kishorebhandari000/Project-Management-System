@@ -1,19 +1,46 @@
 import Sidebar from '../../components/Sidebar';
 import { Link } from 'react-router';
+import { useState, useEffect } from 'react';
+import { api } from '../../lib/api';
+
+interface ApiAllocation {
+  _id: string;
+  status: 'pending' | 'approved' | 'rejected';
+  project: { title: string };
+  student: { name: string; email: string };
+  supervisor: { name: string };
+}
 
 export default function ManageAllocation() {
-  const allocations = [
-    { id: 1, group: 'Group 1', memberCount: 2, project: 'AI-Based Recommendation System', supervisor: 'Dr. Sarah Johnson', status: 'Approved' },
-    { id: 2, group: 'Group 2', memberCount: 3, project: 'E-commerce Platform', supervisor: 'Dr. Sarah Johnson', status: 'Approved' },
-    { id: 3, group: 'Group 3', memberCount: 2, project: 'Machine Learning for Medical Diagnosis', supervisor: 'Dr. Emily Chen', status: 'Pending' },
-    { id: 4, group: 'Group 4', memberCount: 5, project: 'Blockchain-Based Voting System', supervisor: 'Prof. Michael Brown', status: 'Pending' },
-  ];
+  const [allocations, setAllocations] = useState<ApiAllocation[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
-  const unallocatedGroups = [
-    { id: 1, name: 'Group 5', memberCount: 4 },
-    { id: 2, name: 'Group 6', memberCount: 3 },
-    { id: 3, name: 'Group 7', memberCount: 1 },
-  ];
+  const loadAllocations = async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const data = await api.get('/allocations');
+      setAllocations(data.allocations);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load allocations');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadAllocations();
+  }, []);
+
+  const handleDecision = async (id: string, decision: 'approved' | 'rejected') => {
+    try {
+      await api.put(`/allocations/${id}/decision`, { decision });
+      await loadAllocations();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Failed to update allocation');
+    }
+  };
 
   return (
     <div className="flex">
@@ -23,7 +50,7 @@ export default function ManageAllocation() {
           <div className="flex justify-between items-center">
             <div>
               <h1 className="text-2xl">Manage Allocation</h1>
-              <p className="text-gray-600">Allocate groups to projects and supervisors</p>
+              <p className="text-gray-600">Approve or reject student requests to join projects</p>
             </div>
             <div className="flex items-center gap-4">
               <Link to="/admin/notifications" className="relative">
@@ -40,75 +67,89 @@ export default function ManageAllocation() {
         </div>
 
         <div className="p-8">
-          {/* Current Allocations */}
-          <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden mb-6">
-            <div className="px-6 py-4 border-b border-gray-200 bg-gray-50">
-              <h2 className="text-xl">Current Allocations</h2>
+          {loading && <p className="text-gray-500">Loading allocations...</p>}
+          {error && (
+            <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-md px-4 py-3 mb-4">
+              {error}
             </div>
-            <table className="w-full">
-              <thead className="bg-gray-100">
-                <tr>
-                  <th className="text-left px-6 py-4 border-b border-gray-200">Group Name</th>
-                  <th className="text-left px-6 py-4 border-b border-gray-200">Size</th>
-                  <th className="text-left px-6 py-4 border-b border-gray-200">Project</th>
-                  <th className="text-left px-6 py-4 border-b border-gray-200">Supervisor</th>
-                  <th className="text-left px-6 py-4 border-b border-gray-200">Status</th>
-                  <th className="text-left px-6 py-4 border-b border-gray-200">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {allocations.map((allocation) => (
-                  <tr key={allocation.id} className="border-b border-gray-200">
-                    <td className="px-6 py-4">{allocation.group}</td>
-                    <td className="px-6 py-4">{allocation.memberCount} members</td>
-                    <td className="px-6 py-4">{allocation.project}</td>
-                    <td className="px-6 py-4">{allocation.supervisor}</td>
-                    <td className="px-6 py-4">
-                      <span className={allocation.status === 'Approved' ? 'text-green-600' : 'text-orange-600'}>
-                        {allocation.status}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex gap-2">
-                        {allocation.status === 'Pending' && (
-                          <>
-                            <button className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700">
-                              Approve
-                            </button>
-                            <button className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700">
-                              Reject
-                            </button>
-                          </>
-                        )}
-                        {allocation.status === 'Approved' && (
-                          <button className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700">
-                            Remove
-                          </button>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          )}
 
-          {/* Unallocated Groups */}
-          <div className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm">
-            <h2 className="text-xl mb-5">Unallocated Groups</h2>
-            <div className="space-y-3">
-              {unallocatedGroups.map((group) => (
-                <div key={group.id} className="flex justify-between items-center pb-3 border-b border-gray-200 last:border-b-0">
-                  <div>
-                    <div>{group.name}</div>
-                    <div className="text-sm text-gray-500">{group.memberCount} members</div>
-                  </div>
-                  <button className="bg-[#2563a8] text-white px-5 py-2 rounded-md hover:bg-[#1e4a8a]">
-                    Assign Project
-                  </button>
-                </div>
-              ))}
+          {!loading && (
+            <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden mb-6">
+              <div className="px-6 py-4 border-b border-gray-200 bg-gray-50">
+                <h2 className="text-xl">Allocation Requests</h2>
+              </div>
+              <table className="w-full">
+                <thead className="bg-gray-100">
+                  <tr>
+                    <th className="text-left px-6 py-4 border-b border-gray-200">Student</th>
+                    <th className="text-left px-6 py-4 border-b border-gray-200">Project</th>
+                    <th className="text-left px-6 py-4 border-b border-gray-200">Supervisor</th>
+                    <th className="text-left px-6 py-4 border-b border-gray-200">Status</th>
+                    <th className="text-left px-6 py-4 border-b border-gray-200">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {allocations.length === 0 && (
+                    <tr>
+                      <td colSpan={5} className="px-6 py-6 text-center text-gray-500">
+                        No allocation requests yet.
+                      </td>
+                    </tr>
+                  )}
+                  {allocations.map((allocation) => (
+                    <tr key={allocation._id} className="border-b border-gray-200">
+                      <td className="px-6 py-4">{allocation.student?.name}</td>
+                      <td className="px-6 py-4">{allocation.project?.title}</td>
+                      <td className="px-6 py-4">{allocation.supervisor?.name}</td>
+                      <td className="px-6 py-4">
+                        <span
+                          className={
+                            allocation.status === 'approved'
+                              ? 'text-green-600'
+                              : allocation.status === 'rejected'
+                              ? 'text-red-600'
+                              : 'text-orange-600'
+                          }
+                        >
+                          {allocation.status}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="flex gap-2">
+                          {allocation.status === 'pending' && (
+                            <>
+                              <button
+                                onClick={() => handleDecision(allocation._id, 'approved')}
+                                className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700"
+                              >
+                                Approve
+                              </button>
+                              <button
+                                onClick={() => handleDecision(allocation._id, 'rejected')}
+                                className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700"
+                              >
+                                Reject
+                              </button>
+                            </>
+                          )}
+                          {allocation.status !== 'pending' && (
+                            <span className="text-gray-400 text-sm">No actions available</span>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
+          )}
+
+          <div className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm">
+            <h2 className="text-xl mb-2">Group-based allocation</h2>
+            <p className="text-sm text-gray-500">
+              The original design assumed teams/groups of students sharing one project. The current backend only supports one student per allocation request. Group support (multiple students per project, assigning whole unallocated groups at once) can be added as a separate future job if needed.
+            </p>
           </div>
         </div>
       </div>

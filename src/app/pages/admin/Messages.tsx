@@ -1,51 +1,15 @@
 import Sidebar from '../../components/Sidebar';
 import { Link } from 'react-router';
 import { useState } from 'react';
-import { sendDirectMessage } from '../../utils/emailService';
 
-export default function Messages() {
-  const [recipientEmail, setRecipientEmail] = useState('');
-  const [recipientType, setRecipientType] = useState<'student' | 'supervisor'>('student');
-  const [subject, setSubject] = useState('');
-  const [message, setMessage] = useState('');
-  const [sending, setSending] = useState(false);
-  const [successMessage, setSuccessMessage] = useState('');
-  const [errorMessage, setErrorMessage] = useState('');
+const contacts = [
+  { id: 1, name: 'Dr. Sarah Johnson', role: 'Supervisor', avatar: 'SJ', lastMessage: 'Please allocate a student to the new project.', time: '1h ago', unread: 1 },
+  { id: 2, name: 'John Doe', role: 'Student', avatar: 'JD', lastMessage: 'I have a question about project allocation.', time: '3h ago', unread: 0 },
+];
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setSending(true);
-    setSuccessMessage('');
-    setErrorMessage('');
-
-    try {
-      await sendDirectMessage({
-        recipientEmail,
-        recipientName: recipientType === 'student' ? 'Student' : 'Supervisor',
-        senderName: 'Admin Team',
-        senderRole: 'Administrator',
-        subject,
-        message,
-        replyUrl: window.location.origin + (recipientType === 'student' ? '/student/messages' : '/supervisor/messages'),
-      });
-
-      setSuccessMessage(`Email sent successfully to ${recipientType}!`);
-      setRecipientEmail('');
-      setSubject('');
-      setMessage('');
-    } catch (error) {
-      const errorMsg = error instanceof Error ? error.message : 'Failed to send email';
-
-      if (errorMsg.includes('only send testing emails to your own email')) {
-        setErrorMessage('⚠️ Resend free tier: You can only send emails to 20032573@students.koi.edu.au (your verified email). To send to others, verify a domain at resend.com/domains');
-      } else {
-        setErrorMessage('Failed to send email. Please try again.');
-      }
-      console.error('Email send error:', error);
-    } finally {
-      setSending(false);
-    }
-  };
+export default function AdminMessages() {
+  const [selected, setSelected] = useState(contacts[0]);
+  const [input, setInput] = useState('');
 
   return (
     <div className="flex">
@@ -55,120 +19,67 @@ export default function Messages() {
           <div className="flex justify-between items-center">
             <div>
               <h1 className="text-2xl">Messages</h1>
-              <p className="text-gray-600">Send email to students or supervisors</p>
+              <p className="text-gray-600">Communicate with users</p>
             </div>
-            <div className="flex items-center gap-4">
-              <Link to="/admin/notifications" className="relative">
-                <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center text-gray-700 cursor-pointer hover:bg-gray-300">
-                  <span className="text-xl">🔔</span>
-                </div>
-                <div className="absolute top-0 right-0 w-3 h-3 bg-red-600 rounded-full"></div>
-              </Link>
-              <Link to="/admin/profile" className="w-12 h-12 bg-[#2563a8] rounded-full flex items-center justify-center text-white hover:bg-[#1e4a8a] cursor-pointer">
-                AD
-              </Link>
-            </div>
+            <Link to="/admin/profile" className="w-12 h-12 bg-[#2563a8] rounded-full flex items-center justify-center text-white hover:bg-[#1e4a8a]">
+              AD
+            </Link>
           </div>
         </div>
 
-        <div className="p-8">
-          <div className="max-w-3xl mx-auto">
-            <div className="bg-white rounded-lg p-8 border border-gray-200 shadow-sm">
-              <h2 className="text-xl mb-6">Send Email</h2>
-
-              {successMessage && (
-                <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-6">
-                  {successMessage}
+        <div className="flex h-[calc(100vh-90px)]">
+          <div className="w-80 bg-white border-r border-gray-200 overflow-y-auto">
+            {contacts.map((c) => (
+              <button
+                key={c.id}
+                onClick={() => setSelected(c)}
+                className={`w-full text-left px-5 py-4 border-b border-gray-100 hover:bg-gray-50 ${selected.id === c.id ? 'bg-blue-50' : ''}`}
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-[#2563a8] rounded-full flex items-center justify-center text-white text-sm shrink-0">
+                    {c.avatar}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex justify-between">
+                      <span className="font-medium truncate">{c.name}</span>
+                      <span className="text-xs text-gray-500 ml-2 shrink-0">{c.time}</span>
+                    </div>
+                    <p className="text-sm text-gray-500 truncate">{c.lastMessage}</p>
+                  </div>
+                  {c.unread > 0 && (
+                    <span className="bg-[#2563a8] text-white text-xs w-5 h-5 rounded-full flex items-center justify-center shrink-0">
+                      {c.unread}
+                    </span>
+                  )}
                 </div>
-              )}
+              </button>
+            ))}
+          </div>
 
-              {errorMessage && (
-                <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-6">
-                  {errorMessage}
-                </div>
-              )}
-
-              <form onSubmit={handleSubmit} className="space-y-6">
-                <div>
-                  <label className="block text-gray-700 mb-2">Recipient Type *</label>
-                  <select
-                    value={recipientType}
-                    onChange={(e) => setRecipientType(e.target.value as 'student' | 'supervisor')}
-                    className="w-full border border-gray-300 rounded-md px-4 py-3 focus:outline-none focus:border-[#2563a8]"
-                  >
-                    <option value="student">Student</option>
-                    <option value="supervisor">Supervisor</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-gray-700 mb-2">Recipient Email *</label>
-                  <input
-                    type="email"
-                    value={recipientEmail}
-                    onChange={(e) => setRecipientEmail(e.target.value)}
-                    className="w-full border border-gray-300 rounded-md px-4 py-3 focus:outline-none focus:border-[#2563a8]"
-                    placeholder={recipientType === 'student' ? 'student@university.edu' : 'supervisor@university.edu'}
-                    required
-                  />
-                  <p className="text-sm text-orange-600 mt-1">⚠️ Testing mode: Use 20032573@students.koi.edu.au to receive the email yourself</p>
-                </div>
-
-                <div>
-                  <label className="block text-gray-700 mb-2">Subject *</label>
-                  <input
-                    type="text"
-                    value={subject}
-                    onChange={(e) => setSubject(e.target.value)}
-                    className="w-full border border-gray-300 rounded-md px-4 py-3 focus:outline-none focus:border-[#2563a8]"
-                    placeholder="Enter email subject"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-gray-700 mb-2">Message *</label>
-                  <textarea
-                    value={message}
-                    onChange={(e) => setMessage(e.target.value)}
-                    className="w-full border border-gray-300 rounded-md px-4 py-3 h-48 focus:outline-none focus:border-[#2563a8]"
-                    placeholder="Write your message here..."
-                    required
-                  ></textarea>
-                </div>
-
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                  <h3 className="text-sm mb-2 text-blue-900">Email Guidelines:</h3>
-                  <ul className="text-sm text-blue-700 space-y-1 list-disc list-inside">
-                    <li>Use clear and professional language</li>
-                    <li>Include all relevant details and instructions</li>
-                    <li>Recipients will receive this email directly</li>
-                    <li>They can reply to the admin email address</li>
-                  </ul>
-                </div>
-
-                <div className="flex justify-end gap-3">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setRecipientEmail('');
-                      setSubject('');
-                      setMessage('');
-                    }}
-                    className="bg-gray-200 text-gray-700 px-6 py-3 rounded-md hover:bg-gray-300"
-                    disabled={sending}
-                  >
-                    Clear
-                  </button>
-                  <button
-                    type="submit"
-                    className="bg-[#2563a8] text-white px-6 py-3 rounded-md hover:bg-[#1e4a8a] disabled:bg-gray-400"
-                    disabled={sending}
-                  >
-                    {sending ? 'Sending...' : 'Send Email'}
-                  </button>
-                </div>
-              </form>
+          <div className="flex-1 flex flex-col">
+            <div className="bg-white border-b border-gray-200 px-6 py-4 flex items-center gap-3">
+              <div className="w-10 h-10 bg-[#2563a8] rounded-full flex items-center justify-center text-white">
+                {selected.avatar}
+              </div>
+              <div>
+                <div className="font-medium">{selected.name}</div>
+                <div className="text-sm text-gray-500">{selected.role}</div>
+              </div>
+            </div>
+            <div className="flex-1 p-6">
+              <p className="text-gray-500 text-center mt-20">Select a conversation to start messaging.</p>
+            </div>
+            <div className="bg-white border-t border-gray-200 p-4 flex gap-3">
+              <input
+                type="text"
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                placeholder="Type a message..."
+                className="flex-1 border border-gray-300 rounded-md px-4 py-2 focus:outline-none focus:border-[#2563a8]"
+              />
+              <button onClick={() => setInput('')} className="bg-[#2563a8] text-white px-5 py-2 rounded-md hover:bg-[#1e4a8a]">
+                Send
+              </button>
             </div>
           </div>
         </div>

@@ -23,6 +23,7 @@ export default function ManageUsers() {
   const [supervisors, setSupervisors] = useState<ApiUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [search, setSearch] = useState('');
 
   const [showModal, setShowModal] = useState(false);
   const [formName, setFormName] = useState('');
@@ -60,6 +61,13 @@ export default function ManageUsers() {
   useEffect(() => {
     loadUsers();
   }, []);
+
+  const matchesSearch = (user: ApiUser) =>
+    user.name.toLowerCase().includes(search.toLowerCase()) ||
+    user.email.toLowerCase().includes(search.toLowerCase());
+
+  const filteredStudents = students.filter(matchesSearch);
+  const filteredSupervisors = supervisors.filter(matchesSearch);
 
   const openModal = () => {
     setFormName('');
@@ -187,6 +195,17 @@ export default function ManageUsers() {
             </button>
           </div>
 
+          <div className="bg-white rounded-lg p-5 border border-gray-200 shadow-sm mb-6">
+            <label className="block text-gray-700 mb-2">Search</label>
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search by name or email..."
+              className="w-full border border-gray-300 rounded-md px-4 py-2 focus:outline-none focus:border-[#2563a8]"
+            />
+          </div>
+
           {loading && <p className="text-gray-500">Loading users...</p>}
           {error && (
             <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-md px-4 py-3 mb-4">
@@ -205,14 +224,16 @@ export default function ManageUsers() {
                   </tr>
                 </thead>
                 <tbody>
-                  {students.length === 0 && (
+                  {filteredStudents.length === 0 && (
                     <tr>
                       <td colSpan={3} className="px-6 py-6 text-center text-gray-500">
-                        No students yet. Click "Add User" to create one.
+                        {students.length === 0
+                          ? 'No students yet. Click "Add User" to create one.'
+                          : 'No students match your search.'}
                       </td>
                     </tr>
                   )}
-                  {students.map((student) => (
+                  {filteredStudents.map((student) => (
                     <tr key={student.id} className="border-b border-gray-200">
                       <td className="px-6 py-4">{student.name}</td>
                       <td className="px-6 py-4">{student.email}</td>
@@ -250,14 +271,16 @@ export default function ManageUsers() {
                   </tr>
                 </thead>
                 <tbody>
-                  {supervisors.length === 0 && (
+                  {filteredSupervisors.length === 0 && (
                     <tr>
                       <td colSpan={3} className="px-6 py-6 text-center text-gray-500">
-                        No supervisors yet. Click "Add User" to create one.
+                        {supervisors.length === 0
+                          ? 'No supervisors yet. Click "Add User" to create one.'
+                          : 'No supervisors match your search.'}
                       </td>
                     </tr>
                   )}
-                  {supervisors.map((supervisor) => (
+                  {filteredSupervisors.map((supervisor) => (
                     <tr key={supervisor.id} className="border-b border-gray-200">
                       <td className="px-6 py-4">{supervisor.name}</td>
                       <td className="px-6 py-4">{supervisor.email}</td>
