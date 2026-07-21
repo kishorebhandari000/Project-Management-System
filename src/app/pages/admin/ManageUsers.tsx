@@ -11,6 +11,12 @@ interface ApiUser {
   createdAt?: string;
 }
 
+// GET /api/users returns raw Mongo documents (_id), while the rest of this
+// page (and the create/update endpoints) work in terms of `id` — normalize once here.
+function normalizeUser(user: ApiUser & { _id?: string }): ApiUser {
+  return { ...user, id: user.id ?? user._id ?? '' };
+}
+
 export default function ManageUsers() {
   const [activeTab, setActiveTab] = useState<'students' | 'supervisors'>('students');
   const [students, setStudents] = useState<ApiUser[]>([]);
@@ -26,6 +32,14 @@ export default function ManageUsers() {
   const [formError, setFormError] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingUserId, setEditingUserId] = useState<string | null>(null);
+  const [editName, setEditName] = useState('');
+  const [editEmail, setEditEmail] = useState('');
+  const [editRole, setEditRole] = useState<'student' | 'supervisor'>('student');
+  const [editError, setEditError] = useState('');
+  const [editSubmitting, setEditSubmitting] = useState(false);
+
   const loadUsers = async () => {
     setLoading(true);
     setError('');
@@ -34,8 +48,8 @@ export default function ManageUsers() {
         api.get('/users?role=student'),
         api.get('/users?role=supervisor'),
       ]);
-      setStudents(studentRes.users);
-      setSupervisors(supervisorRes.users);
+      setStudents(studentRes.users.map(normalizeUser));
+      setSupervisors(supervisorRes.users.map(normalizeUser));
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load users');
     } finally {
@@ -74,6 +88,48 @@ export default function ManageUsers() {
       setFormError(err instanceof Error ? err.message : 'Failed to create user');
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const openEditModal = (user: ApiUser) => {
+    setEditingUserId(user.id);
+    setEditName(user.name);
+    setEditEmail(user.email);
+    setEditRole(user.role === 'supervisor' ? 'supervisor' : 'student');
+    setEditError('');
+    setShowEditModal(true);
+  };
+
+  const handleUpdateUser = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingUserId) return;
+    setEditError('');
+    setEditSubmitting(true);
+
+    try {
+      await api.put(`/users/${editingUserId}`, {
+        name: editName,
+        email: editEmail,
+        role: editRole,
+      });
+      setShowEditModal(false);
+      await loadUsers();
+    } catch (err) {
+      setEditError(err instanceof Error ? err.message : 'Failed to update user');
+    } finally {
+      setEditSubmitting(false);
+    }
+  };
+
+  const handleDeleteUser = async (user: ApiUser) => {
+    if (!window.confirm('Are you sure you want to delete this user?')) return;
+    setError('');
+
+    try {
+      await api.delete(`/users/${user.id}`);
+      await loadUsers();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to delete user');
     }
   };
 
@@ -162,10 +218,16 @@ export default function ManageUsers() {
                       <td className="px-6 py-4">{student.email}</td>
                       <td className="px-6 py-4">
                         <div className="flex gap-2">
-                          <button className="bg-gray-200 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-300">
+                          <button
+                            onClick={() => openEditModal(student)}
+                            className="bg-gray-200 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-300"
+                          >
                             Edit
                           </button>
-                          <button className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700">
+                          <button
+                            onClick={() => handleDeleteUser(student)}
+                            className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700"
+                          >
                             Delete
                           </button>
                         </div>
@@ -201,10 +263,16 @@ export default function ManageUsers() {
                       <td className="px-6 py-4">{supervisor.email}</td>
                       <td className="px-6 py-4">
                         <div className="flex gap-2">
-                          <button className="bg-gray-200 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-300">
+                          <button
+                            onClick={() => openEditModal(supervisor)}
+                            className="bg-gray-200 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-300"
+                          >
                             Edit
                           </button>
-                          <button className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700">
+                          <button
+                            onClick={() => handleDeleteUser(supervisor)}
+                            className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700"
+                          >
                             Delete
                           </button>
                         </div>
@@ -290,6 +358,73 @@ export default function ManageUsers() {
                   className="flex-1 bg-[#2563a8] text-white px-5 py-2 rounded-md hover:bg-[#1e4a8a] disabled:opacity-60"
                 >
                   {submitting ? 'Creating...' : 'Create User'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {showEditModal && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-lg p-8 w-full max-w-md">
+            <h2 className="text-xl mb-5">Edit User</h2>
+
+            <form onSubmit={handleUpdateUser} className="space-y-4">
+              {editError && (
+                <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-md px-4 py-3">
+                  {editError}
+                </div>
+              )}
+
+              <div>
+                <label className="block text-gray-700 mb-1">Full Name</label>
+                <input
+                  type="text"
+                  value={editName}
+                  onChange={(e) => setEditName(e.target.value)}
+                  className="w-full border border-gray-300 rounded-md px-4 py-2 focus:outline-none focus:border-[#2563a8]"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-gray-700 mb-1">Email</label>
+                <input
+                  type="email"
+                  value={editEmail}
+                  onChange={(e) => setEditEmail(e.target.value)}
+                  className="w-full border border-gray-300 rounded-md px-4 py-2 focus:outline-none focus:border-[#2563a8]"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-gray-700 mb-1">Role</label>
+                <select
+                  value={editRole}
+                  onChange={(e) => setEditRole(e.target.value as 'student' | 'supervisor')}
+                  className="w-full border border-gray-300 rounded-md px-4 py-2 focus:outline-none focus:border-[#2563a8]"
+                >
+                  <option value="student">Student</option>
+                  <option value="supervisor">Supervisor</option>
+                </select>
+              </div>
+
+              <div className="flex gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowEditModal(false)}
+                  className="flex-1 bg-gray-200 text-gray-700 px-5 py-2 rounded-md hover:bg-gray-300"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={editSubmitting}
+                  className="flex-1 bg-[#2563a8] text-white px-5 py-2 rounded-md hover:bg-[#1e4a8a] disabled:opacity-60"
+                >
+                  {editSubmitting ? 'Saving...' : 'Save Changes'}
                 </button>
               </div>
             </form>
