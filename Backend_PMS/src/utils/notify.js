@@ -1,16 +1,14 @@
 const Notification = require('../models/Notification');
 const transporter = require('./mailer');
+const realtime = require('./realtime');
 
-async function sendNotification(app, { userId, email, title, message }) {
+async function sendNotification(_app, { userId, email, title, message }) {
   const notification = await Notification.create({ user: userId, title, message });
 
-  const io = app.get('io');
-  const userSockets = app.get('userSockets');
-  const socketId = userSockets.get(String(userId));
-  if (socketId) {
-    io.to(socketId).emit('notification', notification);
-  }
+  // Push live if the user is connected
+  realtime.pushToUser(userId, 'notification', notification);
 
+  // Email them too
   transporter
     .sendMail({
       from: `"Project Management System" <${process.env.SMTP_USER}>`,

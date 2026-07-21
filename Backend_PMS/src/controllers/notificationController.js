@@ -1,9 +1,30 @@
 const asyncHandler = require('../utils/asyncHandler');
 const Notification = require('../models/Notification');
+const User = require('../models/User');
+const transporter = require('../utils/mailer');
+const realtime = require('../utils/realtime');
 
 // Internal helper other controllers call - not a route handler itself
 async function createNotification({ user, type, title, message, link }) {
-  return Notification.create({ user, type, title, message, link });
+  const notification = await Notification.create({ user, type, title, message, link });
+
+  // 1. Push live if the user is connected
+  realtime.pushToUser(user, 'notification', notification);
+
+  // 2. Email them too
+  const recipient = await User.findById(user).select('email');
+  if (recipient?.email) {
+    transporter
+      .sendMail({
+        from: `"Project Management System" <${process.env.SMTP_USER}>`,
+        to: recipient.email,
+        subject: title,
+        text: message,
+      })
+      .catch((err) => console.error('Email send failed:', err));
+  }
+
+  return notification;
 }
 
 const getMyNotifications = asyncHandler(async (req, res) => {
