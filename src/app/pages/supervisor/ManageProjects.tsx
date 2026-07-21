@@ -1,14 +1,38 @@
 import Sidebar from '../../components/Sidebar';
 import { Link } from 'react-router';
+import { useState, useEffect } from 'react';
+import { api } from '../../lib/api';
+
+interface ProjectFile {
+  url: string;
+  name: string;
+}
+
+interface ApiProject {
+  _id: string;
+  title: string;
+  status: 'open' | 'allocated' | 'closed';
+  files?: ProjectFile[];
+}
 
 export default function ManageProjects() {
-  const projects = [
-    { id: 1, title: 'AI-Based Recommendation System', student: 'John Doe', status: 'Active' },
-    { id: 2, title: 'E-commerce Platform', student: 'Jane Smith', status: 'Active' },
-    { id: 3, title: 'Mobile Health App', student: 'Mike Johnson', status: 'Active' },
-    { id: 4, title: 'Machine Learning for Medical Diagnosis', student: 'Unassigned', status: 'Available' },
-    { id: 5, title: 'IoT Smart Home Automation', student: 'Unassigned', status: 'Available' },
-  ];
+  const [projects, setProjects] = useState<ApiProject[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const data = await api.get('/projects');
+        setProjects(data.projects);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to load projects');
+      } finally {
+        setLoading(false);
+      }
+    };
+    load();
+  }, []);
 
   return (
     <div className="flex">
@@ -21,7 +45,7 @@ export default function ManageProjects() {
               <p className="text-gray-600">Create and manage your project offerings</p>
             </div>
             <div className="flex items-center gap-4">
-              <button className="bg-[#2563a8] text-white px-5 py-2 rounded-md hover:bg-[#1e4a8a]">
+              <button className="bg-[#2563a8] text-white px-5 py-2 rounded-md hover:bg-[#1e4a8a]" disabled title="Create form for supervisors coming in a later job">
                 Create Project
               </button>
               <Link to="/supervisor/notifications" className="relative">
@@ -31,103 +55,67 @@ export default function ManageProjects() {
                 <div className="absolute top-0 right-0 w-3 h-3 bg-red-600 rounded-full"></div>
               </Link>
               <Link to="/supervisor/profile" className="w-12 h-12 bg-[#2563a8] rounded-full flex items-center justify-center text-white hover:bg-[#1e4a8a] cursor-pointer">
-                SJ
+                SV
               </Link>
             </div>
           </div>
         </div>
 
         <div className="p-8">
-          <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
-            <table className="w-full">
-              <thead className="bg-gray-100">
-                <tr>
-                  <th className="text-left px-6 py-4 border-b border-gray-200">Project Title</th>
-                  <th className="text-left px-6 py-4 border-b border-gray-200">Student</th>
-                  <th className="text-left px-6 py-4 border-b border-gray-200">Status</th>
-                  <th className="text-left px-6 py-4 border-b border-gray-200">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {projects.map((project) => (
-                  <tr key={project.id} className="border-b border-gray-200">
-                    <td className="px-6 py-4">{project.title}</td>
-                    <td className="px-6 py-4">
-                      <span className={project.student === 'Unassigned' ? 'text-gray-500' : ''}>
-                        {project.student}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4">
-                      <span className={`${
-                        project.status === 'Active' ? 'text-green-600' : 'text-blue-600'
-                      }`}>
+          {loading && <p className="text-gray-500">Loading projects...</p>}
+          {error && (
+            <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-md px-4 py-3 mb-4">
+              {error}
+            </div>
+          )}
+
+          {!loading && (
+            <div className="space-y-4">
+              {projects.length === 0 && (
+                <div className="bg-white rounded-lg border border-gray-200 shadow-sm px-6 py-6 text-center text-gray-500">
+                  No projects assigned to you yet.
+                </div>
+              )}
+              {projects.map((project) => (
+                <div key={project._id} className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
+                  <div className="flex justify-between items-start mb-3">
+                    <div>
+                      <h3 className="text-lg">{project.title}</h3>
+                      <span className={project.status === 'open' ? 'text-green-600 text-sm' : 'text-gray-500 text-sm'}>
                         {project.status}
                       </span>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex gap-2">
-                        <button className="bg-gray-200 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-300">
-                          Edit
-                        </button>
-                        <button className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700">
-                          Delete
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <button className="bg-gray-200 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-300">
+                        Edit
+                      </button>
+                      <button className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700">
+                        Delete
+                      </button>
+                    </div>
+                  </div>
 
-          {/* Create Project Form */}
-          <div className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm mt-6">
-            <h2 className="text-xl mb-5">Create New Project</h2>
-            <form className="space-y-4">
-              <div>
-                <label className="block text-gray-700 mb-2">Project Title</label>
-                <input
-                  type="text"
-                  className="w-full border border-gray-300 rounded-md px-4 py-3 focus:outline-none focus:border-[#2563a8]"
-                  placeholder="Enter project title"
-                />
-              </div>
-              <div>
-                <label className="block text-gray-700 mb-2">Description</label>
-                <textarea
-                  className="w-full border border-gray-300 rounded-md px-4 py-3 h-28 focus:outline-none focus:border-[#2563a8]"
-                  placeholder="Enter project description"
-                ></textarea>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-gray-700 mb-2">Category</label>
-                  <select className="w-full border border-gray-300 rounded-md px-4 py-3 focus:outline-none focus:border-[#2563a8]">
-                    <option>Machine Learning</option>
-                    <option>Web Development</option>
-                    <option>Mobile Development</option>
-                    <option>IoT</option>
-                    <option>Cybersecurity</option>
-                  </select>
+                  <div className="border-t border-gray-200 pt-3 mt-3">
+                    <p className="text-sm text-gray-700 mb-2">Files</p>
+                    {(!project.files || project.files.length === 0) && (
+                      <p className="text-sm text-gray-400">No files uploaded yet.</p>
+                    )}
+                    {project.files && project.files.length > 0 && (
+                      <ul className="space-y-1">
+                        {project.files.map((f, idx) => (
+  <li key={idx}>
+    <a href={f.url} target="_blank" rel="noopener noreferrer" className="text-[#2563a8] hover:underline text-sm">
+      📎 {f.name}
+    </a>
+  </li>
+))}
+                      </ul>
+                    )}
+                  </div>
                 </div>
-                <div>
-                  <label className="block text-gray-700 mb-2">Max Students</label>
-                  <input
-                    type="number"
-                    className="w-full border border-gray-300 rounded-md px-4 py-3 focus:outline-none focus:border-[#2563a8]"
-                    placeholder="1"
-                    defaultValue={1}
-                  />
-                </div>
-              </div>
-              <button
-                type="submit"
-                className="bg-[#2563a8] text-white px-6 py-3 rounded-md hover:bg-[#1e4a8a]"
-              >
-                Create Project
-              </button>
-            </form>
-          </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </div>

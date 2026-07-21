@@ -1,7 +1,37 @@
-import Sidebar from '../../components/Sidebar';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router';
+import Sidebar from '../../components/Sidebar';
+import { api } from '../../lib/api';
+
+interface Assessment {
+  _id: string;
+  title: string;
+  status: 'not_submitted' | 'submitted' | 'graded';
+  mark: number | null;
+  feedback: string;
+  submittedAt?: string;
+  supervisor: { name: string };
+  project: { name: string };
+}
 
 export default function Feedback() {
+  const [assessments, setAssessments] = useState<Assessment[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    api.get('/assessments/my')
+      .then((d) => setAssessments(d.assessments))
+      .catch((e) => setError(e.message))
+      .finally(() => setLoading(false));
+  }, []);
+
+  const graded = assessments.filter((a) => a.status === 'graded');
+  const pending = assessments.filter((a) => a.status === 'submitted');
+  const avgMark = graded.length
+    ? Math.round(graded.reduce((sum, a) => sum + (a.mark ?? 0), 0) / graded.length)
+    : null;
+
   return (
     <div className="flex">
       <Sidebar role="student" />
@@ -10,86 +40,85 @@ export default function Feedback() {
           <div className="flex justify-between items-center">
             <div>
               <h1 className="text-2xl">Feedback & Marks</h1>
-              <p className="text-gray-600">View your assessment results</p>
+              <p className="text-gray-600">View your assessment results and supervisor feedback</p>
             </div>
             <div className="flex items-center gap-4">
               <Link to="/student/notifications" className="relative">
-                <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center text-gray-700 cursor-pointer hover:bg-gray-300">
+                <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center hover:bg-gray-300">
                   <span className="text-xl">🔔</span>
                 </div>
-                <div className="absolute top-0 right-0 w-3 h-3 bg-red-600 rounded-full"></div>
+                <div className="absolute top-0 right-0 w-3 h-3 bg-red-600 rounded-full" />
               </Link>
-              <Link to="/student/profile" className="w-12 h-12 bg-[#2563a8] rounded-full flex items-center justify-center text-white hover:bg-[#1e4a8a] cursor-pointer">
-                JD
+              <Link to="/student/profile" className="w-12 h-12 bg-[#2563a8] rounded-full flex items-center justify-center text-white hover:bg-[#1e4a8a]">
+                {localStorage.getItem('userName')?.[0] ?? 'S'}
               </Link>
             </div>
           </div>
         </div>
 
         <div className="p-8 space-y-6">
-          {/* Released Marks */}
-          <div className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm">
-            <h2 className="text-xl mb-5">Design Specification</h2>
-
-            <div className="mb-5">
-              <div className="text-gray-600 mb-2">Your Mark</div>
-              <div className="text-5xl text-[#2563a8] mb-3">82/100</div>
-              <div className="bg-gray-200 h-4 rounded-full">
-                <div className="bg-[#2563a8] h-4 rounded-full" style={{ width: '82%' }}></div>
-              </div>
+          {/* Summary */}
+          <div className="grid grid-cols-3 gap-6">
+            <div className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm">
+              <div className="text-gray-600 mb-1">Graded</div>
+              <div className="text-3xl text-green-600">{graded.length}</div>
             </div>
-
-            <div>
-              <div className="text-gray-600 mb-2">Supervisor Feedback</div>
-              <div className="bg-gray-50 border border-gray-200 rounded-lg p-5">
-                <p className="text-gray-700">
-                  Excellent work on the design specification. Your use of UML diagrams was particularly strong,
-                  and the system architecture is well thought out. Some areas for improvement include more detailed
-                  error handling scenarios and edge cases. Overall, a very solid submission that demonstrates good
-                  understanding of the project requirements.
-                </p>
-              </div>
+            <div className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm">
+              <div className="text-gray-600 mb-1">Awaiting Grade</div>
+              <div className="text-3xl text-orange-500">{pending.length}</div>
+            </div>
+            <div className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm">
+              <div className="text-gray-600 mb-1">Average Mark</div>
+              <div className="text-3xl text-[#2563a8]">{avgMark !== null ? `${avgMark}%` : '—'}</div>
             </div>
           </div>
 
-          {/* Pending Marks */}
-          <div className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm">
-            <h2 className="text-xl mb-5">Requirements Document</h2>
+          {loading && <div className="text-center py-16 text-gray-500">Loading feedback...</div>}
+          {error && <div className="bg-red-50 border border-red-200 text-red-700 p-4 rounded-lg">{error}</div>}
 
-            <div className="text-center py-10">
-              <div className="text-xl text-gray-600 mb-2">Marks Not Yet Released</div>
-              <div className="text-gray-500">Your supervisor is currently reviewing this assessment</div>
+          {/* Graded assessments */}
+          {graded.map((a) => (
+            <div key={a._id} className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm">
+              <div className="flex justify-between items-start mb-4">
+                <div>
+                  <h2 className="text-xl">{a.title}</h2>
+                  <p className="text-sm text-gray-500">{a.project?.name} &bull; Supervisor: {a.supervisor?.name}</p>
+                </div>
+                <span className="text-3xl text-green-600 font-semibold">{a.mark}/100</span>
+              </div>
+              <div className="bg-gray-200 h-3 rounded-full mb-4">
+                <div className="bg-[#2563a8] h-3 rounded-full" style={{ width: `${a.mark}%` }} />
+              </div>
+              {a.feedback ? (
+                <div>
+                  <div className="text-gray-600 mb-2 text-sm">Supervisor Feedback</div>
+                  <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                    <p className="text-gray-700">{a.feedback}</p>
+                  </div>
+                </div>
+              ) : (
+                <p className="text-gray-400 italic text-sm">No written feedback provided.</p>
+              )}
             </div>
-          </div>
+          ))}
 
-          {/* Assessment History */}
-          <div className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm">
-            <h2 className="text-xl mb-5">Assessment History</h2>
-
-            <div className="space-y-3">
-              <div className="flex justify-between items-center pb-3 border-b border-gray-200">
-                <div>
-                  <div>Design Specification</div>
-                  <div className="text-sm text-gray-600">Submitted: April 19, 2026</div>
-                </div>
-                <div className="text-lg text-green-600">82/100</div>
-              </div>
-              <div className="flex justify-between items-center pb-3 border-b border-gray-200">
-                <div>
-                  <div>Requirements Document</div>
-                  <div className="text-sm text-gray-600">Submitted: April 27, 2026</div>
-                </div>
-                <div className="text-sm text-orange-600">Pending</div>
-              </div>
-              <div className="flex justify-between items-center">
-                <div>
-                  <div>Initial Proposal</div>
-                  <div className="text-sm text-gray-600">Submitted: March 15, 2026</div>
-                </div>
-                <div className="text-lg text-green-600">78/100</div>
+          {/* Pending */}
+          {pending.map((a) => (
+            <div key={a._id} className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm">
+              <h2 className="text-xl mb-2">{a.title}</h2>
+              <p className="text-sm text-gray-500 mb-4">{a.project?.name} &bull; Supervisor: {a.supervisor?.name}</p>
+              <div className="text-center py-6 bg-gray-50 rounded-lg border border-dashed border-gray-300">
+                <div className="text-gray-600 mb-1">Marks Not Yet Released</div>
+                <div className="text-gray-400 text-sm">Your supervisor is currently reviewing this submission</div>
               </div>
             </div>
-          </div>
+          ))}
+
+          {!loading && assessments.length === 0 && (
+            <div className="bg-white rounded-lg p-16 border border-gray-200 text-center text-gray-500">
+              No assessments yet. Check the Assessments page to submit your work.
+            </div>
+          )}
         </div>
       </div>
     </div>

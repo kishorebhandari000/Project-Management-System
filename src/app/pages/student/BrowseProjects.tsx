@@ -1,51 +1,76 @@
 import Sidebar from '../../components/Sidebar';
 import { Link } from 'react-router';
+import { useState, useEffect } from 'react';
+import { api } from '../../lib/api';
+
+interface ProjectFile {
+  url: string;
+  name: string;
+}
+
+interface ApiProject {
+  _id: string;
+  title: string;
+  description: string;
+  status: 'open' | 'allocated' | 'closed';
+  supervisor?: { name: string };
+  files?: ProjectFile[];
+}
+
+interface ApiAllocation {
+  _id: string;
+  project: { _id: string } | string;
+  status: 'pending' | 'approved' | 'rejected';
+}
 
 export default function BrowseProjects() {
-  const projects = [
-    {
-      id: 1,
-      title: 'Machine Learning for Medical Diagnosis',
-      supervisor: 'Dr. Emily Chen',
-      description: 'Develop a machine learning model to assist in diagnosing medical conditions from patient data and imaging.',
-      status: 'Available'
-    },
-    {
-      id: 2,
-      title: 'Blockchain-Based Voting System',
-      supervisor: 'Prof. Michael Brown',
-      description: 'Design and implement a secure voting system using blockchain technology to ensure transparency.',
-      status: 'Available'
-    },
-    {
-      id: 3,
-      title: 'IoT Smart Home Automation',
-      supervisor: 'Dr. Sarah Johnson',
-      description: 'Create an IoT-based system for automating home appliances with mobile app integration.',
-      status: 'Taken'
-    },
-    {
-      id: 4,
-      title: 'Natural Language Processing Chatbot',
-      supervisor: 'Dr. Robert Lee',
-      description: 'Build an intelligent chatbot using NLP techniques for customer service applications.',
-      status: 'Available'
-    },
-    {
-      id: 5,
-      title: 'Augmented Reality Education App',
-      supervisor: 'Prof. Lisa Wang',
-      description: 'Develop an AR application for interactive learning experiences in science education.',
-      status: 'Available'
-    },
-    {
-      id: 6,
-      title: 'Cybersecurity Threat Detection',
-      supervisor: 'Dr. James Wilson',
-      description: 'Implement an AI-based system for detecting and preventing cybersecurity threats in networks.',
-      status: 'Taken'
+  const [projects, setProjects] = useState<ApiProject[]>([]);
+  const [myAllocations, setMyAllocations] = useState<ApiAllocation[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [requestingId, setRequestingId] = useState<string | null>(null);
+  const [requestError, setRequestError] = useState('');
+
+  const loadData = async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const [projectsRes, allocationsRes] = await Promise.all([
+        api.get('/projects'),
+        api.get('/allocations'),
+      ]);
+      setProjects(projectsRes.projects);
+      setMyAllocations(allocationsRes.allocations);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load projects');
+    } finally {
+      setLoading(false);
     }
-  ];
+  };
+
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  const getAllocationForProject = (projectId: string) => {
+    return myAllocations.find((a) => {
+      const pId = typeof a.project === 'string' ? a.project : a.project._id;
+      return pId === projectId;
+    });
+  };
+
+  const handleRequest = async (projectId: string) => {
+    setRequestError('');
+    setRequestingId(projectId);
+    try {
+      await api.post('/allocations', { projectId });
+      await loadData();
+    } catch (err) {
+      setRequestError(err instanceof Error ? err.message : 'Failed to request project');
+    } finally {
+      setRequestingId(null);
+    }
+  };
 
   return (
     <div className="flex">
@@ -72,7 +97,6 @@ export default function BrowseProjects() {
         </div>
 
         <div className="p-8">
-          {/* Search Bar */}
           <div className="mb-6">
             <input
               type="text"
@@ -81,36 +105,93 @@ export default function BrowseProjects() {
             />
           </div>
 
-          {/* Projects Grid */}
-          <div className="grid grid-cols-2 gap-6">
-            {projects.map((project) => (
-              <div key={project.id} className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm">
-                <div className="flex justify-between items-start mb-3">
-                  <h3 className="text-lg pr-4">{project.title}</h3>
-                  <span className={`text-sm px-3 py-1 rounded ${
-                    project.status === 'Available' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'
-                  }`}>
-                    {project.status}
-                  </span>
-                </div>
-                <div className="text-sm text-gray-600 mb-3">
-                  <span>Supervisor: </span>
-                  <span>{project.supervisor}</span>
-                </div>
-                <p className="text-gray-700 mb-4">{project.description}</p>
-                <button
-                  className={`px-5 py-2 rounded-md ${
-                    project.status === 'Available'
-                      ? 'bg-[#2563a8] text-white hover:bg-[#1e4a8a]'
-                      : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                  }`}
-                  disabled={project.status === 'Taken'}
-                >
-                  {project.status === 'Available' ? 'Request' : 'Not Available'}
-                </button>
-              </div>
-            ))}
-          </div>
+          {loading && <p className="text-gray-500">Loading projects...</p>}
+          {error && (
+            <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-md px-4 py-3 mb-4">
+              {error}
+            </div>
+          )}
+          {requestError && (
+            <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-md px-4 py-3 mb-4">
+              {requestError}
+            </div>
+          )}
+
+          {!loading && (
+            <div className="grid grid-cols-2 gap-6">
+              {projects.length === 0 && (
+                <p className="text-gray-500 col-span-2">No open projects available right now.</p>
+              )}
+              {projects.map((project) => {
+                const allocation = getAllocationForProject(project._id);
+                const isRequesting = requestingId === project._id;
+
+                let buttonLabel = 'Request';
+                let buttonDisabled = false;
+
+                if (allocation) {
+                  buttonLabel =
+                    allocation.status === 'pending'
+                      ? 'Requested (pending)'
+                      : allocation.status === 'approved'
+                      ? 'Approved'
+                      : 'Rejected';
+                  buttonDisabled = true;
+                } else if (project.status !== 'open') {
+                  buttonLabel = 'Not Available';
+                  buttonDisabled = true;
+                } else if (isRequesting) {
+                  buttonLabel = 'Requesting...';
+                  buttonDisabled = true;
+                }
+
+                return (
+                  <div key={project._id} className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm">
+                    <div className="flex justify-between items-start mb-3">
+                      <h3 className="text-lg pr-4">{project.title}</h3>
+                      <span className={`text-sm px-3 py-1 rounded ${
+                        project.status === 'open' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'
+                      }`}>
+                        {project.status}
+                      </span>
+                    </div>
+                    <div className="text-sm text-gray-600 mb-3">
+                      <span>Supervisor: </span>
+                      <span>{project.supervisor?.name || 'Unassigned'}</span>
+                    </div>
+                    <p className="text-gray-700 mb-4">{project.description}</p>
+
+                    {project.files && project.files.length > 0 && (
+                      <div className="mb-4">
+                        <p className="text-sm text-gray-600 mb-1">Files:</p>
+                        <ul className="space-y-1">
+                          {project.files.map((f, idx) => (
+  <li key={idx}>
+    <a href={f.url} target="_blank" rel="noopener noreferrer" className="text-[#2563a8] hover:underline text-sm">
+      📎 {f.name}
+    </a>
+  </li>
+))}
+                        </ul>
+                      </div>
+                    )}
+
+                    <button
+                      onClick={() => handleRequest(project._id)}
+                      disabled={buttonDisabled}
+                      className={`px-5 py-2 rounded-md ${
+                        buttonDisabled
+                          ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                          : 'bg-[#2563a8] text-white hover:bg-[#1e4a8a]'
+                      }`}
+                    >
+                      {buttonLabel}
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       </div>
     </div>

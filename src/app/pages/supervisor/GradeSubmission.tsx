@@ -1,12 +1,66 @@
+import { useEffect, useState } from 'react';
+import { useParams, useNavigate, Link } from 'react-router';
 import Sidebar from '../../components/Sidebar';
-import { Link, useNavigate } from 'react-router';
+import { api } from '../../lib/api';
+
+interface Assessment {
+  _id: string;
+  title: string;
+  description: string;
+  submissionText: string;
+  submittedAt?: string;
+  status: string;
+  mark: number | null;
+  feedback: string;
+  student: { name: string; email: string };
+  project: { name: string };
+}
 
 export default function GradeSubmission() {
+  const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    navigate('/supervisor/assessments');
+  const [assessment, setAssessment] = useState<Assessment | null>(null);
+  const [mark, setMark] = useState('');
+  const [feedback, setFeedback] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+  const [toast, setToast] = useState('');
+
+  useEffect(() => {
+    // Load supervisor's assessments and find this one
+    api.get('/assessments/supervisor')
+      .then((d) => {
+        const found = d.assessments.find((a: Assessment) => a._id === id);
+        if (found) {
+          setAssessment(found);
+          if (found.mark !== null) setMark(String(found.mark));
+          if (found.feedback) setFeedback(found.feedback);
+        } else {
+          setError('Assessment not found');
+        }
+      })
+      .catch((e) => setError(e.message))
+      .finally(() => setLoading(false));
+  }, [id]);
+
+  const handleGrade = async () => {
+    const markNum = Number(mark);
+    if (isNaN(markNum) || markNum < 0 || markNum > 100) {
+      setError('Mark must be between 0 and 100');
+      return;
+    }
+    setSaving(true);
+    try {
+      await api.put(`/assessments/${id}/grade`, { mark: markNum, feedback });
+      setToast('Assessment graded successfully!');
+      setTimeout(() => navigate('/supervisor/assessments'), 1500);
+    } catch (e: any) {
+      setError(e.message);
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -17,244 +71,107 @@ export default function GradeSubmission() {
           <div className="flex justify-between items-center">
             <div>
               <h1 className="text-2xl">Grade Submission</h1>
-              <p className="text-gray-600">Review and provide feedback</p>
+              <p className="text-gray-600">Review and grade the student's submission</p>
             </div>
-            <div className="flex items-center gap-4">
-              <Link to="/supervisor/notifications" className="relative">
-                <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center text-gray-700 cursor-pointer hover:bg-gray-300">
-                  <span className="text-xl">🔔</span>
-                </div>
-                <div className="absolute top-0 right-0 w-3 h-3 bg-red-600 rounded-full"></div>
-              </Link>
-              <Link to="/supervisor/profile" className="w-12 h-12 bg-[#2563a8] rounded-full flex items-center justify-center text-white hover:bg-[#1e4a8a] cursor-pointer">
-                SJ
-              </Link>
-            </div>
+            <Link to="/supervisor/assessments" className="bg-gray-200 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-300 text-sm">
+              ← Back
+            </Link>
           </div>
         </div>
 
-        <div className="p-8">
-          <div className="max-w-5xl mx-auto">
-            {/* Submission Details */}
-            <div className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm mb-6">
-              <h2 className="text-xl mb-5">Submission Details</h2>
-              <div className="grid grid-cols-2 gap-6">
-                <div>
-                  <div className="mb-4">
-                    <div className="text-gray-600 mb-1">Student</div>
-                    <div className="text-lg">John Doe</div>
-                  </div>
-                  <div className="mb-4">
-                    <div className="text-gray-600 mb-1">Student ID</div>
-                    <div>STU2024001</div>
-                  </div>
-                  <div>
-                    <div className="text-gray-600 mb-1">Assessment</div>
-                    <div>Project Proposal</div>
-                  </div>
-                </div>
-                <div>
-                  <div className="mb-4">
-                    <div className="text-gray-600 mb-1">Submitted On</div>
-                    <div>May 1, 2026 at 2:30 PM</div>
-                  </div>
-                  <div className="mb-4">
-                    <div className="text-gray-600 mb-1">Deadline</div>
-                    <div>May 10, 2026</div>
-                  </div>
-                  <div>
-                    <div className="text-gray-600 mb-1">Status</div>
-                    <span className="text-green-600">On Time</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Submitted File */}
-            <div className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm mb-6">
-              <h2 className="text-xl mb-5">Submitted File</h2>
-              <div className="bg-gray-50 border border-gray-200 rounded-lg p-5 flex justify-between items-center">
-                <div>
-                  <div className="mb-1">Project_Proposal_JohnDoe.pdf</div>
-                  <div className="text-sm text-gray-600">2.4 MB</div>
-                </div>
-                <button className="bg-[#2563a8] text-white px-5 py-2 rounded-md hover:bg-[#1e4a8a]">
-                  Download
-                </button>
-              </div>
-            </div>
-
-            {/* Grading Form */}
-            <form onSubmit={handleSubmit}>
-              <div className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm mb-6">
-                <h2 className="text-xl mb-5">Grading</h2>
-
-                <div className="space-y-6">
-                  {/* Marks */}
-                  <div className="grid grid-cols-3 gap-4">
-                    <div>
-                      <label className="block text-gray-700 mb-2">Marks Obtained</label>
-                      <input
-                        type="number"
-                        className="w-full border border-gray-300 rounded-md px-4 py-3 focus:outline-none focus:border-[#2563a8]"
-                        placeholder="0"
-                        min={0}
-                        max={100}
-                        required
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-gray-700 mb-2">Total Marks</label>
-                      <input
-                        type="number"
-                        className="w-full border border-gray-300 rounded-md px-4 py-3 bg-gray-100"
-                        value={100}
-                        disabled
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-gray-700 mb-2">Percentage</label>
-                      <input
-                        type="text"
-                        className="w-full border border-gray-300 rounded-md px-4 py-3 bg-gray-100"
-                        value="-"
-                        disabled
-                      />
-                    </div>
-                  </div>
-
-                  {/* Grade */}
-                  <div>
-                    <label className="block text-gray-700 mb-2">Grade</label>
-                    <select className="w-full border border-gray-300 rounded-md px-4 py-3 focus:outline-none focus:border-[#2563a8]">
-                      <option value="">Select Grade</option>
-                      <option>A+ (90-100)</option>
-                      <option>A (85-89)</option>
-                      <option>A- (80-84)</option>
-                      <option>B+ (75-79)</option>
-                      <option>B (70-74)</option>
-                      <option>B- (65-69)</option>
-                      <option>C+ (60-64)</option>
-                      <option>C (55-59)</option>
-                      <option>D (50-54)</option>
-                      <option>F (0-49)</option>
-                    </select>
-                  </div>
-                </div>
-              </div>
-
-              {/* Feedback Section */}
-              <div className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm mb-6">
-                <h2 className="text-xl mb-5">Detailed Feedback</h2>
-
-                <div className="space-y-5">
-                  {/* Strengths */}
-                  <div>
-                    <label className="block text-gray-700 mb-2">Strengths</label>
-                    <textarea
-                      className="w-full border border-gray-300 rounded-md px-4 py-3 h-28 focus:outline-none focus:border-[#2563a8]"
-                      placeholder="What did the student do well?"
-                    ></textarea>
-                  </div>
-
-                  {/* Areas for Improvement */}
-                  <div>
-                    <label className="block text-gray-700 mb-2">Areas for Improvement</label>
-                    <textarea
-                      className="w-full border border-gray-300 rounded-md px-4 py-3 h-28 focus:outline-none focus:border-[#2563a8]"
-                      placeholder="What could be improved?"
-                    ></textarea>
-                  </div>
-
-                  {/* Overall Comments */}
-                  <div>
-                    <label className="block text-gray-700 mb-2">Overall Comments</label>
-                    <textarea
-                      className="w-full border border-gray-300 rounded-md px-4 py-3 h-32 focus:outline-none focus:border-[#2563a8]"
-                      placeholder="Provide comprehensive feedback on the submission"
-                      required
-                    ></textarea>
-                  </div>
-
-                  {/* Specific Criteria (Optional) */}
-                  <div className="pt-4 border-t border-gray-200">
-                    <h3 className="text-lg mb-4">Criteria-Based Assessment</h3>
-                    <div className="space-y-4">
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <label className="block text-gray-700 mb-2">Content Quality</label>
-                          <select className="w-full border border-gray-300 rounded-md px-4 py-3 focus:outline-none focus:border-[#2563a8]">
-                            <option>Excellent</option>
-                            <option>Good</option>
-                            <option>Satisfactory</option>
-                            <option>Needs Improvement</option>
-                            <option>Poor</option>
-                          </select>
-                        </div>
-                        <div>
-                          <label className="block text-gray-700 mb-2">Structure & Organization</label>
-                          <select className="w-full border border-gray-300 rounded-md px-4 py-3 focus:outline-none focus:border-[#2563a8]">
-                            <option>Excellent</option>
-                            <option>Good</option>
-                            <option>Satisfactory</option>
-                            <option>Needs Improvement</option>
-                            <option>Poor</option>
-                          </select>
-                        </div>
-                      </div>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <label className="block text-gray-700 mb-2">Research & References</label>
-                          <select className="w-full border border-gray-300 rounded-md px-4 py-3 focus:outline-none focus:border-[#2563a8]">
-                            <option>Excellent</option>
-                            <option>Good</option>
-                            <option>Satisfactory</option>
-                            <option>Needs Improvement</option>
-                            <option>Poor</option>
-                          </select>
-                        </div>
-                        <div>
-                          <label className="block text-gray-700 mb-2">Presentation & Formatting</label>
-                          <select className="w-full border border-gray-300 rounded-md px-4 py-3 focus:outline-none focus:border-[#2563a8]">
-                            <option>Excellent</option>
-                            <option>Good</option>
-                            <option>Satisfactory</option>
-                            <option>Needs Improvement</option>
-                            <option>Poor</option>
-                          </select>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Action Buttons */}
-              <div className="flex justify-between items-center">
-                <button
-                  type="button"
-                  onClick={() => navigate('/supervisor/assessments')}
-                  className="bg-gray-200 text-gray-700 px-6 py-3 rounded-md hover:bg-gray-300"
-                >
-                  Cancel
-                </button>
-                <div className="flex gap-3">
-                  <button
-                    type="button"
-                    className="bg-gray-200 text-gray-700 px-6 py-3 rounded-md hover:bg-gray-300"
-                  >
-                    Save as Draft
-                  </button>
-                  <button
-                    type="submit"
-                    className="bg-[#2563a8] text-white px-6 py-3 rounded-md hover:bg-[#1e4a8a]"
-                  >
-                    Submit Grade & Feedback
-                  </button>
-                </div>
-              </div>
-            </form>
+        {toast && (
+          <div className="fixed top-6 right-6 bg-green-600 text-white px-5 py-3 rounded-lg shadow-lg z-50">
+            {toast}
           </div>
+        )}
+
+        <div className="p-8 max-w-3xl">
+          {loading && <div className="text-center py-20 text-gray-500">Loading...</div>}
+          {error && <div className="bg-red-50 border border-red-200 text-red-700 p-4 rounded-lg mb-4">{error}</div>}
+
+          {assessment && (
+            <div className="space-y-6">
+              {/* Info card */}
+              <div className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm">
+                <h2 className="text-xl mb-4">{assessment.title}</h2>
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <span className="text-gray-500">Student:</span>
+                    <span className="ml-2 text-gray-800">{assessment.student?.name}</span>
+                  </div>
+                  <div>
+                    <span className="text-gray-500">Project:</span>
+                    <span className="ml-2 text-gray-800">{assessment.project?.name}</span>
+                  </div>
+                  {assessment.submittedAt && (
+                    <div>
+                      <span className="text-gray-500">Submitted:</span>
+                      <span className="ml-2 text-gray-800">{new Date(assessment.submittedAt).toLocaleDateString()}</span>
+                    </div>
+                  )}
+                  <div>
+                    <span className="text-gray-500">Status:</span>
+                    <span className={`ml-2 ${assessment.status === 'graded' ? 'text-green-600' : 'text-orange-600'}`}>
+                      {assessment.status}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Submission */}
+              <div className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm">
+                <h3 className="text-lg mb-3">Student Submission</h3>
+                {assessment.submissionText ? (
+                  <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 text-gray-700 whitespace-pre-wrap text-sm leading-relaxed">
+                    {assessment.submissionText}
+                  </div>
+                ) : (
+                  <p className="text-gray-400 italic">No submission text.</p>
+                )}
+              </div>
+
+              {/* Grading */}
+              <div className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm">
+                <h3 className="text-lg mb-5">
+                  {assessment.status === 'graded' ? 'Grade (already graded)' : 'Grade This Submission'}
+                </h3>
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-gray-700 mb-2">Mark <span className="text-gray-400">(0–100)</span></label>
+                    <input
+                      type="number"
+                      min={0}
+                      max={100}
+                      value={mark}
+                      onChange={(e) => setMark(e.target.value)}
+                      disabled={assessment.status === 'graded'}
+                      className="w-40 border border-gray-300 rounded-md px-4 py-2 focus:outline-none focus:border-[#2563a8] disabled:bg-gray-50"
+                      placeholder="e.g. 82"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-gray-700 mb-2">Feedback</label>
+                    <textarea
+                      value={feedback}
+                      onChange={(e) => setFeedback(e.target.value)}
+                      disabled={assessment.status === 'graded'}
+                      className="w-full border border-gray-300 rounded-md px-4 py-3 h-32 focus:outline-none focus:border-[#2563a8] disabled:bg-gray-50"
+                      placeholder="Write feedback for the student..."
+                    />
+                  </div>
+                  {assessment.status !== 'graded' && (
+                    <button
+                      onClick={handleGrade}
+                      disabled={saving || !mark}
+                      className="bg-[#2563a8] text-white px-6 py-3 rounded-md hover:bg-[#1e4a8a] disabled:opacity-50"
+                    >
+                      {saving ? 'Saving...' : 'Submit Grade'}
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>

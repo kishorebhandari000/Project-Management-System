@@ -75,4 +75,41 @@ const changePassword = asyncHandler(async (req, res) => {
   res.json({ message: 'Password updated successfully' });
 });
 
-module.exports = { createUser, getUsers, updateMe, changePassword };
+// @desc   Admin updates any user's name/email/role
+// @route  PUT /api/users/:id
+// @access Private/Admin
+const updateUser = asyncHandler(async (req, res) => {
+  const { name, email, role } = req.body;
+  const updates = {};
+  if (name) updates.name = name;
+  if (email) updates.email = email;
+  if (role) updates.role = role;
+
+  const user = await User.findByIdAndUpdate(req.params.id, updates, {
+    new: true,
+    runValidators: true,
+  });
+
+  if (!user) {
+    return res.status(404).json({ message: 'User not found' });
+  }
+
+  res.json({
+    user: { id: user._id, name: user.name, email: user.email, role: user.role },
+  });
+});
+
+// @desc   Admin deletes any user
+// @route  DELETE /api/users/:id
+// @access Private/Admin
+const deleteUser = asyncHandler(async (req, res) => {
+  const user = await User.findByIdAndDelete(req.params.id);
+
+  if (!user) {
+    return res.status(404).json({ message: 'User not found' });
+  }
+
+  res.json({ message: 'User deleted successfully' });
+});
+
+module.exports = { createUser, getUsers, updateMe, changePassword, updateUser, deleteUser };

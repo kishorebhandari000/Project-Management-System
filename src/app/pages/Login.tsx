@@ -21,6 +21,7 @@ export default function Login() {
       const { token, user } = data;
 
       localStorage.setItem('token', token);
+      localStorage.setItem('userId', user.id || user._id);
       localStorage.setItem('userRole', user.role);
       localStorage.setItem('userName', user.name);
       localStorage.setItem('userEmail', user.email);

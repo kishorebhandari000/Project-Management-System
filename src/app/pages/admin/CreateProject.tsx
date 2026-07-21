@@ -1,13 +1,44 @@
 import Sidebar from '../../components/Sidebar';
 import { useNavigate, Link } from 'react-router';
-import type { FormEvent } from 'react';
+import { useState, useEffect, type FormEvent } from 'react';
+import { api } from '../../lib/api';
+
+interface Supervisor {
+  _id: string;
+  name: string;
+}
 
 export default function CreateProject() {
   const navigate = useNavigate();
+  const [supervisors, setSupervisors] = useState<Supervisor[]>([]);
+  const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
+  const [category, setCategory] = useState('Machine Learning');
+  const [supervisorId, setSupervisorId] = useState('');
+  const [maxStudents, setMaxStudents] = useState(1);
+  const [error, setError] = useState('');
+  const [submitting, setSubmitting] = useState(false);
 
-  const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
+  useEffect(() => {
+    api.get('/users?role=supervisor').then((data) => {
+      setSupervisors(data.users);
+      if (data.users.length > 0) setSupervisorId(data.users[0]._id);
+    });
+  }, []);
+
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    navigate('/admin/projects');
+    setError('');
+    setSubmitting(true);
+
+    try {
+      await api.post('/projects', { title, description, category, supervisorId, maxStudents });
+      navigate('/admin/projects');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to create project');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -37,8 +68,13 @@ export default function CreateProject() {
         <div className="p-8">
           <div className="max-w-4xl mx-auto">
             <div className="bg-white rounded-lg p-8 border border-gray-200 shadow-sm">
+              {error && (
+                <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-md px-4 py-3 mb-4">
+                  {error}
+                </div>
+              )}
+
               <form onSubmit={handleSubmit} className="space-y-6">
-                {/* Basic Information */}
                 <div>
                   <h2 className="text-xl mb-4">Basic Information</h2>
                   <div className="space-y-4">
@@ -46,6 +82,8 @@ export default function CreateProject() {
                       <label className="block text-gray-700 mb-2">Project Title</label>
                       <input
                         type="text"
+                        value={title}
+                        onChange={(e) => setTitle(e.target.value)}
                         className="w-full border border-gray-300 rounded-md px-4 py-3 focus:outline-none focus:border-[#2563a8]"
                         placeholder="Enter project title"
                         required
@@ -55,6 +93,8 @@ export default function CreateProject() {
                     <div>
                       <label className="block text-gray-700 mb-2">Description</label>
                       <textarea
+                        value={description}
+                        onChange={(e) => setDescription(e.target.value)}
                         className="w-full border border-gray-300 rounded-md px-4 py-3 h-32 focus:outline-none focus:border-[#2563a8]"
                         placeholder="Enter detailed project description"
                         required
@@ -64,7 +104,11 @@ export default function CreateProject() {
                     <div className="grid grid-cols-2 gap-4">
                       <div>
                         <label className="block text-gray-700 mb-2">Category</label>
-                        <select className="w-full border border-gray-300 rounded-md px-4 py-3 focus:outline-none focus:border-[#2563a8]">
+                        <select
+                          value={category}
+                          onChange={(e) => setCategory(e.target.value)}
+                          className="w-full border border-gray-300 rounded-md px-4 py-3 focus:outline-none focus:border-[#2563a8]"
+                        >
                           <option>Machine Learning</option>
                           <option>Web Development</option>
                           <option>Mobile Development</option>
@@ -78,100 +122,43 @@ export default function CreateProject() {
 
                       <div>
                         <label className="block text-gray-700 mb-2">Supervisor</label>
-                        <select className="w-full border border-gray-300 rounded-md px-4 py-3 focus:outline-none focus:border-[#2563a8]">
-                          <option>Dr. Sarah Johnson</option>
-                          <option>Prof. Michael Brown</option>
-                          <option>Dr. Emily Chen</option>
-                          <option>Dr. Robert Lee</option>
-                          <option>Prof. Lisa Wang</option>
-                          <option>Dr. James Wilson</option>
+                        <select
+                          value={supervisorId}
+                          onChange={(e) => setSupervisorId(e.target.value)}
+                          className="w-full border border-gray-300 rounded-md px-4 py-3 focus:outline-none focus:border-[#2563a8]"
+                          required
+                        >
+                          {supervisors.length === 0 && <option value="">No supervisors yet</option>}
+                          {supervisors.map((s) => (
+                            <option key={s._id} value={s._id}>{s.name}</option>
+                          ))}
                         </select>
                       </div>
                     </div>
                   </div>
                 </div>
 
-                {/* Project Details */}
                 <div className="pt-4 border-t border-gray-200">
                   <h2 className="text-xl mb-4">Project Details</h2>
-                  <div className="space-y-4">
-                    <div className="grid grid-cols-3 gap-4">
-                      <div>
-                        <label className="block text-gray-700 mb-2">Group Size</label>
-                        <select className="w-full border border-gray-300 rounded-md px-4 py-3 focus:outline-none focus:border-[#2563a8]">
-                          <option value="1">Individual (1 student)</option>
-                          <option value="2">Pair (2 students)</option>
-                          <option value="3">Small Group (3 students)</option>
-                          <option value="4">Medium Group (4 students)</option>
-                          <option value="5">Large Group (5 students)</option>
-                        </select>
-                      </div>
-
-                      <div>
-                        <label className="block text-gray-700 mb-2">Difficulty Level</label>
-                        <select className="w-full border border-gray-300 rounded-md px-4 py-3 focus:outline-none focus:border-[#2563a8]">
-                          <option>Beginner</option>
-                          <option>Intermediate</option>
-                          <option>Advanced</option>
-                        </select>
-                      </div>
-
-                      <div>
-                        <label className="block text-gray-700 mb-2">Duration (weeks)</label>
-                        <input
-                          type="number"
-                          className="w-full border border-gray-300 rounded-md px-4 py-3 focus:outline-none focus:border-[#2563a8]"
-                          defaultValue={12}
-                          min={1}
-                        />
-                      </div>
-                    </div>
-
-                    <div>
-                      <label className="block text-gray-700 mb-2">Assign to Group (Optional)</label>
-                      <select className="w-full border border-gray-300 rounded-md px-4 py-3 focus:outline-none focus:border-[#2563a8]">
-                        <option value="">Not Assigned</option>
-                        <option value="group1">Group 1</option>
-                        <option value="group2">Group 2</option>
-                        <option value="group3">Group 3</option>
-                        <option value="group4">Group 4</option>
-                        <option value="group5">Group 5</option>
-                        <option value="group6">Group 6</option>
-                        <option value="group7">Group 7</option>
-                        <option value="group8">Group 8</option>
-                        <option value="group9">Group 9</option>
-                        <option value="group10">Group 10</option>
-                      </select>
-                      <p className="text-sm text-gray-500 mt-1">Leave as "Not Assigned" to make project available for any group to request</p>
-                    </div>
-
-                    <div>
-                      <label className="block text-gray-700 mb-2">Prerequisites</label>
-                      <textarea
-                        className="w-full border border-gray-300 rounded-md px-4 py-3 h-24 focus:outline-none focus:border-[#2563a8]"
-                        placeholder="List any required skills or knowledge (e.g., Python, React, Database Design)"
-                      ></textarea>
-                    </div>
-
-                    <div>
-                      <label className="block text-gray-700 mb-2">Learning Outcomes</label>
-                      <textarea
-                        className="w-full border border-gray-300 rounded-md px-4 py-3 h-24 focus:outline-none focus:border-[#2563a8]"
-                        placeholder="What will students learn from this project?"
-                      ></textarea>
-                    </div>
-
-                    <div>
-                      <label className="block text-gray-700 mb-2">Resources/References</label>
-                      <textarea
-                        className="w-full border border-gray-300 rounded-md px-4 py-3 h-20 focus:outline-none focus:border-[#2563a8]"
-                        placeholder="Links to papers, documentation, or other resources"
-                      ></textarea>
-                    </div>
+                  <div>
+                    <label className="block text-gray-700 mb-2">Group Size (max students)</label>
+                    <select
+                      value={maxStudents}
+                      onChange={(e) => setMaxStudents(Number(e.target.value))}
+                      className="w-full border border-gray-300 rounded-md px-4 py-3 focus:outline-none focus:border-[#2563a8]"
+                    >
+                      <option value="1">Individual (1 student)</option>
+                      <option value="2">Pair (2 students)</option>
+                      <option value="3">Small Group (3 students)</option>
+                      <option value="4">Medium Group (4 students)</option>
+                      <option value="5">Large Group (5 students)</option>
+                    </select>
                   </div>
+                  <p className="text-sm text-gray-500 mt-2">
+                    Difficulty, duration, prerequisites and other detail fields from the original design aren't saved to the backend yet - left out of this pass to keep it simple. Can be added to the Project model later.
+                  </p>
                 </div>
 
-                {/* Action Buttons */}
                 <div className="flex justify-end gap-3 pt-4">
                   <button
                     type="button"
@@ -182,9 +169,10 @@ export default function CreateProject() {
                   </button>
                   <button
                     type="submit"
-                    className="bg-[#2563a8] text-white px-6 py-3 rounded-md hover:bg-[#1e4a8a]"
+                    disabled={submitting}
+                    className="bg-[#2563a8] text-white px-6 py-3 rounded-md hover:bg-[#1e4a8a] disabled:opacity-60"
                   >
-                    Create Project
+                    {submitting ? 'Creating...' : 'Create Project'}
                   </button>
                 </div>
               </form>
