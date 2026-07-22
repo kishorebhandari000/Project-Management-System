@@ -87,6 +87,7 @@ const getThreads = asyncHandler(async (req, res) => {
 const getThread = asyncHandler(async (req, res) => {
   const { thread } = await loadThreadWithProjectAccess(req.params.id, req.user);
   await thread.populate('createdBy', 'name email');
+  await thread.populate('project', 'title supervisor');
 
   const posts = await DiscussionPost.find({ thread: thread._id })
     .populate('createdBy', 'name email')
