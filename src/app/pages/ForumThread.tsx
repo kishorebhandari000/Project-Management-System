@@ -15,7 +15,7 @@ interface ForumPost {
 interface ForumComment {
   _id: string;
   body: string;
-  author: { name: string; email: string };
+  author: { _id: string; name: string; email: string };
   createdAt: string;
 }
 
@@ -32,6 +32,8 @@ export default function ForumThread() {
 
   const isLoggedIn = !!localStorage.getItem('token');
   const userName = localStorage.getItem('userName') ?? '';
+  const userId = localStorage.getItem('userId');
+  const userRole = localStorage.getItem('userRole');
 
   const loadThread = async () => {
     setLoading(true);
@@ -69,6 +71,19 @@ export default function ForumThread() {
       setCommentError(err instanceof Error ? err.message : 'Failed to post reply');
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const canDeleteComment = (comment: ForumComment) =>
+    userRole === 'admin' || comment.author?._id === userId;
+
+  const handleDeleteComment = async (commentId: string) => {
+    if (!confirm('Delete this reply?')) return;
+    try {
+      await api.delete(`/forum/${id}/comments/${commentId}`);
+      setComments((prev) => prev.filter((c) => c._id !== commentId));
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Failed to delete reply');
     }
   };
 
@@ -128,11 +143,21 @@ export default function ForumThread() {
                             {initials(comment.author?.name ?? '?')}
                           </div>
                           <div className="flex-1">
-                            <div className="flex items-center gap-2 mb-1">
-                              <span className="text-gray-800">{comment.author?.name ?? 'Unknown'}</span>
-                              <span className="text-sm text-gray-500">
-                                {new Date(comment.createdAt).toLocaleDateString()}
-                              </span>
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-2 mb-1">
+                                <span className="text-gray-800">{comment.author?.name ?? 'Unknown'}</span>
+                                <span className="text-sm text-gray-500">
+                                  {new Date(comment.createdAt).toLocaleDateString()}
+                                </span>
+                              </div>
+                              {canDeleteComment(comment) && (
+                                <button
+                                  onClick={() => handleDeleteComment(comment._id)}
+                                  className="text-red-700 bg-red-100 hover:bg-red-200 px-3 py-1 rounded-md text-xs"
+                                >
+                                  Delete
+                                </button>
+                              )}
                             </div>
                             <p className="text-gray-700">{comment.body}</p>
                           </div>

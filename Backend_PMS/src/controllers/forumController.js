@@ -97,4 +97,23 @@ const deletePost = asyncHandler(async (req, res) => {
   res.json({ message: 'Forum post deleted' });
 });
 
-module.exports = { createPost, getPosts, getPost, getComments, createComment, deletePost };
+const deleteComment = asyncHandler(async (req, res) => {
+  if (!mongoose.Types.ObjectId.isValid(req.params.id) || !mongoose.Types.ObjectId.isValid(req.params.commentId)) {
+    return res.status(400).json({ message: 'Invalid id' });
+  }
+
+  const comment = await ForumComment.findOne({ _id: req.params.commentId, post: req.params.id });
+  if (!comment) {
+    return res.status(404).json({ message: 'Comment not found' });
+  }
+
+  const isAuthor = String(comment.author) === String(req.user._id);
+  if (req.user.role !== 'admin' && !isAuthor) {
+    return res.status(403).json({ message: 'Only the comment author or an admin can delete this comment' });
+  }
+
+  await comment.deleteOne();
+  res.json({ message: 'Comment deleted' });
+});
+
+module.exports = { createPost, getPosts, getPost, getComments, createComment, deletePost, deleteComment };
