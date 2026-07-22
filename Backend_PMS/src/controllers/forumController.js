@@ -1,3 +1,4 @@
+const mongoose = require('mongoose');
 const ForumPost = require('../models/ForumPost');
 const ForumComment = require('../models/ForumComment');
 const asyncHandler = require('../utils/asyncHandler');
@@ -26,6 +27,10 @@ const getPosts = asyncHandler(async (req, res) => {
 });
 
 const getPost = asyncHandler(async (req, res) => {
+  if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+    return res.status(400).json({ message: 'Invalid post id' });
+  }
+
   const post = await ForumPost.findById(req.params.id).populate('createdBy', 'name email');
 
   if (!post) {
@@ -36,6 +41,10 @@ const getPost = asyncHandler(async (req, res) => {
 });
 
 const getComments = asyncHandler(async (req, res) => {
+  if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+    return res.status(400).json({ message: 'Invalid post id' });
+  }
+
   const post = await ForumPost.findById(req.params.id);
   if (!post) {
     return res.status(404).json({ message: 'Forum post not found' });
@@ -54,6 +63,10 @@ const createComment = asyncHandler(async (req, res) => {
     return res.status(400).json({ message: 'body is required' });
   }
 
+  if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+    return res.status(400).json({ message: 'Invalid post id' });
+  }
+
   const post = await ForumPost.findById(req.params.id);
   if (!post) {
     return res.status(404).json({ message: 'Forum post not found' });
@@ -69,6 +82,10 @@ const createComment = asyncHandler(async (req, res) => {
 });
 
 const deletePost = asyncHandler(async (req, res) => {
+  if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+    return res.status(400).json({ message: 'Invalid post id' });
+  }
+
   const post = await ForumPost.findById(req.params.id);
   if (!post) {
     return res.status(404).json({ message: 'Forum post not found' });

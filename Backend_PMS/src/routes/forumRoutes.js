@@ -12,10 +12,9 @@ const roleGuard = require('../middleware/roleGuard');
 
 const router = express.Router();
 
-router.use(protect);
-
-router.route('/').post(roleGuard('admin'), createPost).get(getPosts);
-router.route('/:id').get(getPost).delete(roleGuard('admin'), deletePost);
-router.route('/:id/comments').get(getComments).post(createComment);
+// Forum is public-facing (visible on homepage) - only mutations require auth.
+router.route('/').get(getPosts).post(protect, roleGuard('admin'), createPost);
+router.route('/:id').get(getPost).delete(protect, roleGuard('admin'), deletePost);
+router.route('/:id/comments').get(getComments).post(protect, createComment);
 
 module.exports = router;
