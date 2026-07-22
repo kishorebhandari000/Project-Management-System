@@ -34,6 +34,7 @@ import AdminAssessments from "./pages/admin/Assessments";
 import Reports from "./pages/admin/Reports";
 import ManageForum from "./pages/admin/ManageForum";
 import NewForumPost from "./pages/admin/NewForumPost";
+import AdminDiscussions from "./pages/admin/Discussions";
 import AdminMessages from "./pages/admin/Messages";
 import Notifications from "./pages/admin/Notifications";
 import Profile from "./pages/admin/Profile";
@@ -190,6 +191,10 @@ export const router = createBrowserRouter([
   {
     path: "/admin/reports",
     Component: () => <ProtectedRoute role="admin"><Reports /></ProtectedRoute>,
+  },
+  {
+    path: "/admin/discussions",
+    Component: () => <ProtectedRoute role="admin"><AdminDiscussions /></ProtectedRoute>,
   },
   {
     path: "/admin/forum",

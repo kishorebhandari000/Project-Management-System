@@ -72,9 +72,16 @@ const getThreads = asyncHandler(async (req, res) => {
 
   const threads = await DiscussionThread.find({ project })
     .populate('createdBy', 'name email')
-    .sort({ createdAt: -1 });
+    .sort({ createdAt: -1 })
+    .lean();
 
-  res.json(threads);
+  const counts = await DiscussionPost.aggregate([
+    { $match: { thread: { $in: threads.map((t) => t._id) } } },
+    { $group: { _id: '$thread', count: { $sum: 1 } } },
+  ]);
+  const countByThread = new Map(counts.map((c) => [String(c._id), c.count]));
+
+  res.json(threads.map((t) => ({ ...t, repliesCount: countByThread.get(String(t._id)) || 0 })));
 });
 
 const getThread = asyncHandler(async (req, res) => {
