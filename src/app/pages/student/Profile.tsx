@@ -29,6 +29,7 @@ export default function StudentProfile() {
             </Link>
           </div>
         </div>
+0
 
         <div className="p-8 max-w-2xl">
           <div className="bg-white rounded-lg p-8 border border-gray-200 shadow-sm">
