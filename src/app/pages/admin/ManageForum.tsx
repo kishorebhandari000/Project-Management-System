@@ -1,54 +1,47 @@
 import Sidebar from '../../components/Sidebar';
-import { Link, useNavigate } from 'react-router';
-import { useState } from 'react';
+import { Link } from 'react-router';
+import { useEffect, useState } from 'react';
+import { api } from '../../lib/api';
+
+interface ForumPost {
+  _id: string;
+  title: string;
+  body: string;
+  createdBy: { name: string; email: string };
+  createdAt: string;
+}
 
 export default function ManageForum() {
-  const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState<'published' | 'drafts'>('published');
+  const [posts, setPosts] = useState<ForumPost[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
-  const forumPosts = [
-    {
-      id: 1,
-      // Renamed brand text from "PMS" to full name
-      title: 'Welcome to Project Management System - Getting Started Guide',
-      category: 'Announcement',
-      excerpt: 'New to the Project Management System? This guide will help you navigate the platform...',
-      status: 'Published',
-      postedDate: '2 days ago',
-      replies: 24,
-    },
-    {
-      id: 2,
-      title: 'Project Submission Deadline Extended',
-      category: 'Important',
-      excerpt: 'The final project submission deadline has been extended to accommodate student requests...',
-      status: 'Published',
-      postedDate: '5 days ago',
-      replies: 18,
-    },
-    {
-      id: 3,
-      title: 'Tips for Choosing the Right Project',
-      category: 'General',
-      excerpt: 'Learn how to select a project that aligns with your interests and career goals...',
-      status: 'Published',
-      postedDate: '1 week ago',
-      replies: 42,
-    },
-  ];
+  const loadPosts = async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const data = await api.get('/forum');
+      setPosts(data);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load posts');
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  const draftPosts = [
-    {
-      id: 4,
-      title: 'Upcoming Workshop: Research Methodology',
-      category: 'Event',
-      excerpt: 'Join us for an interactive workshop on research methodology and academic writing...',
-      status: 'Draft',
-      lastEdited: '1 day ago',
-    },
-  ];
+  useEffect(() => {
+    loadPosts();
+  }, []);
 
-  const displayPosts = activeTab === 'published' ? forumPosts : draftPosts;
+  const handleDelete = async (id: string) => {
+    if (!confirm('Delete this forum post? This will also delete its comments.')) return;
+    try {
+      await api.delete(`/forum/${id}`);
+      await loadPosts();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Failed to delete post');
+    }
+  };
 
   return (
     <div className="flex">
@@ -81,104 +74,61 @@ export default function ManageForum() {
         </div>
 
         <div className="p-8">
-          {/* Stats Overview */}
-          <div className="grid grid-cols-3 gap-6 mb-8">
-            <div className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm">
-              <div className="text-gray-600 mb-2">Published Posts</div>
-              <div className="text-3xl text-[#2563a8]">3</div>
-            </div>
-            <div className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm">
-              <div className="text-gray-600 mb-2">Draft Posts</div>
-              <div className="text-3xl text-gray-700">1</div>
-            </div>
-            <div className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm">
-              <div className="text-gray-600 mb-2">Total Replies</div>
-              <div className="text-3xl text-gray-700">84</div>
+          <div className="mb-8">
+            <div className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm inline-block">
+              <div className="text-gray-600 mb-2">Total Posts</div>
+              <div className="text-3xl text-[#2563a8]">{posts.length}</div>
             </div>
           </div>
 
-          {/* Filter Tabs */}
-          <div className="mb-6 flex gap-3">
-            <button
-              onClick={() => setActiveTab('published')}
-              className={`px-6 py-3 rounded-md ${
-                activeTab === 'published'
-                  ? 'bg-[#2563a8] text-white'
-                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-              }`}
-            >
-              Published
-            </button>
-            <button
-              onClick={() => setActiveTab('drafts')}
-              className={`px-6 py-3 rounded-md ${
-                activeTab === 'drafts'
-                  ? 'bg-[#2563a8] text-white'
-                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-              }`}
-            >
-              Drafts
-            </button>
-          </div>
+          {error && (
+            <div className="mb-6 bg-red-50 border border-red-200 text-red-700 rounded-md px-4 py-3">
+              {error}
+            </div>
+          )}
 
-          {/* Posts List */}
-          <div className="space-y-4">
-            {displayPosts.map((post) => (
-              <div
-                key={post.id}
-                className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm hover:shadow-md transition-shadow"
-              >
-                <div className="flex justify-between items-start mb-3">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-3 mb-2">
-                      <h3 className="text-lg">{post.title}</h3>
-                      <span className={`text-xs px-2 py-1 rounded ${
-                        post.category === 'Announcement'
-                          ? 'bg-blue-100 text-blue-700'
-                          : post.category === 'Important'
-                          ? 'bg-orange-100 text-orange-700'
-                          : post.category === 'Event'
-                          ? 'bg-purple-100 text-purple-700'
-                          : 'bg-gray-100 text-gray-700'
-                      }`}>
-                        {post.category}
-                      </span>
-                      <span className={`text-xs px-2 py-1 rounded ${
-                        post.status === 'Published'
-                          ? 'bg-green-100 text-green-700'
-                          : 'bg-gray-100 text-gray-700'
-                      }`}>
-                        {post.status}
-                      </span>
+          {loading ? (
+            <div className="text-gray-500">Loading posts...</div>
+          ) : posts.length === 0 ? (
+            <div className="bg-white rounded-lg p-8 border border-gray-200 text-center text-gray-500">
+              No forum posts yet. Create the first one.
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {posts.map((post) => (
+                <div
+                  key={post._id}
+                  className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm hover:shadow-md transition-shadow"
+                >
+                  <div className="flex justify-between items-start mb-3">
+                    <div className="flex-1">
+                      <h3 className="text-lg mb-2">{post.title}</h3>
+                      <p className="text-gray-600 mb-3 line-clamp-2">{post.body}</p>
+                      <div className="flex items-center gap-4 text-sm text-gray-500">
+                        <span>By {post.createdBy?.name ?? 'Unknown'}</span>
+                        <span>•</span>
+                        <span>{new Date(post.createdAt).toLocaleDateString()}</span>
+                      </div>
                     </div>
-                    <p className="text-gray-600 mb-3">{post.excerpt}</p>
-                    <div className="flex items-center gap-4 text-sm text-gray-500">
-                      {post.status === 'Published' ? (
-                        <>
-                          <span>Posted {post.postedDate}</span>
-                          <span>•</span>
-                          <span>{post.replies} replies</span>
-                        </>
-                      ) : (
-                        <span>Last edited {post.lastEdited}</span>
-                      )}
+                    <div className="flex gap-2 ml-4">
+                      <Link
+                        to={`/forum/${post._id}`}
+                        className="bg-gray-200 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-300"
+                      >
+                        View
+                      </Link>
+                      <button
+                        onClick={() => handleDelete(post._id)}
+                        className="bg-red-100 text-red-700 px-4 py-2 rounded-md hover:bg-red-200"
+                      >
+                        Delete
+                      </button>
                     </div>
-                  </div>
-                  <div className="flex gap-2 ml-4">
-                    <button
-                      onClick={() => navigate(`/admin/forum/edit/${post.id}`)}
-                      className="bg-gray-200 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-300"
-                    >
-                      Edit
-                    </button>
-                    <button className="bg-red-100 text-red-700 px-4 py-2 rounded-md hover:bg-red-200">
-                      Delete
-                    </button>
                   </div>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </div>

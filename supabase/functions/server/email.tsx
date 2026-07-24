@@ -7,7 +7,7 @@ interface EmailParams {
   from?: string;
 }
 
-export async function sendEmail({ to, subject, html, from = 'PMS <onboarding@resend.dev>' }: EmailParams) {
+export async function sendEmail({ to, subject, html, from = 'Project Management System <onboarding@resend.dev>' }: EmailParams) {
   const apiKey = Deno.env.get('RESEND_API_KEY');
 
   if (!apiKey) {
@@ -73,7 +73,7 @@ export function assessmentSubmittedTemplate(data: {
             <a href="${data.viewUrl}" class="button">View Submission</a>
           </div>
           <div class="footer">
-            <p>This is an automated message from the Project Management System (PMS)</p>
+            <p>This is an automated message from the Project Management System</p>
           </div>
         </div>
       </body>
@@ -121,7 +121,7 @@ export function assessmentGradedTemplate(data: {
             <a href="${data.viewUrl}" class="button">View Full Feedback</a>
           </div>
           <div class="footer">
-            <p>This is an automated message from the Project Management System (PMS)</p>
+            <p>This is an automated message from the Project Management System</p>
           </div>
         </div>
       </body>
@@ -169,7 +169,7 @@ export function submissionConfirmationTemplate(data: {
             <a href="${data.viewUrl}" class="button">View Submission</a>
           </div>
           <div class="footer">
-            <p>This is an automated confirmation from the Project Management System (PMS)</p>
+            <p>This is an automated confirmation from the Project Management System</p>
           </div>
         </div>
       </body>
@@ -216,7 +216,7 @@ export function directMessageTemplate(data: {
             <a href="${data.replyUrl}" class="button">Reply to Message</a>
           </div>
           <div class="footer">
-            <p>This is an automated message from the Project Management System (PMS)</p>
+            <p>This is an automated message from the Project Management System</p>
           </div>
         </div>
       </body>

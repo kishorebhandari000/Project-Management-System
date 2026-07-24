@@ -34,6 +34,7 @@ export default function Sidebar({ role }: SidebarProps) {
     { to: '/admin/assessments', label: 'Assessments' },
     { to: '/admin/reports', label: 'Reports' },
     { to: '/admin/forum', label: 'Public Forum' },
+    { to: '/admin/discussions', label: 'Discussions' },
     { to: '/admin/messages', label: 'Messages' },
   ];
 

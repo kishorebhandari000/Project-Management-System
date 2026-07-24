@@ -2,6 +2,7 @@ import Sidebar from '../../components/Sidebar';
 import { Link } from 'react-router';
 import { useState, useEffect } from 'react';
 import { api } from '../../lib/api';
+import NotificationBell from '../../components/NotificationBell';
 
 interface ApiNotification {
   _id: string;
@@ -75,14 +76,7 @@ export default function Notifications() {
               <p className="text-gray-600">You have {unreadCount} unread notifications</p>
             </div>
             <div className="flex items-center gap-4">
-              <Link to="/supervisor/notifications" className="relative">
-                <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center text-gray-700 cursor-pointer hover:bg-gray-300">
-                  <span className="text-xl">🔔</span>
-                </div>
-                {unreadCount > 0 && (
-                  <div className="absolute top-0 right-0 w-3 h-3 bg-red-600 rounded-full"></div>
-                )}
-              </Link>
+              <NotificationBell role="supervisor" />
               <Link to="/supervisor/profile" className="w-12 h-12 bg-[#2563a8] rounded-full flex items-center justify-center text-white hover:bg-[#1e4a8a] cursor-pointer">
                 SV
               </Link>

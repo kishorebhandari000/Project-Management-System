@@ -33,7 +33,7 @@ export default function ManageAllocation() {
     loadAllocations();
   }, []);
 
-  const handleDecision = async (id: string, decision: 'approved' | 'rejected') => {
+  const handleDecision = async (id: string, decision: 'approved' | 'rejected' | 'pending') => {
     try {
       await api.put(`/allocations/${id}/decision`, { decision });
       await loadAllocations();
@@ -134,7 +134,12 @@ export default function ManageAllocation() {
                             </>
                           )}
                           {allocation.status !== 'pending' && (
-                            <span className="text-gray-400 text-sm">No actions available</span>
+                            <button
+                              onClick={() => handleDecision(allocation._id, 'pending')}
+                              className="bg-gray-200 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-300"
+                            >
+                              Undo
+                            </button>
                           )}
                         </div>
                       </td>

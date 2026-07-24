@@ -1,18 +1,28 @@
 import Sidebar from '../../components/Sidebar';
 import { Link, useNavigate } from 'react-router';
 import { useState } from 'react';
+import { api } from '../../lib/api';
 
 export default function NewForumPost() {
   const navigate = useNavigate();
-  const [status, setStatus] = useState<'draft' | 'published'>('draft');
+  const [title, setTitle] = useState('');
+  const [body, setBody] = useState('');
+  const [error, setError] = useState('');
+  const [submitting, setSubmitting] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    navigate('/admin/forum');
-  };
+    setError('');
+    setSubmitting(true);
 
-  const handleSaveDraft = () => {
-    navigate('/admin/forum');
+    try {
+      await api.post('/forum', { title, body });
+      navigate('/admin/forum');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to create post');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -48,11 +58,19 @@ export default function NewForumPost() {
         <div className="p-8">
           <div className="max-w-4xl mx-auto">
             <div className="bg-white rounded-lg p-8 border border-gray-200 shadow-sm">
+              {error && (
+                <div className="mb-6 bg-red-50 border border-red-200 text-red-700 rounded-md px-4 py-3">
+                  {error}
+                </div>
+              )}
+
               <form onSubmit={handleSubmit} className="space-y-6">
                 <div>
                   <label className="block text-gray-700 mb-2">Post Title</label>
                   <input
                     type="text"
+                    value={title}
+                    onChange={(e) => setTitle(e.target.value)}
                     className="w-full border border-gray-300 rounded-md px-4 py-3 focus:outline-none focus:border-[#2563a8]"
                     placeholder="Enter a clear and engaging title"
                     required
@@ -60,62 +78,14 @@ export default function NewForumPost() {
                 </div>
 
                 <div>
-                  <label className="block text-gray-700 mb-2">Category</label>
-                  <select className="w-full border border-gray-300 rounded-md px-4 py-3 focus:outline-none focus:border-[#2563a8]">
-                    <option>Announcement</option>
-                    <option>Important</option>
-                    <option>General</option>
-                    <option>Event</option>
-                    <option>Guidelines</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-gray-700 mb-2">Excerpt</label>
-                  <input
-                    type="text"
-                    className="w-full border border-gray-300 rounded-md px-4 py-3 focus:outline-none focus:border-[#2563a8]"
-                    placeholder="Short summary (displayed on homepage)"
-                    required
-                  />
-                  <p className="text-sm text-gray-500 mt-1">This will be shown in the preview on the homepage</p>
-                </div>
-
-                <div>
-                  <label className="block text-gray-700 mb-2">Full Content</label>
+                  <label className="block text-gray-700 mb-2">Content</label>
                   <textarea
+                    value={body}
+                    onChange={(e) => setBody(e.target.value)}
                     className="w-full border border-gray-300 rounded-md px-4 py-3 h-64 focus:outline-none focus:border-[#2563a8]"
                     placeholder="Write your announcement or discussion topic here..."
                     required
                   ></textarea>
-                </div>
-
-                <div>
-                  <label className="block text-gray-700 mb-2">Visibility Status</label>
-                  <div className="flex gap-4">
-                    <label className="flex items-center gap-2 cursor-pointer">
-                      <input
-                        type="radio"
-                        name="status"
-                        value="draft"
-                        checked={status === 'draft'}
-                        onChange={(e) => setStatus(e.target.value as 'draft')}
-                        className="w-4 h-4"
-                      />
-                      <span className="text-gray-700">Save as Draft</span>
-                    </label>
-                    <label className="flex items-center gap-2 cursor-pointer">
-                      <input
-                        type="radio"
-                        name="status"
-                        value="published"
-                        checked={status === 'published'}
-                        onChange={(e) => setStatus(e.target.value as 'published')}
-                        className="w-4 h-4"
-                      />
-                      <span className="text-gray-700">Publish Immediately</span>
-                    </label>
-                  </div>
                 </div>
 
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
@@ -123,8 +93,6 @@ export default function NewForumPost() {
                   <ul className="text-sm text-blue-700 space-y-1 list-disc list-inside">
                     <li>Posts will be visible to all visitors on the homepage</li>
                     <li>Use clear and professional language</li>
-                    <li>Choose appropriate categories for better organization</li>
-                    <li>Draft posts are only visible to administrators</li>
                   </ul>
                 </div>
 
@@ -136,20 +104,12 @@ export default function NewForumPost() {
                   >
                     Cancel
                   </button>
-                  {status === 'draft' && (
-                    <button
-                      type="button"
-                      onClick={handleSaveDraft}
-                      className="bg-gray-700 text-white px-6 py-3 rounded-md hover:bg-gray-800"
-                    >
-                      Save Draft
-                    </button>
-                  )}
                   <button
                     type="submit"
-                    className="bg-[#2563a8] text-white px-6 py-3 rounded-md hover:bg-[#1e4a8a]"
+                    disabled={submitting}
+                    className="bg-[#2563a8] text-white px-6 py-3 rounded-md hover:bg-[#1e4a8a] disabled:opacity-50"
                   >
-                    {status === 'published' ? 'Publish Post' : 'Save'}
+                    {submitting ? 'Publishing...' : 'Publish Post'}
                   </button>
                 </div>
               </form>
