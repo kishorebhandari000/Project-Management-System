@@ -1,25 +1,34 @@
 const Task = require('../models/Task');
 const Project = require('../models/Project');
+const Allocation = require('../models/Allocation');
 const asyncHandler = require('../utils/asyncHandler');
 const sendNotification = require('../utils/notify');
    const User = require('../models/User');
 
-async function assertProjectAccess(projectId, userId) {
+async function assertProjectAccess(projectId, user) {
   const project = await Project.findById(projectId);
   if (!project) {
     const err = new Error('Project not found');
     err.statusCode = 404;
     throw err;
   }
-  const isMember =
-    String(project.owner) === String(userId) ||
-    project.members.some((m) => String(m) === String(userId));
-  if (!isMember) {
-    const err = new Error('Not authorized for this project');
-    err.statusCode = 403;
-    throw err;
+
+  if (user.role === 'admin') return project;
+
+  if (String(project.supervisor) === String(user._id)) return project;
+
+  if (user.role === 'student') {
+    const allocation = await Allocation.findOne({
+      project: project._id,
+      student: user._id,
+      status: 'approved',
+    });
+    if (allocation) return project;
   }
-  return project;
+
+  const err = new Error('Not authorized for this project');
+  err.statusCode = 403;
+  throw err;
 }
 
 const createTask = asyncHandler(async (req, res) => {
@@ -28,7 +37,7 @@ const createTask = asyncHandler(async (req, res) => {
     return res.status(400).json({ message: 'title and project are required' });
   }
 
-  await assertProjectAccess(project, req.user._id);
+  await assertProjectAccess(project, req.user);
 
   const task = await Task.create({
     title,
@@ -50,7 +59,7 @@ const getTasks = asyncHandler(async (req, res) => {
     return res.status(400).json({ message: 'project query param is required' });
   }
 
-  await assertProjectAccess(project, req.user._id);
+  await assertProjectAccess(project, req.user);
 
   const tasks = await Task.find({ project })
     .populate('assignee', 'name email')
@@ -69,7 +78,7 @@ const getTask = asyncHandler(async (req, res) => {
     return res.status(404).json({ message: 'Task not found' });
   }
 
-  await assertProjectAccess(task.project, req.user._id);
+  await assertProjectAccess(task.project, req.user);
   res.json(task);
 });
 
@@ -79,7 +88,7 @@ const updateTask = asyncHandler(async (req, res) => {
     return res.status(404).json({ message: 'Task not found' });
   }
 
-  await assertProjectAccess(task.project, req.user._id);
+  await assertProjectAccess(task.project, req.user);
 
   const previousAssignee = task.assignee ? String(task.assignee) : null;
 
@@ -114,7 +123,7 @@ const deleteTask = asyncHandler(async (req, res) => {
     return res.status(404).json({ message: 'Task not found' });
   }
 
-  await assertProjectAccess(task.project, req.user._id);
+  await assertProjectAccess(task.project, req.user);
 
   await task.deleteOne();
   res.json({ message: 'Task deleted' });
