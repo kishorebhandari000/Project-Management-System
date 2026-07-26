@@ -23,6 +23,7 @@ app.use('/api/forum', require('./routes/forumRoutes'));
 app.use('/api/allocations', require('./routes/allocationRoutes'));
 app.use('/api/notifications', require('./routes/notificationRoutes'));
 app.use('/api/assessments', require('./routes/assessmentRoutes'));
+app.use('/api/discussions', require('./routes/discussionRoutes'));
 app.use(notFound);
 app.use(errorHandler);
 
