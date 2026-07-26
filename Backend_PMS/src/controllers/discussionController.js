@@ -4,6 +4,7 @@ const Project = require('../models/Project');
 const Allocation = require('../models/Allocation');
 const asyncHandler = require('../utils/asyncHandler');
 
+// Admin, the project's supervisor, or a student with an approved Allocation on it.
 async function assertProjectAccess(projectId, user) {
   const project = await Project.findById(projectId);
   if (!project) {
@@ -70,14 +71,22 @@ const getThreads = asyncHandler(async (req, res) => {
 
   const threads = await DiscussionThread.find({ project })
     .populate('createdBy', 'name email')
-    .sort({ createdAt: -1 });
+    .sort({ createdAt: -1 })
+    .lean();
 
-  res.json(threads);
+  const counts = await DiscussionPost.aggregate([
+    { $match: { thread: { $in: threads.map((t) => t._id) } } },
+    { $group: { _id: '$thread', count: { $sum: 1 } } },
+  ]);
+  const countByThread = new Map(counts.map((c) => [String(c._id), c.count]));
+
+  res.json(threads.map((t) => ({ ...t, repliesCount: countByThread.get(String(t._id)) || 0 })));
 });
 
 const getThread = asyncHandler(async (req, res) => {
   const { thread } = await loadThreadWithProjectAccess(req.params.id, req.user);
   await thread.populate('createdBy', 'name email');
+  await thread.populate('project', 'title supervisor');
 
   const posts = await DiscussionPost.find({ thread: thread._id })
     .populate('createdBy', 'name email')
@@ -89,7 +98,8 @@ const getThread = asyncHandler(async (req, res) => {
 const updateThread = asyncHandler(async (req, res) => {
   const { thread } = await loadThreadWithProjectAccess(req.params.id, req.user);
 
-  if (String(thread.createdBy) !== String(req.user._id)) {
+  const isAuthor = String(thread.createdBy) === String(req.user._id);
+  if (req.user.role !== 'admin' && !isAuthor) {
     return res.status(403).json({ message: 'Only the author can update this thread' });
   }
 
@@ -106,9 +116,9 @@ const deleteThread = asyncHandler(async (req, res) => {
   const { thread, project } = await loadThreadWithProjectAccess(req.params.id, req.user);
 
   const isAuthor = String(thread.createdBy) === String(req.user._id);
-  const isProjectOwner = String(project.supervisor) === String(req.user._id);
-  if (!isAuthor && !isProjectOwner) {
-    return res.status(403).json({ message: 'Only the author or project owner can delete this thread' });
+  const isSupervisor = String(project.supervisor) === String(req.user._id);
+  if (req.user.role !== 'admin' && !isAuthor && !isSupervisor) {
+    return res.status(403).json({ message: 'Only the author, the project supervisor, or an admin can delete this thread' });
   }
 
   await DiscussionPost.deleteMany({ thread: thread._id });
@@ -151,7 +161,8 @@ const updatePost = asyncHandler(async (req, res) => {
     return res.status(404).json({ message: 'Post not found' });
   }
 
-  if (String(post.createdBy) !== String(req.user._id)) {
+  const isAuthor = String(post.createdBy) === String(req.user._id);
+  if (req.user.role !== 'admin' && !isAuthor) {
     return res.status(403).json({ message: 'Only the author can update this post' });
   }
 
@@ -171,9 +182,9 @@ const deletePost = asyncHandler(async (req, res) => {
   }
 
   const isAuthor = String(post.createdBy) === String(req.user._id);
-  const isProjectOwner = String(project.supervisor) === String(req.user._id);
-  if (!isAuthor && !isProjectOwner) {
-    return res.status(403).json({ message: 'Only the author or project owner can delete this post' });
+  const isSupervisor = String(project.supervisor) === String(req.user._id);
+  if (req.user.role !== 'admin' && !isAuthor && !isSupervisor) {
+    return res.status(403).json({ message: 'Only the author, the project supervisor, or an admin can delete this post' });
   }
 
   await post.deleteOne();

@@ -25,7 +25,7 @@ interface Post {
   createdAt: string;
 }
 
-export default function DiscussionThread() {
+export default function AdminDiscussionThread() {
   const { id } = useParams();
   const navigate = useNavigate();
 
@@ -85,7 +85,7 @@ export default function DiscussionThread() {
     if (!confirm('Delete this discussion? This will also delete all its replies.')) return;
     try {
       await api.delete(`/discussions/${id}`);
-      navigate('/student/discussions');
+      navigate('/admin/discussions');
     } catch (err) {
       alert(err instanceof Error ? err.message : 'Failed to delete discussion');
     }
@@ -105,13 +105,13 @@ export default function DiscussionThread() {
 
   return (
     <div className="flex">
-      <Sidebar role="student" />
+      <Sidebar role="admin" />
       <div className="flex-1 bg-[#f4f6f8]">
         <div className="bg-white border-b border-gray-200 px-8 py-5">
           <div className="flex justify-between items-center">
             <div>
               <button
-                onClick={() => navigate('/student/discussions')}
+                onClick={() => navigate('/admin/discussions')}
                 className="text-[#2563a8] hover:underline mb-2 text-sm"
               >
                 ← Back to Discussions
@@ -120,13 +120,13 @@ export default function DiscussionThread() {
               <p className="text-gray-600">{thread ? thread.project.title : 'Discussion Thread'}</p>
             </div>
             <div className="flex items-center gap-4">
-              <Link to="/student/notifications" className="relative">
+              <Link to="/admin/notifications" className="relative">
                 <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center text-gray-700 cursor-pointer hover:bg-gray-300">
                   <span className="text-xl">🔔</span>
                 </div>
                 <div className="absolute top-0 right-0 w-3 h-3 bg-red-600 rounded-full"></div>
               </Link>
-              <Link to="/student/profile" className="w-12 h-12 bg-[#2563a8] rounded-full flex items-center justify-center text-white hover:bg-[#1e4a8a] cursor-pointer">
+              <Link to="/admin/profile" className="w-12 h-12 bg-[#2563a8] rounded-full flex items-center justify-center text-white hover:bg-[#1e4a8a] cursor-pointer">
                 {(localStorage.getItem('userName') ?? '?').split(' ').map((n) => n[0]).join('').toUpperCase()}
               </Link>
             </div>
@@ -229,7 +229,7 @@ export default function DiscussionThread() {
                     <div className="flex justify-end gap-3">
                       <button
                         type="button"
-                        onClick={() => navigate('/student/discussions')}
+                        onClick={() => navigate('/admin/discussions')}
                         className="bg-gray-200 text-gray-700 px-6 py-3 rounded-md hover:bg-gray-300"
                       >
                         Cancel

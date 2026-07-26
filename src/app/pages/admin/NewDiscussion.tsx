@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { api } from '../../lib/api';
 import { useMyProjects } from '../../hooks/useMyProjects';
 
-export default function SupervisorNewDiscussion() {
+export default function AdminNewDiscussion() {
   const navigate = useNavigate();
   const { projects, loading: projectsLoading, error: projectsError } = useMyProjects();
 
@@ -24,7 +24,7 @@ export default function SupervisorNewDiscussion() {
     setSubmitting(true);
     try {
       const thread = await api.post('/discussions', { title, content, project: projectId });
-      navigate(`/supervisor/discussions/${thread._id}`);
+      navigate(`/admin/discussions/${thread._id}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create discussion');
     } finally {
@@ -34,21 +34,21 @@ export default function SupervisorNewDiscussion() {
 
   return (
     <div className="flex">
-      <Sidebar role="supervisor" />
+      <Sidebar role="admin" />
       <div className="flex-1 bg-[#f4f6f8]">
         <div className="bg-white border-b border-gray-200 px-8 py-5">
           <div className="flex justify-between items-center">
             <div>
               <button
-                onClick={() => navigate('/supervisor/discussions')}
+                onClick={() => navigate('/admin/discussions')}
                 className="text-[#2563a8] hover:underline mb-2 text-sm"
               >
                 ← Back to Discussions
               </button>
               <h1 className="text-2xl">New Discussion</h1>
-              <p className="text-gray-600">Start a new discussion thread on one of your projects</p>
+              <p className="text-gray-600">Start a new discussion thread on any project</p>
             </div>
-            <Link to="/supervisor/profile" className="w-12 h-12 bg-[#2563a8] rounded-full flex items-center justify-center text-white hover:bg-[#1e4a8a]">
+            <Link to="/admin/profile" className="w-12 h-12 bg-[#2563a8] rounded-full flex items-center justify-center text-white hover:bg-[#1e4a8a]">
               {(localStorage.getItem('userName') ?? '?').split(' ').map((n) => n[0]).join('').toUpperCase()}
             </Link>
           </div>
@@ -57,7 +57,7 @@ export default function SupervisorNewDiscussion() {
         <div className="p-8 max-w-2xl">
           {projectsLoading ? (
             <div className="bg-white rounded-lg p-12 border border-gray-200 text-center text-gray-500">
-              Loading your projects...
+              Loading projects...
             </div>
           ) : projectsError ? (
             <div className="bg-white rounded-lg p-12 border border-gray-200 text-center text-red-700">
@@ -65,8 +65,8 @@ export default function SupervisorNewDiscussion() {
             </div>
           ) : projects.length === 0 ? (
             <div className="bg-white rounded-lg p-12 border border-gray-200 shadow-sm text-center">
-              <h3 className="text-xl text-gray-600 mb-3">No supervised projects yet</h3>
-              <p className="text-gray-500">You can start a discussion once you supervise a project.</p>
+              <h3 className="text-xl text-gray-600 mb-3">No projects exist yet</h3>
+              <p className="text-gray-500">Create a project first before starting a discussion.</p>
             </div>
           ) : (
             <div className="bg-white rounded-lg p-8 border border-gray-200 shadow-sm">
@@ -120,7 +120,7 @@ export default function SupervisorNewDiscussion() {
                   >
                     {submitting ? 'Posting...' : 'Post Discussion'}
                   </button>
-                  <Link to="/supervisor/discussions" className="bg-gray-200 text-gray-700 px-6 py-3 rounded-md hover:bg-gray-300">
+                  <Link to="/admin/discussions" className="bg-gray-200 text-gray-700 px-6 py-3 rounded-md hover:bg-gray-300">
                     Cancel
                   </Link>
                 </div>

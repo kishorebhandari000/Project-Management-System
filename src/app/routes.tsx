@@ -34,6 +34,9 @@ import AdminAssessments from "./pages/admin/Assessments";
 import Reports from "./pages/admin/Reports";
 import ManageForum from "./pages/admin/ManageForum";
 import NewForumPost from "./pages/admin/NewForumPost";
+import AdminDiscussions from "./pages/admin/Discussions";
+import AdminNewDiscussion from "./pages/admin/NewDiscussion";
+import AdminDiscussionThread from "./pages/admin/DiscussionThread";
 import AdminMessages from "./pages/admin/Messages";
 import Notifications from "./pages/admin/Notifications";
 import Profile from "./pages/admin/Profile";
@@ -190,6 +193,18 @@ export const router = createBrowserRouter([
   {
     path: "/admin/reports",
     Component: () => <ProtectedRoute role="admin"><Reports /></ProtectedRoute>,
+  },
+  {
+    path: "/admin/discussions",
+    Component: () => <ProtectedRoute role="admin"><AdminDiscussions /></ProtectedRoute>,
+  },
+  {
+    path: "/admin/discussions/new",
+    Component: () => <ProtectedRoute role="admin"><AdminNewDiscussion /></ProtectedRoute>,
+  },
+  {
+    path: "/admin/discussions/:id",
+    Component: () => <ProtectedRoute role="admin"><AdminDiscussionThread /></ProtectedRoute>,
   },
   {
     path: "/admin/forum",
