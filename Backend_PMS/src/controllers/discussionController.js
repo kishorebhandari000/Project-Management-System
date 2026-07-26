@@ -13,23 +13,22 @@ async function assertProjectAccess(projectId, user) {
     throw err;
   }
 
-  if (user.role === 'admin' || String(project.supervisor) === String(user._id)) {
-    return project;
+  if (user.role === 'admin') return project;
+
+  if (String(project.supervisor) === String(user._id)) return project;
+
+  if (user.role === 'student') {
+    const allocation = await Allocation.findOne({
+      project: project._id,
+      student: user._id,
+      status: 'approved',
+    });
+    if (allocation) return project;
   }
 
-  const approved = await Allocation.findOne({
-    project: projectId,
-    student: user._id,
-    status: 'approved',
-  });
-
-  if (!approved) {
-    const err = new Error('Not authorized for this project');
-    err.statusCode = 403;
-    throw err;
-  }
-
-  return project;
+  const err = new Error('Not authorized for this project');
+  err.statusCode = 403;
+  throw err;
 }
 
 async function loadThreadWithProjectAccess(threadId, user) {
