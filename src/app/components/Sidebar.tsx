@@ -42,8 +42,8 @@ export default function Sidebar({ role }: SidebarProps) {
 
   return (
     <div className="w-64 bg-[#1e3a5f] min-h-screen text-white p-5">
-      <Link to="/" className="mb-8 mt-2 block cursor-pointer hover:opacity-80 transition-opacity">
-        <Logo size="small" color="white" />
+    <Link to="/" className="mb-8 mt-2 block cursor-pointer hover:opacity-80 transition-opacity">
+        <Logo size="large" color="white" />
       </Link>
       <nav className="space-y-2">
         {links.map((link) => (
@@ -61,9 +61,11 @@ export default function Sidebar({ role }: SidebarProps) {
         ))}
       </nav>
       <div className="mt-10 pt-6 border-t border-gray-600">
-        <Link
+       <Link
           to="/login"
           onClick={() => {
+            localStorage.removeItem('token');
+            localStorage.removeItem('userId');
             localStorage.removeItem('userRole');
             localStorage.removeItem('userName');
             localStorage.removeItem('userEmail');

@@ -1,5 +1,6 @@
 import { Link, useNavigate } from 'react-router';
 import { useState } from 'react';
+import { Eye, EyeOff, Home } from 'lucide-react';
 import Logo from '../components/Logo';
 import { api } from '../lib/api';
 
@@ -7,6 +8,7 @@ export default function Login() {
   const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -38,7 +40,15 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen bg-[#2563a8] flex items-center justify-center px-6">
+    <div className="min-h-screen bg-[#2563a8] flex items-center justify-center px-6 relative">
+      <Link
+        to="/"
+        className="absolute top-6 left-6 flex items-center gap-2 text-white hover:text-gray-200"
+      >
+        <Home size={20} />
+        <span>Home</span>
+      </Link>
+
       <div className="bg-white rounded-lg shadow-lg p-10 w-full max-w-md">
         <div className="text-center mb-8">
           <div className="flex justify-center mb-3">
@@ -68,14 +78,25 @@ export default function Login() {
 
           <div>
             <label className="block text-gray-700 mb-2">Password</label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full border border-gray-300 rounded-md px-4 py-3 focus:outline-none focus:border-[#2563a8]"
-              placeholder="Enter your password"
-              required
-            />
+            <div className="relative">
+              <input
+                type={showPassword ? 'text' : 'password'}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full border border-gray-300 rounded-md px-4 py-3 pr-11 focus:outline-none focus:border-[#2563a8]"
+                placeholder="Enter your password"
+                required
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword((prev) => !prev)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                tabIndex={-1}
+                aria-label={showPassword ? 'Hide password' : 'Show password'}
+              >
+                {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+              </button>
+            </div>
           </div>
 
           <button
