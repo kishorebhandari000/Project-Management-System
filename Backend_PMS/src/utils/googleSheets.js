@@ -13,7 +13,7 @@ const sheets = google.sheets({ version: 'v4', auth });
 async function appendContactSubmission({ name, email, message }) {
   await sheets.spreadsheets.values.append({
     spreadsheetId: process.env.GOOGLE_SHEET_ID,
-    range: 'Sheet1!A:D', // adjust 'Sheet1' if you renamed the tab
+    range: 'CONTACTFORM!A:D', // adjust 'Sheet1' if you renamed the tab
     valueInputOption: 'USER_ENTERED',
     requestBody: {
       values: [[name, email, message, new Date().toLocaleString()]],
