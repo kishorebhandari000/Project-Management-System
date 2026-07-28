@@ -4,6 +4,7 @@ import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import GetStartedButton from '../components/GetStartedButton';
 import { api } from '../lib/api';
+import aboutImage from '../../assets/image.jpeg';
 
 interface ForumPost {
   _id: string;
@@ -121,27 +122,63 @@ export default function Homepage() {
       </section>
 
       {/* About Section */}
-      <section id="about" className="py-20 px-6 bg-[#f4f6f8] scroll-mt-[88px]">
-        <div className="max-w-6xl mx-auto">
-          <div className="grid grid-cols-2 gap-12 items-center">
-            <div>
-              <h2 className="text-3xl mb-6">About Project Management System</h2>
-              <p className="text-gray-700 mb-4">
-                The Project Management System is designed to simplify the management of final year projects
-                at universities. It provides a centralized platform for students to select projects, submit assessments,
-                and receive feedback.
-              </p>
-              <p className="text-gray-700">
-                Supervisors can manage their projects and students efficiently, while administrators have full oversight
-                of all project activities and user management.
-              </p>
-            </div>
-            <div className="bg-gray-300 h-80 rounded-lg flex items-center justify-center">
-              <span className="text-gray-500">Image Placeholder</span>
-            </div>
-          </div>
-        </div>
-      </section>
+<section id="about" className="py-20 px-6 bg-[#f4f6f8] scroll-mt-[88px]">
+  <div className="max-w-6xl mx-auto">
+    <div className="grid grid-cols-2 gap-12 items-center">
+      <div>
+        <h2 className="text-3xl mb-6">About Project Management System</h2>
+        <p className="text-gray-700 mb-4">
+          The Project Management System is designed to simplify the management of final year projects
+          at universities. It provides a centralized platform for students to select projects, submit assessments,
+          and receive feedback — replacing scattered emails, spreadsheets, and paper forms with one connected system.
+        </p>
+        <p className="text-gray-700 mb-6">
+          Supervisors can manage their projects and students efficiently, while administrators have full oversight
+          of all project activities and user management across the department.
+        </p>
+
+        <ul className="space-y-3 mb-6">
+          <li className="flex items-start gap-3">
+            <span className="text-[#2563a8] mt-1">✓</span>
+            <span className="text-gray-700">
+              <strong>Centralized project repository</strong> — supervisors publish projects, students browse and request the ones that interest them
+            </span>
+          </li>
+          <li className="flex items-start gap-3">
+            <span className="text-[#2563a8] mt-1">✓</span>
+            <span className="text-gray-700">
+              <strong>Role-based dashboards</strong> — students, supervisors, and admins each see exactly what's relevant to them
+            </span>
+          </li>
+          <li className="flex items-start gap-3">
+            <span className="text-[#2563a8] mt-1">✓</span>
+            <span className="text-gray-700">
+              <strong>Assessment tracking</strong> — deadlines, submissions, marking, and feedback all in one timeline
+            </span>
+          </li>
+          <li className="flex items-start gap-3">
+            <span className="text-[#2563a8] mt-1">✓</span>
+            <span className="text-gray-700">
+              <strong>Discussion forums</strong> — students and supervisors collaborate on project-related questions in one place
+            </span>
+          </li>
+          <li className="flex items-start gap-3">
+            <span className="text-[#2563a8] mt-1">✓</span>
+            <span className="text-gray-700">
+              <strong>Real-time notifications</strong> — everyone stays updated on approvals, marks, and messages as they happen
+            </span>
+          </li>
+        </ul>
+      </div>
+
+      <img
+        src={aboutImage}
+        alt="Project Management System overview"
+        className="h-80 w-full object-cover rounded-lg"
+      />
+    </div>
+  </div>
+</section>
 
       {/* Community Forum Section */}
       <section className="py-20 px-6 bg-white">
