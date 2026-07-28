@@ -74,6 +74,19 @@ const deleteProject = asyncHandler(async (req, res) => {
     return res.status(403).json({ message: 'Not authorized to delete this project' });
   }
 
+  const [allocationCount, assessmentCount] = await Promise.all([
+    Allocation.countDocuments({ project: project._id }),
+    Assessment.countDocuments({ project: project._id }),
+  ]);
+
+  if (allocationCount > 0 || assessmentCount > 0) {
+    return res.status(409).json({
+      message: `Cannot delete: this project has ${allocationCount} allocation(s) and ${assessmentCount} assessment(s) linked to it. Remove those first.`,
+      allocationCount,
+      assessmentCount,
+    });
+  }
+
   await project.deleteOne();
   res.json({ message: 'Project deleted' });
 });

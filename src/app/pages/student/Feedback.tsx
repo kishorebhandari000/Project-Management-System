@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router';
 import Sidebar from '../../components/Sidebar';
 import { api } from '../../lib/api';
-
+import Profile from '../admin/Profile';
+import ProfileAvatar from '../../components/ProfileAvatar';
 interface Assessment {
   _id: string;
   title: string;
@@ -49,9 +50,7 @@ export default function Feedback() {
                 </div>
                 <div className="absolute top-0 right-0 w-3 h-3 bg-red-600 rounded-full" />
               </Link>
-              <Link to="/student/profile" className="w-12 h-12 bg-[#2563a8] rounded-full flex items-center justify-center text-white hover:bg-[#1e4a8a]">
-                {localStorage.getItem('userName')?.[0] ?? 'S'}
-              </Link>
+              <ProfileAvatar role="student" />
             </div>
           </div>
         </div>

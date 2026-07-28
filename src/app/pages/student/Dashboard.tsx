@@ -2,6 +2,7 @@ import Sidebar from '../../components/Sidebar';
 import { Link } from 'react-router';
 import { useState, useEffect } from 'react';
 import { api } from '../../lib/api';
+import ProfileAvatar from '../../components/ProfileAvatar';
 
 interface ProjectFile {
   url: string;

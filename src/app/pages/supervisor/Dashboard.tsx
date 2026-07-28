@@ -1,5 +1,6 @@
 import Sidebar from '../../components/Sidebar';
 import { Link } from 'react-router';
+import ProfileAvatar from '../../components/ProfileAvatar';
 
 export default function SupervisorDashboard() {
   const students = [
@@ -30,9 +31,7 @@ export default function SupervisorDashboard() {
                 </div>
                 <div className="absolute top-0 right-0 w-3 h-3 bg-red-600 rounded-full"></div>
               </Link>
-              <Link to="/supervisor/profile" className="w-12 h-12 bg-[#2563a8] rounded-full flex items-center justify-center text-white hover:bg-[#1e4a8a] cursor-pointer">
-                SJ
-              </Link>
+              <ProfileAvatar role="supervisor" />
             </div>
           </div>
         </div>

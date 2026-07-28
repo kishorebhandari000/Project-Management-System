@@ -1,6 +1,7 @@
 import Sidebar from '../../components/Sidebar';
 import { Link } from 'react-router';
 import { useState } from 'react';
+import ProfileAvatar from '../../components/ProfileAvatar';
 
 const contacts = [
   { id: 1, name: 'Dr. Sarah Johnson', role: 'Supervisor', avatar: 'SJ', lastMessage: 'Please allocate a student to the new project.', time: '1h ago', unread: 1 },
@@ -21,9 +22,7 @@ export default function AdminMessages() {
               <h1 className="text-2xl">Messages</h1>
               <p className="text-gray-600">Communicate with users</p>
             </div>
-            <Link to="/admin/profile" className="w-12 h-12 bg-[#2563a8] rounded-full flex items-center justify-center text-white hover:bg-[#1e4a8a]">
-              AD
-            </Link>
+            <ProfileAvatar role="admin" />
           </div>
         </div>
 
