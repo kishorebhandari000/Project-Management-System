@@ -29,6 +29,7 @@ import AdminDashboard from "./pages/admin/Dashboard";
 import ManageUsers from "./pages/admin/ManageUsers";
 import AdminManageProjects from "./pages/admin/ManageProjects";
 import CreateProject from "./pages/admin/CreateProject";
+import EditProject from './pages/admin/EditProject';
 import ManageAllocation from "./pages/admin/ManageAllocation";
 import AdminAssessments from "./pages/admin/Assessments";
 import Reports from "./pages/admin/Reports";
@@ -182,6 +183,10 @@ export const router = createBrowserRouter([
     path: "/admin/projects/create",
     Component: () => <ProtectedRoute role="admin"><CreateProject /></ProtectedRoute>,
   },
+  {
+  path: "/admin/projects/:id/edit",
+  Component: () => <ProtectedRoute role="admin"><EditProject /></ProtectedRoute>,
+},
   {
     path: "/admin/allocation",
     Component: () => <ProtectedRoute role="admin"><ManageAllocation /></ProtectedRoute>,
