@@ -43,9 +43,14 @@ import Notifications from "./pages/admin/Notifications";
 import Profile from "./pages/admin/Profile";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
+import CreateAssessment from "./pages/admin/CreateAssessment";
 
 export const router = createBrowserRouter([
 
+  {
+  path: "/admin/assessments/create",
+  Component: CreateAssessment,
+},
   {
   path: "/forgot-password",
   Component: ForgotPassword,

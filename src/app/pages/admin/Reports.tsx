@@ -1,5 +1,6 @@
 import Sidebar from '../../components/Sidebar';
 import { Link } from 'react-router';
+import ProfileAvatar from '../../components/ProfileAvatar';
 
 export default function Reports() {
   const submissionStats = [
@@ -35,9 +36,7 @@ export default function Reports() {
                 </div>
                 <div className="absolute top-0 right-0 w-3 h-3 bg-red-600 rounded-full"></div>
               </Link>
-              <Link to="/admin/profile" className="w-12 h-12 bg-[#2563a8] rounded-full flex items-center justify-center text-white hover:bg-[#1e4a8a] cursor-pointer">
-                AD
-              </Link>
+              <ProfileAvatar role="admin" />
             </div>
           </div>
         </div>

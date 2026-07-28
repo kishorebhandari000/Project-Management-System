@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router';
 import { useState } from 'react';
 import { api } from '../../lib/api';
 import { useMyProjects } from '../../hooks/useMyProjects';
+import ProfileAvatar from '../../components/ProfileAvatar';
 
 export default function SupervisorNewDiscussion() {
   const navigate = useNavigate();
@@ -48,9 +49,7 @@ export default function SupervisorNewDiscussion() {
               <h1 className="text-2xl">New Discussion</h1>
               <p className="text-gray-600">Start a new discussion thread on one of your projects</p>
             </div>
-            <Link to="/supervisor/profile" className="w-12 h-12 bg-[#2563a8] rounded-full flex items-center justify-center text-white hover:bg-[#1e4a8a]">
-              {(localStorage.getItem('userName') ?? '?').split(' ').map((n) => n[0]).join('').toUpperCase()}
-            </Link>
+            <ProfileAvatar role="supervisor" />
           </div>
         </div>
 

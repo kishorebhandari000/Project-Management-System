@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router';
 import Sidebar from '../../components/Sidebar';
 import { api } from '../../lib/api';
-
+import ProfileAvatar from '../../components/ProfileAvatar';
 interface Assessment {
   _id: string;
   title: string;

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router';
 import Sidebar from '../../components/Sidebar';
 import { api } from '../../lib/api';
+import ProfileAvatar from '../../components/ProfileAvatar';
 
 interface Assessment {
   _id: string;
@@ -37,15 +38,16 @@ export default function AdminAssessments() {
               <p className="text-gray-600">Monitor all assessment submissions across the system</p>
             </div>
             <div className="flex items-center gap-4">
+              <Link to="/admin/assessments/create" className="bg-[#2563a8] text-white px-5 py-2 rounded-md hover:bg-[#1e4a8a]">
+                Create Assessment
+              </Link>
               <Link to="/admin/notifications" className="relative">
                 <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center hover:bg-gray-300">
                   <span className="text-xl">🔔</span>
                 </div>
                 <div className="absolute top-0 right-0 w-3 h-3 bg-red-600 rounded-full" />
               </Link>
-              <Link to="/admin/profile" className="w-12 h-12 bg-[#2563a8] rounded-full flex items-center justify-center text-white hover:bg-[#1e4a8a]">
-                AD
-              </Link>
+              <ProfileAvatar role="admin" />
             </div>
           </div>
         </div>

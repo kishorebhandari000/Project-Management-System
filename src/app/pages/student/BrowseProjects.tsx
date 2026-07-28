@@ -2,6 +2,7 @@ import Sidebar from '../../components/Sidebar';
 import { Link } from 'react-router';
 import { useState, useEffect } from 'react';
 import { api } from '../../lib/api';
+import ProfileAvatar from '../../components/ProfileAvatar';
 
 interface ProjectFile {
   url: string;
@@ -53,11 +54,12 @@ export default function BrowseProjects() {
   }, []);
 
   const getAllocationForProject = (projectId: string) => {
-    return myAllocations.find((a) => {
-      const pId = typeof a.project === 'string' ? a.project : a.project._id;
-      return pId === projectId;
-    });
-  };
+  return myAllocations.find((a) => {
+    if (!a.project) return false;
+    const pId = typeof a.project === 'string' ? a.project : a.project._id;
+    return pId === projectId;
+  });
+};
 
   const handleRequest = async (projectId: string) => {
     setRequestError('');
@@ -89,9 +91,7 @@ export default function BrowseProjects() {
                 </div>
                 <div className="absolute top-0 right-0 w-3 h-3 bg-red-600 rounded-full"></div>
               </Link>
-              <Link to="/student/profile" className="w-12 h-12 bg-[#2563a8] rounded-full flex items-center justify-center text-white hover:bg-[#1e4a8a] cursor-pointer">
-                JD
-              </Link>
+              <ProfileAvatar role="student" />
             </div>
           </div>
         </div>
