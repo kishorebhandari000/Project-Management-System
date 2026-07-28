@@ -127,9 +127,12 @@ export default function ManageProjects() {
                       </div>
                     </div>
                     <div className="flex gap-2">
-                      <button className="bg-gray-200 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-300">
-                        Edit
-                      </button>
+                      <Link
+  to={`/admin/projects/${project._id}/edit`}
+  className="bg-gray-200 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-300"
+>
+  Edit
+</Link>
                       <button
                         onClick={() => handleDelete(project._id)}
                         className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700"
