@@ -1,6 +1,6 @@
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
-import { Link, useParams } from 'react-router';
+import { Link, useParams, useNavigate } from 'react-router';
 import { useEffect, useState } from 'react';
 import { api } from '../lib/api';
 
@@ -8,7 +8,7 @@ interface ForumPost {
   _id: string;
   title: string;
   body: string;
-  createdBy: { name: string; email: string };
+  createdBy: { _id: string; name: string; email: string };
   createdAt: string;
 }
 
@@ -21,6 +21,7 @@ interface ForumComment {
 
 export default function ForumThread() {
   const { id } = useParams();
+  const navigate = useNavigate();
   const [post, setPost] = useState<ForumPost | null>(null);
   const [comments, setComments] = useState<ForumComment[]>([]);
   const [loading, setLoading] = useState(true);
@@ -77,6 +78,8 @@ export default function ForumThread() {
   const canDeleteComment = (comment: ForumComment) =>
     userRole === 'admin' || comment.author?._id === userId;
 
+  const canDeletePost = post ? userRole === 'admin' || post.createdBy?._id === userId : false;
+
   const handleDeleteComment = async (commentId: string) => {
     if (!confirm('Delete this reply?')) return;
     try {
@@ -84,6 +87,16 @@ export default function ForumThread() {
       setComments((prev) => prev.filter((c) => c._id !== commentId));
     } catch (err) {
       alert(err instanceof Error ? err.message : 'Failed to delete reply');
+    }
+  };
+
+  const handleDeletePost = async () => {
+    if (!confirm('Delete this thread? This will also delete its replies.')) return;
+    try {
+      await api.delete(`/forum/${id}`);
+      navigate('/forum');
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Failed to delete thread');
     }
   };
 
@@ -95,8 +108,8 @@ export default function ForumThread() {
 
       <div className="flex-1 bg-[#f4f6f8] py-12 px-6">
         <div className="max-w-4xl mx-auto">
-          <Link to="/" className="text-[#2563a8] hover:underline mb-6 inline-block">
-            ← Back to Homepage
+          <Link to={isLoggedIn ? '/forum' : '/'} className="text-[#2563a8] hover:underline mb-6 inline-block">
+            {isLoggedIn ? '← Back to Forum' : '← Back to Homepage'}
           </Link>
 
           {loading ? (
@@ -111,10 +124,18 @@ export default function ForumThread() {
             <>
               {/* Post Header */}
               <div className="bg-white rounded-lg p-8 border border-gray-200 shadow-sm mb-6">
-                <div className="flex items-center gap-3 mb-4">
+                <div className="flex items-center justify-between gap-3 mb-4">
                   <span className="text-sm text-gray-500">
                     Posted {new Date(post.createdAt).toLocaleDateString()} by {post.createdBy?.name ?? 'Unknown'}
                   </span>
+                  {canDeletePost && (
+                    <button
+                      onClick={handleDeletePost}
+                      className="text-red-700 bg-red-100 hover:bg-red-200 px-3 py-1 rounded-md text-sm"
+                    >
+                      Delete
+                    </button>
+                  )}
                 </div>
 
                 <h1 className="text-3xl mb-6">{post.title}</h1>

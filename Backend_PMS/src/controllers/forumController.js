@@ -91,6 +91,11 @@ const deletePost = asyncHandler(async (req, res) => {
     return res.status(404).json({ message: 'Forum post not found' });
   }
 
+  const isAuthor = String(post.createdBy) === String(req.user._id);
+  if (req.user.role !== 'admin' && !isAuthor) {
+    return res.status(403).json({ message: 'Only the thread author or an admin can delete this thread' });
+  }
+
   await ForumComment.deleteMany({ post: post._id });
   await post.deleteOne();
 

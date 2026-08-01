@@ -1,7 +1,9 @@
 const asyncHandler = require('../utils/asyncHandler');
 const Project = require('../models/Project');
+const Allocation = require('../models/Allocation');
+const Assessment = require('../models/Assessment');
 
-// @desc   Create a project (admin picks any supervisor, supervisor creates for themself)
+// @desc   Create a project - admin only, admin picks the supervisor
 // @route  POST /api/projects
 const createProject = asyncHandler(async (req, res) => {
   const { title, description, category, supervisorId, maxStudents } = req.body;
@@ -10,7 +12,7 @@ const createProject = asyncHandler(async (req, res) => {
     return res.status(400).json({ message: 'title and description are required' });
   }
 
-  const supervisor = req.user.role === 'supervisor' ? req.user._id : supervisorId;
+  const supervisor = supervisorId;
   if (!supervisor) {
     return res.status(400).json({ message: 'supervisorId is required' });
   }

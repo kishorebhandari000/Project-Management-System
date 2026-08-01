@@ -1,10 +1,13 @@
-import Sidebar from '../../components/Sidebar';
+import Sidebar from '../components/Sidebar';
 import { Link, useNavigate } from 'react-router';
 import { useState } from 'react';
-import { api } from '../../lib/api';
-import  ProfileAvatar from '../../components/ProfileAvatar';
+import { api } from '../lib/api';
+import ProfileAvatar from '../components/ProfileAvatar';
+
+type Role = 'admin' | 'supervisor' | 'student';
 
 export default function NewForumPost() {
+  const role = (localStorage.getItem('userRole') as Role | null) ?? 'student';
   const navigate = useNavigate();
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
@@ -18,38 +21,38 @@ export default function NewForumPost() {
 
     try {
       await api.post('/forum', { title, body });
-      navigate('/admin/forum');
+      navigate('/forum');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to create post');
+      setError(err instanceof Error ? err.message : 'Failed to create thread');
     } finally {
       setSubmitting(false);
     }
   };
 
   return (
-    <div className="flex flex-col md:flex-row">
-      <Sidebar role="admin" />
-      <div className="flex-1 bg-[#f4f6f8] pt-16 md:pt-0">
+    <div className="flex">
+      <Sidebar role={role} />
+      <div className="flex-1 bg-[#f4f6f8]">
         <div className="bg-white border-b border-gray-200 px-8 py-5">
           <div className="flex justify-between items-center">
             <div>
               <button
-                onClick={() => navigate('/admin/forum')}
+                onClick={() => navigate('/forum')}
                 className="text-[#2563a8] hover:underline mb-2 text-sm"
               >
-                ← Back to Forum Management
+                ← Back to Forum
               </button>
-              <h1 className="text-2xl">Create New Forum Post</h1>
-              <p className="text-gray-600">Post announcements and updates to the public homepage</p>
+              <h1 className="text-2xl">New Forum Thread</h1>
+              <p className="text-gray-600">Post a thread visible to everyone on the homepage</p>
             </div>
             <div className="flex items-center gap-4">
-              <Link to="/admin/notifications" className="relative">
+              <Link to={`/${role}/notifications`} className="relative">
                 <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center text-gray-700 cursor-pointer hover:bg-gray-300">
                   <span className="text-xl">🔔</span>
                 </div>
                 <div className="absolute top-0 right-0 w-3 h-3 bg-red-600 rounded-full"></div>
               </Link>
-              <ProfileAvatar role="admin" />
+              <ProfileAvatar role={role} />
             </div>
           </div>
         </div>
@@ -65,7 +68,7 @@ export default function NewForumPost() {
 
               <form onSubmit={handleSubmit} className="space-y-6">
                 <div>
-                  <label className="block text-gray-700 mb-2">Post Title</label>
+                  <label className="block text-gray-700 mb-2">Thread Title</label>
                   <input
                     type="text"
                     value={title}
@@ -90,7 +93,7 @@ export default function NewForumPost() {
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                   <h3 className="text-sm mb-2 text-blue-900">Public Forum Guidelines:</h3>
                   <ul className="text-sm text-blue-700 space-y-1 list-disc list-inside">
-                    <li>Posts will be visible to all visitors on the homepage</li>
+                    <li>Threads will be visible to all visitors on the homepage</li>
                     <li>Use clear and professional language</li>
                   </ul>
                 </div>
@@ -98,7 +101,7 @@ export default function NewForumPost() {
                 <div className="flex justify-end gap-3">
                   <button
                     type="button"
-                    onClick={() => navigate('/admin/forum')}
+                    onClick={() => navigate('/forum')}
                     className="bg-gray-200 text-gray-700 px-6 py-3 rounded-md hover:bg-gray-300"
                   >
                     Cancel
@@ -108,7 +111,7 @@ export default function NewForumPost() {
                     disabled={submitting}
                     className="bg-[#2563a8] text-white px-6 py-3 rounded-md hover:bg-[#1e4a8a] disabled:opacity-50"
                   >
-                    {submitting ? 'Publishing...' : 'Publish Post'}
+                    {submitting ? 'Publishing...' : 'Publish Thread'}
                   </button>
                 </div>
               </form>
