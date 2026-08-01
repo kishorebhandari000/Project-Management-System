@@ -2,35 +2,35 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router';
 import Sidebar from '../../components/Sidebar';
 import { api } from '../../lib/api';
-import Profile from '../admin/Profile';
 import ProfileAvatar from '../../components/ProfileAvatar';
-interface Assessment {
+
+interface Submission {
   _id: string;
-  title: string;
-  status: 'not_submitted' | 'submitted' | 'graded';
-  mark: number | null;
+  fileUrl: string;
+  fileName: string;
+  status: 'submitted' | 'graded';
+  marks: number | null;
   feedback: string;
   submittedAt?: string;
-  supervisor: { name: string };
-  project: { title: string };
+  assessment: { title: string; project: { title: string }; supervisor: { name: string } };
 }
 
 export default function Feedback() {
-  const [assessments, setAssessments] = useState<Assessment[]>([]);
+  const [submissions, setSubmissions] = useState<Submission[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
   useEffect(() => {
-    api.get('/assessments/my')
-      .then((d) => setAssessments(d.assessments))
-      .catch((e) => setError(e.message))
+    api.get('/submissions')
+      .then((d) => setSubmissions(d.submissions))
+      .catch((e) => setError(e instanceof Error ? e.message : 'Failed to load feedback'))
       .finally(() => setLoading(false));
   }, []);
 
-  const graded = assessments.filter((a) => a.status === 'graded');
-  const pending = assessments.filter((a) => a.status === 'submitted');
+  const graded = submissions.filter((s) => s.status === 'graded');
+  const pending = submissions.filter((s) => s.status === 'submitted');
   const avgMark = graded.length
-    ? Math.round(graded.reduce((sum, a) => sum + (a.mark ?? 0), 0) / graded.length)
+    ? Math.round(graded.reduce((sum, s) => sum + (s.marks ?? 0), 0) / graded.length)
     : null;
 
   return (
@@ -56,7 +56,6 @@ export default function Feedback() {
         </div>
 
         <div className="p-8 space-y-6">
-          {/* Summary */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             <div className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm">
               <div className="text-gray-600 mb-1">Graded</div>
@@ -75,24 +74,25 @@ export default function Feedback() {
           {loading && <div className="text-center py-16 text-gray-500">Loading feedback...</div>}
           {error && <div className="bg-red-50 border border-red-200 text-red-700 p-4 rounded-lg">{error}</div>}
 
-          {/* Graded assessments */}
-          {graded.map((a) => (
-            <div key={a._id} className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm">
+          {graded.map((s) => (
+            <div key={s._id} className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm">
               <div className="flex justify-between items-start mb-4">
                 <div>
-                  <h2 className="text-xl">{a.title}</h2>
-                  <p className="text-sm text-gray-500">{a.project?.title} &bull; Supervisor: {a.supervisor?.name}</p>
+                  <h2 className="text-xl">{s.assessment?.title}</h2>
+                  <p className="text-sm text-gray-500">
+                    {s.assessment?.project?.title} &bull; Supervisor: {s.assessment?.supervisor?.name}
+                  </p>
                 </div>
-                <span className="text-3xl text-green-600 font-semibold">{a.mark}/100</span>
+                <span className="text-3xl text-green-600 font-semibold">{s.marks}/100</span>
               </div>
               <div className="bg-gray-200 h-3 rounded-full mb-4">
-                <div className="bg-[#2563a8] h-3 rounded-full" style={{ width: `${a.mark}%` }} />
+                <div className="bg-[#2563a8] h-3 rounded-full" style={{ width: `${s.marks}%` }} />
               </div>
-              {a.feedback ? (
+              {s.feedback ? (
                 <div>
                   <div className="text-gray-600 mb-2 text-sm">Supervisor Feedback</div>
                   <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
-                    <p className="text-gray-700">{a.feedback}</p>
+                    <p className="text-gray-700">{s.feedback}</p>
                   </div>
                 </div>
               ) : (
@@ -101,11 +101,12 @@ export default function Feedback() {
             </div>
           ))}
 
-          {/* Pending */}
-          {pending.map((a) => (
-            <div key={a._id} className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm">
-              <h2 className="text-xl mb-2">{a.title}</h2>
-              <p className="text-sm text-gray-500 mb-4">{a.project?.title} &bull; Supervisor: {a.supervisor?.name}</p>
+          {pending.map((s) => (
+            <div key={s._id} className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm">
+              <h2 className="text-xl mb-2">{s.assessment?.title}</h2>
+              <p className="text-sm text-gray-500 mb-4">
+                {s.assessment?.project?.title} &bull; Supervisor: {s.assessment?.supervisor?.name}
+              </p>
               <div className="text-center py-6 bg-gray-50 rounded-lg border border-dashed border-gray-300">
                 <div className="text-gray-600 mb-1">Marks Not Yet Released</div>
                 <div className="text-gray-400 text-sm">Your supervisor is currently reviewing this submission</div>
@@ -113,9 +114,9 @@ export default function Feedback() {
             </div>
           ))}
 
-          {!loading && assessments.length === 0 && (
+          {!loading && submissions.length === 0 && (
             <div className="bg-white rounded-lg p-16 border border-gray-200 text-center text-gray-500">
-              No assessments yet. Check the Assessments page to submit your work.
+              No submissions yet. Check the Assessments page to submit your work.
             </div>
           )}
         </div>

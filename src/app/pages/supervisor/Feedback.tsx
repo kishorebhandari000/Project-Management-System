@@ -1,13 +1,30 @@
+import { useEffect, useState } from 'react';
 import Sidebar from '../../components/Sidebar';
 import { Link } from 'react-router';
+import { api } from '../../lib/api';
 import ProfileAvatar from '../../components/ProfileAvatar';
 
-const feedbackHistory = [
-  { id: 1, student: 'John Doe', assessment: 'Design Specification', mark: 82, date: 'April 21, 2026', feedback: 'Excellent work on the design specification. UML diagrams were particularly strong.' },
-  { id: 2, student: 'Mike Johnson', assessment: 'Initial Proposal', mark: 75, date: 'March 18, 2026', feedback: 'Good proposal but needs more detail on the technical implementation.' },
-];
+interface Submission {
+  _id: string;
+  marks: number | null;
+  feedback: string;
+  gradedAt?: string;
+  student: { name: string; email: string };
+  assessment: { title: string };
+}
 
 export default function SupervisorFeedback() {
+  const [submissions, setSubmissions] = useState<Submission[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    api.get('/submissions')
+      .then((d) => setSubmissions(d.submissions.filter((s: any) => s.status === 'graded')))
+      .catch((e) => setError(e instanceof Error ? e.message : 'Failed to load feedback'))
+      .finally(() => setLoading(false));
+  }, []);
+
   return (
     <div className="flex flex-col md:flex-row">
       <Sidebar role="supervisor" />
@@ -31,17 +48,28 @@ export default function SupervisorFeedback() {
         </div>
 
         <div className="p-8 space-y-6">
-          {feedbackHistory.map((f) => (
-            <div key={f.id} className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm">
+          {loading && <div className="text-center py-16 text-gray-500">Loading feedback...</div>}
+          {error && <div className="bg-red-50 border border-red-200 text-red-700 p-4 rounded-lg">{error}</div>}
+
+          {!loading && !error && submissions.length === 0 && (
+            <div className="bg-white rounded-lg p-16 border border-gray-200 text-center text-gray-500">
+              You haven't graded any submissions yet.
+            </div>
+          )}
+
+          {submissions.map((s) => (
+            <div key={s._id} className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm">
               <div className="flex justify-between items-start mb-4">
                 <div>
-                  <h3 className="text-lg">{f.student} — {f.assessment}</h3>
-                  <p className="text-sm text-gray-500">Graded: {f.date}</p>
+                  <h3 className="text-lg">{s.student?.name} — {s.assessment?.title}</h3>
+                  <p className="text-sm text-gray-500">
+                    Graded: {s.gradedAt ? new Date(s.gradedAt).toLocaleDateString() : '—'}
+                  </p>
                 </div>
-                <span className="text-2xl text-green-600">{f.mark}/100</span>
+                <span className="text-2xl text-green-600">{s.marks}/100</span>
               </div>
               <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
-                <p className="text-gray-700">{f.feedback}</p>
+                <p className="text-gray-700">{s.feedback || <span className="italic text-gray-400">No written feedback provided.</span>}</p>
               </div>
             </div>
           ))}
