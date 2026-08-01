@@ -1,0 +1,175 @@
+import Sidebar from '../../components/Sidebar';
+import { Link } from 'react-router';
+import { useState, useEffect } from 'react';
+import { api } from '../../lib/api';
+import ProfileAvatar from '../../components/ProfileAvatar';
+
+interface ApiAllocation {
+  _id: string;
+  status: 'pending' | 'approved' | 'rejected';
+  project: { title: string };
+  student: { name: string; email: string };
+}
+
+export default function SupervisorAllocations() {
+  const [allocations, setAllocations] = useState<ApiAllocation[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  const loadAllocations = async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const data = await api.get('/allocations');
+      setAllocations(data.allocations);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load applications');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadAllocations();
+  }, []);
+
+  const handleDecision = async (id: string, decision: 'approved' | 'rejected' | 'pending') => {
+    try {
+      await api.put(`/allocations/${id}/decision`, { decision });
+      await loadAllocations();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Failed to update application');
+    }
+  };
+
+  const pending = allocations.filter((a) => a.status === 'pending');
+  const decided = allocations.filter((a) => a.status !== 'pending');
+
+  return (
+    <div className="flex">
+      <Sidebar role="supervisor" />
+      <div className="flex-1 bg-[#f4f6f8]">
+        <div className="bg-white border-b border-gray-200 px-8 py-5">
+          <div className="flex justify-between items-center">
+            <div>
+              <h1 className="text-2xl">Pending Applications</h1>
+              <p className="text-gray-600">Approve or reject student requests to join your projects</p>
+            </div>
+            <div className="flex items-center gap-4">
+              <Link to="/supervisor/notifications" className="relative">
+                <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center text-gray-700 cursor-pointer hover:bg-gray-300">
+                  <span className="text-xl">🔔</span>
+                </div>
+                <div className="absolute top-0 right-0 w-3 h-3 bg-red-600 rounded-full"></div>
+              </Link>
+              <ProfileAvatar role="supervisor" />
+            </div>
+          </div>
+        </div>
+
+        <div className="p-8">
+          {loading && <p className="text-gray-500">Loading applications...</p>}
+          {error && (
+            <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-md px-4 py-3 mb-4">
+              {error}
+            </div>
+          )}
+
+          {!loading && (
+            <>
+              <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden mb-6">
+                <div className="px-6 py-4 border-b border-gray-200 bg-gray-50">
+                  <h2 className="text-xl">Pending ({pending.length})</h2>
+                </div>
+                <table className="w-full">
+                  <thead className="bg-gray-100">
+                    <tr>
+                      <th className="text-left px-6 py-4 border-b border-gray-200">Student</th>
+                      <th className="text-left px-6 py-4 border-b border-gray-200">Project</th>
+                      <th className="text-left px-6 py-4 border-b border-gray-200">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {pending.length === 0 && (
+                      <tr>
+                        <td colSpan={3} className="px-6 py-6 text-center text-gray-500">
+                          No pending applications.
+                        </td>
+                      </tr>
+                    )}
+                    {pending.map((allocation) => (
+                      <tr key={allocation._id} className="border-b border-gray-200">
+                        <td className="px-6 py-4">{allocation.student?.name}</td>
+                        <td className="px-6 py-4">{allocation.project?.title}</td>
+                        <td className="px-6 py-4">
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => handleDecision(allocation._id, 'approved')}
+                              className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700"
+                            >
+                              Approve
+                            </button>
+                            <button
+                              onClick={() => handleDecision(allocation._id, 'rejected')}
+                              className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700"
+                            >
+                              Reject
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
+                <div className="px-6 py-4 border-b border-gray-200 bg-gray-50">
+                  <h2 className="text-xl">Decided</h2>
+                </div>
+                <table className="w-full">
+                  <thead className="bg-gray-100">
+                    <tr>
+                      <th className="text-left px-6 py-4 border-b border-gray-200">Student</th>
+                      <th className="text-left px-6 py-4 border-b border-gray-200">Project</th>
+                      <th className="text-left px-6 py-4 border-b border-gray-200">Status</th>
+                      <th className="text-left px-6 py-4 border-b border-gray-200">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {decided.length === 0 && (
+                      <tr>
+                        <td colSpan={4} className="px-6 py-6 text-center text-gray-500">
+                          No decided applications yet.
+                        </td>
+                      </tr>
+                    )}
+                    {decided.map((allocation) => (
+                      <tr key={allocation._id} className="border-b border-gray-200">
+                        <td className="px-6 py-4">{allocation.student?.name}</td>
+                        <td className="px-6 py-4">{allocation.project?.title}</td>
+                        <td className="px-6 py-4">
+                          <span className={allocation.status === 'approved' ? 'text-green-600' : 'text-red-600'}>
+                            {allocation.status}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4">
+                          <button
+                            onClick={() => handleDecision(allocation._id, 'pending')}
+                            className="bg-gray-200 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-300"
+                          >
+                            Undo
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
