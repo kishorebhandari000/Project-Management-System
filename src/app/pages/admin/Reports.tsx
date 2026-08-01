@@ -1,23 +1,43 @@
 import Sidebar from '../../components/Sidebar';
 import { Link } from 'react-router';
+import { useEffect, useState } from 'react';
+import { api } from '../../lib/api';
 import ProfileAvatar from '../../components/ProfileAvatar';
 
-export default function Reports() {
-  const submissionStats = [
-    { assessment: 'Project Proposal', submissions: 45, total: 60, percentage: 75 },
-    { assessment: 'Literature Review', submissions: 32, total: 60, percentage: 53 },
-    { assessment: 'Requirements Doc', submissions: 58, total: 60, percentage: 97 },
-    { assessment: 'Design Spec', submissions: 50, total: 60, percentage: 83 },
-  ];
+interface AssessmentStat {
+  title: string;
+  submitted: number;
+  total: number;
+  percentage: number;
+}
 
-  const projectCategories = [
-    { category: 'Machine Learning', count: 28 },
-    { category: 'Web Development', count: 22 },
-    { category: 'Mobile Apps', count: 18 },
-    { category: 'IoT', count: 15 },
-    { category: 'Cybersecurity', count: 12 },
-    { category: 'Other', count: 3 },
-  ];
+interface ProjectCategory {
+  category: string;
+  count: number;
+}
+
+interface Summary {
+  totalProjects: number;
+  totalStudents: number;
+  totalSupervisors: number;
+  completionRate: number;
+  avgGrade: number;
+  pendingReviews: number;
+  assessmentStats: AssessmentStat[];
+  projectCategories: ProjectCategory[];
+}
+
+export default function Reports() {
+  const [summary, setSummary] = useState<Summary | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    api.get('/reports/summary')
+      .then((d) => setSummary(d))
+      .catch((e) => setError(e instanceof Error ? e.message : 'Failed to load reports'))
+      .finally(() => setLoading(false));
+  }, []);
 
   return (
     <div className="flex flex-col md:flex-row">
@@ -42,77 +62,76 @@ export default function Reports() {
         </div>
 
         <div className="p-8">
-          {/* Summary Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-            <div className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm">
-              <div className="text-gray-600 mb-2">Total Projects</div>
-              <div className="text-4xl text-[#2563a8]">98</div>
-            </div>
-            <div className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm">
-              <div className="text-gray-600 mb-2">Completion Rate</div>
-              <div className="text-4xl text-green-600">87%</div>
-            </div>
-            <div className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm">
-              <div className="text-gray-600 mb-2">Avg Grade</div>
-              <div className="text-4xl text-[#2563a8]">74.5</div>
-            </div>
-            <div className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm">
-              <div className="text-gray-600 mb-2">Pending Reviews</div>
-              <div className="text-4xl text-orange-600">23</div>
-            </div>
-          </div>
+          {loading && <div className="text-center py-20 text-gray-500">Loading reports...</div>}
+          {error && <div className="bg-red-50 border border-red-200 text-red-700 p-4 rounded-lg">{error}</div>}
 
-          {/* Submission Statistics */}
-          <div className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm mb-6">
-            <h2 className="text-xl mb-6">Submission Statistics</h2>
-            <div className="space-y-5">
-              {submissionStats.map((stat, index) => (
-                <div key={index}>
-                  <div className="flex justify-between mb-2">
-                    <span>{stat.assessment}</span>
-                    <span className="text-gray-600">
-                      {stat.submissions}/{stat.total} ({stat.percentage}%)
-                    </span>
-                  </div>
-                  <div className="bg-gray-200 h-4 rounded-full">
-                    <div
-                      className="bg-[#2563a8] h-4 rounded-full"
-                      style={{ width: `${stat.percentage}%` }}
-                    ></div>
-                  </div>
+          {summary && (
+            <>
+              {/* Summary Cards */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                <div className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm">
+                  <div className="text-gray-600 mb-2">Total Projects</div>
+                  <div className="text-4xl text-[#2563a8]">{summary.totalProjects}</div>
                 </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Project Breakdown */}
-          <div className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm">
-            <h2 className="text-xl mb-6">Project Breakdown by Category</h2>
-            <div className="space-y-3">
-              {projectCategories.map((category, index) => (
-                <div key={index} className="flex justify-between items-center pb-3 border-b border-gray-200 last:border-b-0">
-                  <span>{category.category}</span>
-                  <span className="text-lg">{category.count} projects</span>
+                <div className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm">
+                  <div className="text-gray-600 mb-2">Allocation Completion</div>
+                  <div className="text-4xl text-green-600">{summary.completionRate}%</div>
                 </div>
-              ))}
-            </div>
-          </div>
+                <div className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm">
+                  <div className="text-gray-600 mb-2">Avg Grade</div>
+                  <div className="text-4xl text-[#2563a8]">{summary.avgGrade || '—'}</div>
+                </div>
+                <div className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm">
+                  <div className="text-gray-600 mb-2">Pending Reviews</div>
+                  <div className="text-4xl text-orange-600">{summary.pendingReviews}</div>
+                </div>
+              </div>
 
-          {/* Export Section */}
-          <div className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm mt-6">
-            <h2 className="text-xl mb-5">Export Reports</h2>
-            <div className="flex gap-3">
-              <button className="bg-[#2563a8] text-white px-6 py-3 rounded-md hover:bg-[#1e4a8a]">
-                Export as PDF
-              </button>
-              <button className="bg-gray-200 text-gray-700 px-6 py-3 rounded-md hover:bg-gray-300">
-                Export as CSV
-              </button>
-              <button className="bg-gray-200 text-gray-700 px-6 py-3 rounded-md hover:bg-gray-300">
-                Export as Excel
-              </button>
-            </div>
-          </div>
+              {/* Submission Statistics */}
+              <div className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm mb-6">
+                <h2 className="text-xl mb-6">Submission Statistics</h2>
+                {summary.assessmentStats.length === 0 ? (
+                  <p className="text-gray-500">No assessments created yet.</p>
+                ) : (
+                  <div className="space-y-5">
+                    {summary.assessmentStats.map((stat, index) => (
+                      <div key={index}>
+                        <div className="flex justify-between mb-2">
+                          <span>{stat.title}</span>
+                          <span className="text-gray-600">
+                            {stat.submitted}/{stat.total} ({stat.percentage}%)
+                          </span>
+                        </div>
+                        <div className="bg-gray-200 h-4 rounded-full">
+                          <div
+                            className="bg-[#2563a8] h-4 rounded-full"
+                            style={{ width: `${stat.percentage}%` }}
+                          ></div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Project Breakdown */}
+              <div className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm">
+                <h2 className="text-xl mb-6">Project Breakdown by Category</h2>
+                {summary.projectCategories.length === 0 ? (
+                  <p className="text-gray-500">No projects created yet.</p>
+                ) : (
+                  <div className="space-y-3">
+                    {summary.projectCategories.map((category, index) => (
+                      <div key={index} className="flex justify-between items-center pb-3 border-b border-gray-200 last:border-b-0">
+                        <span>{category.category}</span>
+                        <span className="text-lg">{category.count} projects</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </>
+          )}
         </div>
       </div>
     </div>
