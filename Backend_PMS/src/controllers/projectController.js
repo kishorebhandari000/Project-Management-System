@@ -63,6 +63,11 @@ const updateProject = asyncHandler(async (req, res) => {
   }
 
   Object.assign(project, req.body);
+  // Backfill fields that predate this schema (legacy records created before
+  // createdBy/status existed) so editing one repairs it instead of failing
+  // validation forever on fields the edit form has no way to touch.
+  if (!project.createdBy) project.createdBy = req.user._id;
+  if (!['open', 'allocated', 'closed'].includes(project.status)) project.status = 'open';
   await project.save();
   res.json({ project });
 });
