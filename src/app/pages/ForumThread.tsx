@@ -1,8 +1,12 @@
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
+import Sidebar from '../components/Sidebar';
+import ProfileAvatar from '../components/ProfileAvatar';
 import { Link, useParams, useNavigate } from 'react-router';
 import { useEffect, useState } from 'react';
 import { api } from '../lib/api';
+
+type Role = 'admin' | 'supervisor' | 'student';
 
 interface ForumPost {
   _id: string;
@@ -34,7 +38,7 @@ export default function ForumThread() {
   const isLoggedIn = !!localStorage.getItem('token');
   const userName = localStorage.getItem('userName') ?? '';
   const userId = localStorage.getItem('userId');
-  const userRole = localStorage.getItem('userRole');
+  const userRole = localStorage.getItem('userRole') as Role | null;
 
   const loadThread = async () => {
     setLoading(true);
@@ -102,17 +106,13 @@ export default function ForumThread() {
 
   const initials = (name: string) => name.split(' ').map((n) => n[0]).join('').toUpperCase();
 
-  return (
-    <div className="min-h-screen flex flex-col">
-      <Navbar />
+  const content = (
+    <div className="max-w-4xl mx-auto">
+      <Link to={isLoggedIn ? '/forum' : '/'} className="text-[#2563a8] hover:underline mb-6 inline-block">
+        {isLoggedIn ? '← Back to Forum' : '← Back to Homepage'}
+      </Link>
 
-      <div className="flex-1 bg-[#f4f6f8] py-12 px-6">
-        <div className="max-w-4xl mx-auto">
-          <Link to={isLoggedIn ? '/forum' : '/'} className="text-[#2563a8] hover:underline mb-6 inline-block">
-            {isLoggedIn ? '← Back to Forum' : '← Back to Homepage'}
-          </Link>
-
-          {loading ? (
+      {loading ? (
             <div className="bg-white rounded-lg p-8 border border-gray-200 text-gray-500">
               Loading post...
             </div>
@@ -240,9 +240,36 @@ export default function ForumThread() {
               </div>
             </>
           ) : null}
+    </div>
+  );
+
+  if (isLoggedIn) {
+    const role: Role = userRole ?? 'student';
+    return (
+      <div className="flex">
+        <Sidebar role={role} />
+        <div className="flex-1 bg-[#f4f6f8]">
+          <div className="bg-white border-b border-gray-200 px-8 py-5 flex justify-end">
+            <div className="flex items-center gap-4">
+              <Link to={`/${role}/notifications`} className="relative">
+                <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center text-gray-700 cursor-pointer hover:bg-gray-300">
+                  <span className="text-xl">🔔</span>
+                </div>
+                <div className="absolute top-0 right-0 w-3 h-3 bg-red-600 rounded-full"></div>
+              </Link>
+              <ProfileAvatar role={role} />
+            </div>
+          </div>
+          <div className="p-8">{content}</div>
         </div>
       </div>
+    );
+  }
 
+  return (
+    <div className="min-h-screen flex flex-col">
+      <Navbar />
+      <div className="flex-1 bg-[#f4f6f8] py-12 px-6">{content}</div>
       <Footer />
     </div>
   );
