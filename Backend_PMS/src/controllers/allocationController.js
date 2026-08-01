@@ -75,7 +75,7 @@ const decideAllocation = asyncHandler(async (req, res) => {
   const allocation = await Allocation.findById(req.params.id).populate('project', 'title');
   if (!allocation) return res.status(404).json({ message: 'Allocation not found' });
 
-  const isOwner = allocation.supervisor.toString() === req.user._id.toString();
+  const isOwner = !!allocation.supervisor && allocation.supervisor.toString() === req.user._id.toString();
   if (req.user.role !== 'admin' && !isOwner) {
     return res.status(403).json({ message: 'Only the project supervisor or an admin can decide on this allocation' });
   }
