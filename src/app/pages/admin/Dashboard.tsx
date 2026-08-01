@@ -163,6 +163,10 @@ export default function AdminDashboard() {
                   <div className="text-2xl mb-2">🔗</div>
                   <div className="text-sm">Manage Allocation</div>
                 </Link>
+                <Link to="/admin/assessments/create" className="bg-gray-50 border border-gray-200 rounded-lg p-4 hover:bg-gray-100 text-center">
+                  <div className="text-2xl mb-2">📝</div>
+                  <div className="text-sm">Create Assessment</div>
+                </Link>
                 <Link to="/admin/reports" className="bg-gray-50 border border-gray-200 rounded-lg p-4 hover:bg-gray-100 text-center">
                   <div className="text-2xl mb-2">📊</div>
                   <div className="text-sm">View Reports</div>
