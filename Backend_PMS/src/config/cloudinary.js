@@ -15,4 +15,12 @@ const projectFileStorage = new CloudinaryStorage({
   },
 });
 
-module.exports = { cloudinary, projectFileStorage };
+const submissionFileStorage = new CloudinaryStorage({
+  cloudinary,
+  params: {
+    folder: 'pms/submissions',
+    resource_type: 'auto', // allows pdf/doc/zip, not just images
+  },
+});
+
+module.exports = { cloudinary, projectFileStorage, submissionFileStorage };
