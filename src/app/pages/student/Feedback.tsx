@@ -12,7 +12,7 @@ interface Assessment {
   feedback: string;
   submittedAt?: string;
   supervisor: { name: string };
-  project: { name: string };
+  project: { title: string };
 }
 
 export default function Feedback() {
@@ -81,7 +81,7 @@ export default function Feedback() {
               <div className="flex justify-between items-start mb-4">
                 <div>
                   <h2 className="text-xl">{a.title}</h2>
-                  <p className="text-sm text-gray-500">{a.project?.name} &bull; Supervisor: {a.supervisor?.name}</p>
+                  <p className="text-sm text-gray-500">{a.project?.title} &bull; Supervisor: {a.supervisor?.name}</p>
                 </div>
                 <span className="text-3xl text-green-600 font-semibold">{a.mark}/100</span>
               </div>
@@ -105,7 +105,7 @@ export default function Feedback() {
           {pending.map((a) => (
             <div key={a._id} className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm">
               <h2 className="text-xl mb-2">{a.title}</h2>
-              <p className="text-sm text-gray-500 mb-4">{a.project?.name} &bull; Supervisor: {a.supervisor?.name}</p>
+              <p className="text-sm text-gray-500 mb-4">{a.project?.title} &bull; Supervisor: {a.supervisor?.name}</p>
               <div className="text-center py-6 bg-gray-50 rounded-lg border border-dashed border-gray-300">
                 <div className="text-gray-600 mb-1">Marks Not Yet Released</div>
                 <div className="text-gray-400 text-sm">Your supervisor is currently reviewing this submission</div>

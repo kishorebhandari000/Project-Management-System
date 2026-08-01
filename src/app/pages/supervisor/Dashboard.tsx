@@ -23,7 +23,7 @@ interface ApiAssessment {
   status: 'not_submitted' | 'submitted' | 'graded';
   submittedAt?: string;
   student: { _id: string; name: string };
-  project: { name: string };
+  project: { title: string };
 }
 
 export default function SupervisorDashboard() {

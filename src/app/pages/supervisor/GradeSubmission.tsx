@@ -13,7 +13,7 @@ interface Assessment {
   mark: number | null;
   feedback: string;
   student: { name: string; email: string };
-  project: { name: string };
+  project: { title: string };
 }
 
 export default function GradeSubmission() {
@@ -101,7 +101,7 @@ export default function GradeSubmission() {
                   </div>
                   <div>
                     <span className="text-gray-500">Project:</span>
-                    <span className="ml-2 text-gray-800">{assessment.project?.name}</span>
+                    <span className="ml-2 text-gray-800">{assessment.project?.title}</span>
                   </div>
                   {assessment.submittedAt && (
                     <div>

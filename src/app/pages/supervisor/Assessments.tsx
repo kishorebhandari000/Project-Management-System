@@ -10,7 +10,7 @@ interface Assessment {
   mark: number | null;
   submittedAt?: string;
   student: { name: string; email: string };
-  project: { name: string };
+  project: { title: string };
 }
 
 export default function SupervisorAssessments() {
@@ -95,7 +95,7 @@ export default function SupervisorAssessments() {
                     <tr key={a._id} className="border-t border-gray-200 hover:bg-gray-50">
                       <td className="px-6 py-4">{a.student?.name}</td>
                       <td className="px-6 py-4">{a.title}</td>
-                      <td className="px-6 py-4 text-gray-500">{a.project?.name}</td>
+                      <td className="px-6 py-4 text-gray-500">{a.project?.title}</td>
                       <td className="px-6 py-4 text-gray-500 text-sm">
                         {a.submittedAt ? new Date(a.submittedAt).toLocaleDateString() : '—'}
                       </td>

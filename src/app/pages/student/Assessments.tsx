@@ -13,7 +13,7 @@ interface Assessment {
   mark: number | null;
   feedback: string;
   supervisor: { name: string; email: string };
-  project: { name: string };
+  project: { title: string };
 }
 
 export default function Assessments() {
@@ -123,7 +123,7 @@ export default function Assessments() {
                     <div>
                       <h3 className="text-lg mb-1">{a.title}</h3>
                       <p className="text-sm text-gray-500">
-                        {a.project?.name} &bull; Supervisor: {a.supervisor?.name}
+                        {a.project?.title} &bull; Supervisor: {a.supervisor?.name}
                       </p>
                       {a.description && <p className="text-sm text-gray-600 mt-1">{a.description}</p>}
                     </div>

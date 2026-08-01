@@ -41,7 +41,7 @@ const getAllAssessments = asyncHandler(async (req, res) => {
   const assessments = await Assessment.find()
     .populate('student', 'name email')
     .populate('supervisor', 'name email')
-    .populate('project', 'name')
+    .populate('project', 'title')
     .sort({ createdAt: -1 });
 
   res.json({ count: assessments.length, assessments });
@@ -55,7 +55,7 @@ const getAllAssessments = asyncHandler(async (req, res) => {
 const getMyAssessments = asyncHandler(async (req, res) => {
   const assessments = await Assessment.find({ student: req.user._id })
     .populate('supervisor', 'name email')
-    .populate('project', 'name')
+    .populate('project', 'title')
     .sort({ createdAt: -1 });
 
   res.json({ count: assessments.length, assessments });
@@ -109,7 +109,7 @@ const submitAssessment = asyncHandler(async (req, res) => {
 const getSupervisorAssessments = asyncHandler(async (req, res) => {
   const assessments = await Assessment.find({ supervisor: req.user._id })
     .populate('student', 'name email')
-    .populate('project', 'name')
+    .populate('project', 'title')
     .sort({ createdAt: -1 });
 
   res.json({ count: assessments.length, assessments });
