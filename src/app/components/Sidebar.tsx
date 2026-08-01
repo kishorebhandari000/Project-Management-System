@@ -13,6 +13,7 @@ export default function Sidebar({ role }: SidebarProps) {
     { to: '/student/projects', label: 'Browse Projects' },
     { to: '/student/assessments', label: 'Assessments' },
     { to: '/student/feedback', label: 'Feedback & Marks' },
+    { to: '/forum', label: 'Forum' },
     { to: '/student/discussions', label: 'Discussions' },
     { to: '/student/messages', label: 'Messages' },
   ];
@@ -20,8 +21,10 @@ export default function Sidebar({ role }: SidebarProps) {
   const supervisorLinks = [
     { to: '/supervisor/dashboard', label: 'Dashboard' },
     { to: '/supervisor/projects', label: 'Manage Projects' },
+    { to: '/supervisor/allocations', label: 'Pending Applications' },
     { to: '/supervisor/assessments', label: 'Assessments' },
     { to: '/supervisor/feedback', label: 'Feedback' },
+    { to: '/forum', label: 'Forum' },
     { to: '/supervisor/discussions', label: 'Discussions' },
     { to: '/supervisor/messages', label: 'Messages' },
   ];
@@ -33,7 +36,7 @@ export default function Sidebar({ role }: SidebarProps) {
     { to: '/admin/allocation', label: 'Manage Allocation' },
     { to: '/admin/assessments', label: 'Assessments' },
     { to: '/admin/reports', label: 'Reports' },
-    { to: '/admin/forum', label: 'Public Forum' },
+    { to: '/forum', label: 'Forum' },
     { to: '/admin/discussions', label: 'Discussions' },
     { to: '/admin/messages', label: 'Messages' },
   ];

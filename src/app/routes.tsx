@@ -2,8 +2,11 @@ import { createBrowserRouter } from "react-router";
 import Homepage from "./pages/Homepage";
 import Login from "./pages/Login";
 import ColorPalette from "./pages/ColorPalette";
+import Forum from "./pages/Forum";
+import NewForumPost from "./pages/NewForumPost";
 import ForumThread from "./pages/ForumThread";
 import ProtectedRoute from "./components/ProtectedRoute";
+import AuthenticatedRoute from "./components/AuthenticatedRoute";
 import StudentDashboard from "./pages/student/Dashboard";
 import BrowseProjects from "./pages/student/BrowseProjects";
 import Assessments from "./pages/student/Assessments";
@@ -16,6 +19,7 @@ import StudentNotifications from "./pages/student/Notifications";
 import StudentProfile from "./pages/student/Profile";
 import SupervisorDashboard from "./pages/supervisor/Dashboard";
 import ManageProjects from "./pages/supervisor/ManageProjects";
+import SupervisorAllocations from "./pages/supervisor/Allocations";
 import SupervisorAssessments from "./pages/supervisor/Assessments";
 import GradeSubmission from "./pages/supervisor/GradeSubmission";
 import SupervisorFeedback from "./pages/supervisor/Feedback";
@@ -32,8 +36,6 @@ import CreateProject from "./pages/admin/CreateProject";
 import ManageAllocation from "./pages/admin/ManageAllocation";
 import AdminAssessments from "./pages/admin/Assessments";
 import Reports from "./pages/admin/Reports";
-import ManageForum from "./pages/admin/ManageForum";
-import NewForumPost from "./pages/admin/NewForumPost";
 import AdminDiscussions from "./pages/admin/Discussions";
 import AdminNewDiscussion from "./pages/admin/NewDiscussion";
 import AdminDiscussionThread from "./pages/admin/DiscussionThread";
@@ -82,6 +84,14 @@ export const router = createBrowserRouter([
   {
     path: "/colors",
     Component: ColorPalette,
+  },
+  {
+    path: "/forum",
+    Component: () => <AuthenticatedRoute><Forum /></AuthenticatedRoute>,
+  },
+  {
+    path: "/forum/new",
+    Component: () => <AuthenticatedRoute><NewForumPost /></AuthenticatedRoute>,
   },
   {
     path: "/forum/:id",
@@ -134,6 +144,10 @@ export const router = createBrowserRouter([
   {
     path: "/supervisor/projects",
     Component: () => <ProtectedRoute role="supervisor"><ManageProjects /></ProtectedRoute>,
+  },
+  {
+    path: "/supervisor/allocations",
+    Component: () => <ProtectedRoute role="supervisor"><SupervisorAllocations /></ProtectedRoute>,
   },
   {
     path: "/supervisor/assessments",
@@ -210,14 +224,6 @@ export const router = createBrowserRouter([
   {
     path: "/admin/discussions/:id",
     Component: () => <ProtectedRoute role="admin"><AdminDiscussionThread /></ProtectedRoute>,
-  },
-  {
-    path: "/admin/forum",
-    Component: () => <ProtectedRoute role="admin"><ManageForum /></ProtectedRoute>,
-  },
-  {
-    path: "/admin/forum/new",
-    Component: () => <ProtectedRoute role="admin"><NewForumPost /></ProtectedRoute>,
   },
   {
     path: "/admin/messages",

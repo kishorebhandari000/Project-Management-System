@@ -1,18 +1,23 @@
-import Sidebar from '../../components/Sidebar';
+import Sidebar from '../components/Sidebar';
 import { Link } from 'react-router';
 import { useEffect, useState } from 'react';
-import { api } from '../../lib/api';
-import ProfileAvatar from '../../components/ProfileAvatar';
+import { api } from '../lib/api';
+import ProfileAvatar from '../components/ProfileAvatar';
+
+type Role = 'admin' | 'supervisor' | 'student';
 
 interface ForumPost {
   _id: string;
   title: string;
   body: string;
-  createdBy: { name: string; email: string };
+  createdBy: { _id: string; name: string; email: string };
   createdAt: string;
 }
 
-export default function ManageForum() {
+export default function Forum() {
+  const role = (localStorage.getItem('userRole') as Role | null) ?? 'student';
+  const userId = localStorage.getItem('userId');
+
   const [posts, setPosts] = useState<ForumPost[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -34,40 +39,42 @@ export default function ManageForum() {
     loadPosts();
   }, []);
 
+  const canDelete = (post: ForumPost) => role === 'admin' || post.createdBy?._id === userId;
+
   const handleDelete = async (id: string) => {
-    if (!confirm('Delete this forum post? This will also delete its comments.')) return;
+    if (!confirm('Delete this forum thread? This will also delete its comments.')) return;
     try {
       await api.delete(`/forum/${id}`);
       await loadPosts();
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Failed to delete post');
+      alert(err instanceof Error ? err.message : 'Failed to delete thread');
     }
   };
 
   return (
     <div className="flex">
-      <Sidebar role="admin" />
+      <Sidebar role={role} />
       <div className="flex-1 bg-[#f4f6f8]">
         <div className="bg-white border-b border-gray-200 px-8 py-5">
           <div className="flex justify-between items-center">
             <div>
-              <h1 className="text-2xl">Manage Public Forum</h1>
-              <p className="text-gray-600">Create and manage announcements visible on homepage</p>
+              <h1 className="text-2xl">Forum</h1>
+              <p className="text-gray-600">Public discussion threads visible to everyone</p>
             </div>
             <div className="flex items-center gap-4">
               <Link
-                to="/admin/forum/new"
+                to="/forum/new"
                 className="bg-[#2563a8] text-white px-5 py-2 rounded-md hover:bg-[#1e4a8a]"
               >
-                New Forum Post
+                New Thread
               </Link>
-              <Link to="/admin/notifications" className="relative">
+              <Link to={`/${role}/notifications`} className="relative">
                 <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center text-gray-700 cursor-pointer hover:bg-gray-300">
                   <span className="text-xl">🔔</span>
                 </div>
                 <div className="absolute top-0 right-0 w-3 h-3 bg-red-600 rounded-full"></div>
               </Link>
-              <ProfileAvatar role="admin" />
+              <ProfileAvatar role={role} />
             </div>
           </div>
         </div>
@@ -75,7 +82,7 @@ export default function ManageForum() {
         <div className="p-8">
           <div className="mb-8">
             <div className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm inline-block">
-              <div className="text-gray-600 mb-2">Total Posts</div>
+              <div className="text-gray-600 mb-2">Total Threads</div>
               <div className="text-3xl text-[#2563a8]">{posts.length}</div>
             </div>
           </div>
@@ -87,10 +94,10 @@ export default function ManageForum() {
           )}
 
           {loading ? (
-            <div className="text-gray-500">Loading posts...</div>
+            <div className="text-gray-500">Loading threads...</div>
           ) : posts.length === 0 ? (
             <div className="bg-white rounded-lg p-8 border border-gray-200 text-center text-gray-500">
-              No forum posts yet. Create the first one.
+              No forum threads yet. Start the first one.
             </div>
           ) : (
             <div className="space-y-4">
@@ -116,12 +123,14 @@ export default function ManageForum() {
                       >
                         View
                       </Link>
-                      <button
-                        onClick={() => handleDelete(post._id)}
-                        className="bg-red-100 text-red-700 px-4 py-2 rounded-md hover:bg-red-200"
-                      >
-                        Delete
-                      </button>
+                      {canDelete(post) && (
+                        <button
+                          onClick={() => handleDelete(post._id)}
+                          className="bg-red-100 text-red-700 px-4 py-2 rounded-md hover:bg-red-200"
+                        >
+                          Delete
+                        </button>
+                      )}
                     </div>
                   </div>
                 </div>
