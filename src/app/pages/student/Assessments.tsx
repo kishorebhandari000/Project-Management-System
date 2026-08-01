@@ -3,33 +3,56 @@ import { Link } from 'react-router';
 import Sidebar from '../../components/Sidebar';
 import { api } from '../../lib/api';
 import ProfileAvatar from '../../components/ProfileAvatar';
+
 interface Assessment {
   _id: string;
   title: string;
   description: string;
   dueDate?: string;
-  submittedAt?: string;
-  status: 'not_submitted' | 'submitted' | 'graded';
-  mark: number | null;
-  feedback: string;
   supervisor: { name: string; email: string };
   project: { title: string };
 }
 
+interface Submission {
+  _id: string;
+  assessment: { _id: string };
+  fileUrl: string;
+  fileName: string;
+  status: 'submitted' | 'graded';
+  marks: number | null;
+  feedback: string;
+  submittedAt: string;
+}
+
 export default function Assessments() {
   const [assessments, setAssessments] = useState<Assessment[]>([]);
+  const [submissions, setSubmissions] = useState<Submission[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [activeUpload, setActiveUpload] = useState<string | null>(null);
+  const [file, setFile] = useState<File | null>(null);
   const [submitting, setSubmitting] = useState<string | null>(null);
-  const [submitText, setSubmitText] = useState('');
-  const [activeSubmit, setActiveSubmit] = useState<string | null>(null);
   const [toast, setToast] = useState('');
 
+  const loadData = async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const [assessmentsRes, submissionsRes] = await Promise.all([
+        api.get('/assessments/my'),
+        api.get('/submissions'),
+      ]);
+      setAssessments(assessmentsRes.assessments);
+      setSubmissions(submissionsRes.submissions);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to load assessments');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    api.get('/assessments/my')
-      .then((d) => setAssessments(d.assessments))
-      .catch((e) => setError(e.message))
-      .finally(() => setLoading(false));
+    loadData();
   }, []);
 
   const showToast = (msg: string) => {
@@ -37,33 +60,36 @@ export default function Assessments() {
     setTimeout(() => setToast(''), 3000);
   };
 
-  const handleSubmit = async (id: string) => {
-    if (!submitText.trim()) return;
-    setSubmitting(id);
+  const submissionFor = (assessmentId: string) =>
+    submissions.find((s) => s.assessment._id === assessmentId);
+
+  const handleUpload = async (assessmentId: string) => {
+    if (!file) return;
+    setSubmitting(assessmentId);
     try {
-      const d = await api.put(`/assessments/${id}/submit`, { submissionText: submitText });
-      setAssessments((prev) => prev.map((a) => (a._id === id ? d.assessment : a)));
-      setActiveSubmit(null);
-      setSubmitText('');
-      showToast('Assessment submitted successfully!');
-    } catch (e: any) {
-      showToast(e.message);
+      const formData = new FormData();
+      formData.append('assessmentId', assessmentId);
+      formData.append('file', file);
+      await api.upload('/submissions', formData);
+      setActiveUpload(null);
+      setFile(null);
+      showToast('File submitted successfully!');
+      await loadData();
+    } catch (e) {
+      showToast(e instanceof Error ? e.message : 'Failed to submit');
     } finally {
       setSubmitting(null);
     }
   };
 
-  const statusBadge = (s: Assessment['status']) => {
-    if (s === 'graded') return <span className="text-green-600 font-medium">Graded</span>;
-    if (s === 'submitted') return <span className="text-blue-600 font-medium">Submitted</span>;
-    return <span className="text-orange-500 font-medium">Not Submitted</span>;
-  };
+  const total = assessments.length;
+  const submittedCount = submissions.length;
+  const gradedCount = submissions.filter((s) => s.status === 'graded').length;
 
   return (
     <div className="flex flex-col md:flex-row">
       <Sidebar role="student" />
       <div className="flex-1 bg-[#f4f6f8] pt-16 md:pt-0">
-        {/* Top bar */}
         <div className="bg-white border-b border-gray-200 px-8 py-5">
           <div className="flex justify-between items-center">
             <div>
@@ -82,27 +108,25 @@ export default function Assessments() {
           </div>
         </div>
 
-        {/* Toast */}
         {toast && (
-          <div className="fixed top-6 right-6 bg-[#2563a8] text-white px-5 py-3 rounded-lg shadow-lg z-50 transition-all">
+          <div className="fixed top-6 right-6 bg-[#2563a8] text-white px-5 py-3 rounded-lg shadow-lg z-50">
             {toast}
           </div>
         )}
 
         <div className="p-8">
-          {/* Stats */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
             <div className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm">
               <div className="text-gray-600 mb-1">Total</div>
-              <div className="text-3xl">{assessments.length}</div>
+              <div className="text-3xl">{total}</div>
             </div>
             <div className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm">
               <div className="text-gray-600 mb-1">Submitted</div>
-              <div className="text-3xl text-blue-600">{assessments.filter((a) => a.status !== 'not_submitted').length}</div>
+              <div className="text-3xl text-blue-600">{submittedCount}</div>
             </div>
             <div className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm">
               <div className="text-gray-600 mb-1">Graded</div>
-              <div className="text-3xl text-green-600">{assessments.filter((a) => a.status === 'graded').length}</div>
+              <div className="text-3xl text-green-600">{gradedCount}</div>
             </div>
           </div>
 
@@ -116,93 +140,97 @@ export default function Assessments() {
           )}
 
           <div className="space-y-4">
-            {assessments.map((a) => (
-              <div key={a._id} className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
-                <div className="p-6">
-                  <div className="flex justify-between items-start mb-3">
-                    <div>
-                      <h3 className="text-lg mb-1">{a.title}</h3>
-                      <p className="text-sm text-gray-500">
-                        {a.project?.title} &bull; Supervisor: {a.supervisor?.name}
-                      </p>
-                      {a.description && <p className="text-sm text-gray-600 mt-1">{a.description}</p>}
-                    </div>
-                    <div className="text-right shrink-0 ml-4">
-                      {statusBadge(a.status)}
-                      {a.dueDate && (
-                        <div className="text-xs text-gray-400 mt-1">
-                          Due: {new Date(a.dueDate).toLocaleDateString()}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Graded result */}
-                  {a.status === 'graded' && (
-                    <div className="mt-4 bg-green-50 border border-green-200 rounded-lg p-4">
-                      <div className="flex items-center gap-4 mb-2">
-                        <span className="text-gray-600">Mark:</span>
-                        <span className="text-2xl text-green-600 font-semibold">{a.mark}/100</span>
+            {assessments.map((a) => {
+              const submission = submissionFor(a._id);
+              return (
+                <div key={a._id} className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
+                  <div className="p-6">
+                    <div className="flex justify-between items-start mb-3">
+                      <div>
+                        <h3 className="text-lg mb-1">{a.title}</h3>
+                        <p className="text-sm text-gray-500">
+                          {a.project?.title} &bull; Supervisor: {a.supervisor?.name}
+                        </p>
+                        {a.description && <p className="text-sm text-gray-600 mt-1">{a.description}</p>}
                       </div>
-                      <div className="bg-gray-200 h-2 rounded-full mb-3">
-                        <div className="bg-green-500 h-2 rounded-full" style={{ width: `${a.mark}%` }} />
-                      </div>
-                      {a.feedback && (
-                        <div>
-                          <div className="text-sm text-gray-600 mb-1">Feedback:</div>
-                          <p className="text-gray-700 text-sm bg-white p-3 rounded border border-green-100">{a.feedback}</p>
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Submitted view */}
-                  {a.status === 'submitted' && (
-                    <div className="mt-3 bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm text-blue-700">
-                      ✓ Submitted {a.submittedAt ? `on ${new Date(a.submittedAt).toLocaleDateString()}` : ''} — awaiting review
-                    </div>
-                  )}
-
-                  {/* Submit form */}
-                  {a.status === 'not_submitted' && (
-                    <div className="mt-4">
-                      {activeSubmit === a._id ? (
-                        <div className="space-y-3">
-                          <textarea
-                            value={submitText}
-                            onChange={(e) => setSubmitText(e.target.value)}
-                            className="w-full border border-gray-300 rounded-md px-4 py-3 h-28 focus:outline-none focus:border-[#2563a8] text-sm"
-                            placeholder="Write your submission here..."
-                          />
-                          <div className="flex gap-3">
-                            <button
-                              onClick={() => handleSubmit(a._id)}
-                              disabled={submitting === a._id || !submitText.trim()}
-                              className="bg-[#2563a8] text-white px-5 py-2 rounded-md hover:bg-[#1e4a8a] disabled:opacity-50 text-sm"
-                            >
-                              {submitting === a._id ? 'Submitting...' : 'Submit'}
-                            </button>
-                            <button
-                              onClick={() => { setActiveSubmit(null); setSubmitText(''); }}
-                              className="bg-gray-200 text-gray-700 px-5 py-2 rounded-md hover:bg-gray-300 text-sm"
-                            >
-                              Cancel
-                            </button>
+                      <div className="text-right shrink-0 ml-4">
+                        {submission?.status === 'graded' ? (
+                          <span className="text-green-600 font-medium">Graded</span>
+                        ) : submission?.status === 'submitted' ? (
+                          <span className="text-blue-600 font-medium">Submitted</span>
+                        ) : (
+                          <span className="text-orange-500 font-medium">Not Submitted</span>
+                        )}
+                        {a.dueDate && (
+                          <div className="text-xs text-gray-400 mt-1">
+                            Due: {new Date(a.dueDate).toLocaleDateString()}
                           </div>
-                        </div>
-                      ) : (
-                        <button
-                          onClick={() => setActiveSubmit(a._id)}
-                          className="bg-[#2563a8] text-white px-5 py-2 rounded-md hover:bg-[#1e4a8a] text-sm"
-                        >
-                          Submit Assessment
-                        </button>
-                      )}
+                        )}
+                      </div>
                     </div>
-                  )}
+
+                    {submission?.status === 'graded' && (
+                      <div className="mt-4 bg-green-50 border border-green-200 rounded-lg p-4">
+                        <div className="flex items-center gap-4 mb-2">
+                          <span className="text-gray-600">Mark:</span>
+                          <span className="text-2xl text-green-600 font-semibold">{submission.marks}/100</span>
+                        </div>
+                        <a href={submission.fileUrl} target="_blank" rel="noopener noreferrer" className="text-[#2563a8] hover:underline text-sm">
+                          📎 {submission.fileName}
+                        </a>
+                      </div>
+                    )}
+
+                    {submission?.status === 'submitted' && (
+                      <div className="mt-3 bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm text-blue-700">
+                        ✓ Submitted {submission.submittedAt ? `on ${new Date(submission.submittedAt).toLocaleDateString()}` : ''} — awaiting review
+                        <div className="mt-1">
+                          <a href={submission.fileUrl} target="_blank" rel="noopener noreferrer" className="underline">
+                            📎 {submission.fileName}
+                          </a>
+                        </div>
+                      </div>
+                    )}
+
+                    {!submission && (
+                      <div className="mt-4">
+                        {activeUpload === a._id ? (
+                          <div className="space-y-3">
+                            <input
+                              type="file"
+                              onChange={(e) => setFile(e.target.files?.[0] || null)}
+                              className="w-full border border-gray-300 rounded-md px-4 py-2 text-sm"
+                            />
+                            <div className="flex gap-3">
+                              <button
+                                onClick={() => handleUpload(a._id)}
+                                disabled={submitting === a._id || !file}
+                                className="bg-[#2563a8] text-white px-5 py-2 rounded-md hover:bg-[#1e4a8a] disabled:opacity-50 text-sm"
+                              >
+                                {submitting === a._id ? 'Submitting...' : 'Submit File'}
+                              </button>
+                              <button
+                                onClick={() => { setActiveUpload(null); setFile(null); }}
+                                className="bg-gray-200 text-gray-700 px-5 py-2 rounded-md hover:bg-gray-300 text-sm"
+                              >
+                                Cancel
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <button
+                            onClick={() => setActiveUpload(a._id)}
+                            className="bg-[#2563a8] text-white px-5 py-2 rounded-md hover:bg-[#1e4a8a] text-sm"
+                          >
+                            Submit File
+                          </button>
+                        )}
+                      </div>
+                    )}
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       </div>
