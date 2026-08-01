@@ -1,6 +1,7 @@
 const path = require('path');
 const asyncHandler = require('../utils/asyncHandler');
 const transporter = require('../utils/mailer');
+const { appendContactSubmission } = require('../utils/googleSheets');
 
 // @desc   Send a message from the public contact form
 // @route  POST /api/contact
@@ -11,7 +12,10 @@ const sendContactMessage = asyncHandler(async (req, res) => {
   if (!name || !email || !message) {
     return res.status(400).json({ message: 'name, email and message are required' });
   }
-
+  appendContactSubmission({ name, email, message }).catch((err) =>
+    console.error('Failed to log contact submission to Google Sheets:', err)
+  );
+  
   const html = `
     <div style="font-family: Arial, sans-serif; max-width: 560px; margin: 0 auto; background: #ffffff;">
       <div style="background: #2563a8; padding: 24px; text-align: center;">
