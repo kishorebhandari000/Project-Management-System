@@ -3,30 +3,43 @@ import { Link } from 'react-router';
 import Sidebar from '../../components/Sidebar';
 import { api } from '../../lib/api';
 import ProfileAvatar from '../../components/ProfileAvatar';
+
 interface Assessment {
   _id: string;
   title: string;
-  status: 'not_submitted' | 'submitted' | 'graded';
-  mark: number | null;
-  submittedAt?: string;
   student: { name: string; email: string };
   project: { title: string };
 }
 
+interface Submission {
+  _id: string;
+  assessment: { _id: string };
+  status: 'submitted' | 'graded';
+  marks: number | null;
+  submittedAt: string;
+}
+
 export default function SupervisorAssessments() {
   const [assessments, setAssessments] = useState<Assessment[]>([]);
+  const [submissions, setSubmissions] = useState<Submission[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
   useEffect(() => {
-    api.get('/assessments/supervisor')
-      .then((d) => setAssessments(d.assessments))
-      .catch((e) => setError(e.message))
+    Promise.all([api.get('/assessments/supervisor'), api.get('/submissions')])
+      .then(([a, s]) => {
+        setAssessments(a.assessments);
+        setSubmissions(s.submissions);
+      })
+      .catch((e) => setError(e instanceof Error ? e.message : 'Failed to load'))
       .finally(() => setLoading(false));
   }, []);
 
-  const pending = assessments.filter((a) => a.status === 'submitted');
-  const graded = assessments.filter((a) => a.status === 'graded');
+  const submissionFor = (assessmentId: string) =>
+    submissions.find((s) => s.assessment._id === assessmentId);
+
+  const pending = submissions.filter((s) => s.status === 'submitted');
+  const graded = submissions.filter((s) => s.status === 'graded');
 
   return (
     <div className="flex flex-col md:flex-row">
@@ -51,7 +64,6 @@ export default function SupervisorAssessments() {
         </div>
 
         <div className="p-8">
-          {/* Stats */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
             <div className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm">
               <div className="text-gray-600 mb-1">Total</div>
@@ -91,40 +103,50 @@ export default function SupervisorAssessments() {
                   </tr>
                 </thead>
                 <tbody>
-                  {assessments.map((a) => (
-                    <tr key={a._id} className="border-t border-gray-200 hover:bg-gray-50">
-                      <td className="px-6 py-4">{a.student?.name}</td>
-                      <td className="px-6 py-4">{a.title}</td>
-                      <td className="px-6 py-4 text-gray-500">{a.project?.title}</td>
-                      <td className="px-6 py-4 text-gray-500 text-sm">
-                        {a.submittedAt ? new Date(a.submittedAt).toLocaleDateString() : '—'}
-                      </td>
-                      <td className="px-6 py-4">
-                        <span className={
-                          a.status === 'graded' ? 'text-green-600' :
-                          a.status === 'submitted' ? 'text-orange-600' : 'text-gray-400'
-                        }>
-                          {a.status === 'not_submitted' ? 'Not submitted' :
-                           a.status === 'submitted' ? 'Pending review' : 'Graded'}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4">
-                        {a.mark !== null ? <span className="text-green-600">{a.mark}/100</span> : '—'}
-                      </td>
-                      <td className="px-6 py-4">
-                        <Link
-                          to={`/supervisor/assessments/grade/${a._id}`}
-                          className={`px-4 py-2 rounded-md text-sm ${
-                            a.status === 'submitted'
-                              ? 'bg-[#2563a8] text-white hover:bg-[#1e4a8a]'
-                              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                          }`}
-                        >
-                          {a.status === 'submitted' ? 'Grade' : 'View'}
-                        </Link>
-                      </td>
-                    </tr>
-                  ))}
+                  {assessments.map((a) => {
+                    const submission = submissionFor(a._id);
+                    const status = submission?.status ?? 'not_submitted';
+                    return (
+                      <tr key={a._id} className="border-t border-gray-200 hover:bg-gray-50">
+                        <td className="px-6 py-4">{a.student?.name}</td>
+                        <td className="px-6 py-4">{a.title}</td>
+                        <td className="px-6 py-4 text-gray-500">{a.project?.title}</td>
+                        <td className="px-6 py-4 text-gray-500 text-sm">
+                          {submission?.submittedAt ? new Date(submission.submittedAt).toLocaleDateString() : '—'}
+                        </td>
+                        <td className="px-6 py-4">
+                          <span className={
+                            status === 'graded' ? 'text-green-600' :
+                            status === 'submitted' ? 'text-orange-600' : 'text-gray-400'
+                          }>
+                            {status === 'not_submitted' ? 'Not submitted' :
+                             status === 'submitted' ? 'Pending review' : 'Graded'}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4">
+                          {submission?.marks !== null && submission?.marks !== undefined ? (
+                            <span className="text-green-600">{submission.marks}/100</span>
+                          ) : '—'}
+                        </td>
+                        <td className="px-6 py-4">
+                          {submission ? (
+                            <Link
+                              to={`/supervisor/assessments/grade/${submission._id}`}
+                              className={`px-4 py-2 rounded-md text-sm ${
+                                status === 'submitted'
+                                  ? 'bg-[#2563a8] text-white hover:bg-[#1e4a8a]'
+                                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                              }`}
+                            >
+                              {status === 'submitted' ? 'Grade' : 'View'}
+                            </Link>
+                          ) : (
+                            <span className="text-gray-400 text-sm">Awaiting submission</span>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table></div>
             </div>

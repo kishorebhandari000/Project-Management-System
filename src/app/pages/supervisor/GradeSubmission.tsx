@@ -2,25 +2,24 @@ import { useEffect, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router';
 import Sidebar from '../../components/Sidebar';
 import { api } from '../../lib/api';
-import ProfileAvatar from '../../components/ProfileAvatar';
-interface Assessment {
+
+interface Submission {
   _id: string;
-  title: string;
-  description: string;
-  submissionText: string;
-  submittedAt?: string;
+  fileUrl: string;
+  fileName: string;
   status: string;
-  mark: number | null;
+  marks: number | null;
   feedback: string;
+  submittedAt?: string;
   student: { name: string; email: string };
-  project: { title: string };
+  assessment: { title: string; project: { title: string } };
 }
 
 export default function GradeSubmission() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
 
-  const [assessment, setAssessment] = useState<Assessment | null>(null);
+  const [submission, setSubmission] = useState<Submission | null>(null);
   const [mark, setMark] = useState('');
   const [feedback, setFeedback] = useState('');
   const [loading, setLoading] = useState(true);
@@ -29,16 +28,15 @@ export default function GradeSubmission() {
   const [toast, setToast] = useState('');
 
   useEffect(() => {
-    // Load supervisor's assessments and find this one
-    api.get('/assessments/supervisor')
+    api.get('/submissions')
       .then((d) => {
-        const found = d.assessments.find((a: Assessment) => a._id === id);
+        const found = d.submissions.find((s: Submission) => s._id === id);
         if (found) {
-          setAssessment(found);
-          if (found.mark !== null) setMark(String(found.mark));
+          setSubmission(found);
+          if (found.marks !== null) setMark(String(found.marks));
           if (found.feedback) setFeedback(found.feedback);
         } else {
-          setError('Assessment not found');
+          setError('Submission not found');
         }
       })
       .catch((e) => setError(e.message))
@@ -53,8 +51,8 @@ export default function GradeSubmission() {
     }
     setSaving(true);
     try {
-      await api.put(`/assessments/${id}/grade`, { mark: markNum, feedback });
-      setToast('Assessment graded successfully!');
+      await api.put(`/submissions/${id}/grade`, { marks: markNum, feedback });
+      setToast('Submission graded successfully!');
       setTimeout(() => navigate('/supervisor/assessments'), 1500);
     } catch (e: any) {
       setError(e.message);
@@ -89,51 +87,49 @@ export default function GradeSubmission() {
           {loading && <div className="text-center py-20 text-gray-500">Loading...</div>}
           {error && <div className="bg-red-50 border border-red-200 text-red-700 p-4 rounded-lg mb-4">{error}</div>}
 
-          {assessment && (
+          {submission && (
             <div className="space-y-6">
-              {/* Info card */}
               <div className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm">
-                <h2 className="text-xl mb-4">{assessment.title}</h2>
+                <h2 className="text-xl mb-4">{submission.assessment?.title}</h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                   <div>
                     <span className="text-gray-500">Student:</span>
-                    <span className="ml-2 text-gray-800">{assessment.student?.name}</span>
+                    <span className="ml-2 text-gray-800">{submission.student?.name}</span>
                   </div>
                   <div>
                     <span className="text-gray-500">Project:</span>
-                    <span className="ml-2 text-gray-800">{assessment.project?.title}</span>
+                    <span className="ml-2 text-gray-800">{submission.assessment?.project?.title}</span>
                   </div>
-                  {assessment.submittedAt && (
+                  {submission.submittedAt && (
                     <div>
                       <span className="text-gray-500">Submitted:</span>
-                      <span className="ml-2 text-gray-800">{new Date(assessment.submittedAt).toLocaleDateString()}</span>
+                      <span className="ml-2 text-gray-800">{new Date(submission.submittedAt).toLocaleDateString()}</span>
                     </div>
                   )}
                   <div>
                     <span className="text-gray-500">Status:</span>
-                    <span className={`ml-2 ${assessment.status === 'graded' ? 'text-green-600' : 'text-orange-600'}`}>
-                      {assessment.status}
+                    <span className={`ml-2 ${submission.status === 'graded' ? 'text-green-600' : 'text-orange-600'}`}>
+                      {submission.status}
                     </span>
                   </div>
                 </div>
               </div>
 
-              {/* Submission */}
               <div className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm">
                 <h3 className="text-lg mb-3">Student Submission</h3>
-                {assessment.submissionText ? (
-                  <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 text-gray-700 whitespace-pre-wrap text-sm leading-relaxed">
-                    {assessment.submissionText}
-                  </div>
-                ) : (
-                  <p className="text-gray-400 italic">No submission text.</p>
-                )}
+                <a
+                  href={submission.fileUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 text-[#2563a8] hover:underline bg-gray-50 border border-gray-200 rounded-lg px-4 py-3"
+                >
+                  📎 {submission.fileName}
+                </a>
               </div>
 
-              {/* Grading */}
               <div className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm">
                 <h3 className="text-lg mb-5">
-                  {assessment.status === 'graded' ? 'Grade (already graded)' : 'Grade This Submission'}
+                  {submission.status === 'graded' ? 'Grade (already graded - editable)' : 'Grade This Submission'}
                 </h3>
                 <div className="space-y-4">
                   <div>
@@ -144,8 +140,7 @@ export default function GradeSubmission() {
                       max={100}
                       value={mark}
                       onChange={(e) => setMark(e.target.value)}
-                      disabled={assessment.status === 'graded'}
-                      className="w-40 border border-gray-300 rounded-md px-4 py-2 focus:outline-none focus:border-[#2563a8] disabled:bg-gray-50"
+                      className="w-40 border border-gray-300 rounded-md px-4 py-2 focus:outline-none focus:border-[#2563a8]"
                       placeholder="e.g. 82"
                     />
                   </div>
@@ -154,20 +149,17 @@ export default function GradeSubmission() {
                     <textarea
                       value={feedback}
                       onChange={(e) => setFeedback(e.target.value)}
-                      disabled={assessment.status === 'graded'}
-                      className="w-full border border-gray-300 rounded-md px-4 py-3 h-32 focus:outline-none focus:border-[#2563a8] disabled:bg-gray-50"
+                      className="w-full border border-gray-300 rounded-md px-4 py-3 h-32 focus:outline-none focus:border-[#2563a8]"
                       placeholder="Write feedback for the student..."
                     />
                   </div>
-                  {assessment.status !== 'graded' && (
-                    <button
-                      onClick={handleGrade}
-                      disabled={saving || !mark}
-                      className="bg-[#2563a8] text-white px-6 py-3 rounded-md hover:bg-[#1e4a8a] disabled:opacity-50"
-                    >
-                      {saving ? 'Saving...' : 'Submit Grade'}
-                    </button>
-                  )}
+                  <button
+                    onClick={handleGrade}
+                    disabled={saving || !mark}
+                    className="bg-[#2563a8] text-white px-6 py-3 rounded-md hover:bg-[#1e4a8a] disabled:opacity-50"
+                  >
+                    {saving ? 'Saving...' : submission.status === 'graded' ? 'Update Grade' : 'Submit Grade'}
+                  </button>
                 </div>
               </div>
             </div>
