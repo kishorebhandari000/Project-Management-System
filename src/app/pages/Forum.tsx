@@ -53,7 +53,7 @@ export default function Forum() {
 
   return (
     <div className="flex">
-      <Sidebar role={role} />
+      <Sidebar role="admin" />
       <div className="flex-1 bg-[#f4f6f8]">
         <div className="bg-white border-b border-gray-200 px-8 py-5">
           <div className="flex justify-between items-center">

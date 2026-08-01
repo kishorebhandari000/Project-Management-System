@@ -70,9 +70,9 @@ export default function EditProject() {
   };
 
   return (
-    <div className="flex">
+    <div className="flex flex-col md:flex-row">
       <Sidebar role="admin" />
-      <div className="flex-1 bg-[#f4f6f8]">
+      <div className="flex-1 bg-[#f4f6f8] pt-16 md:pt-0">
         <div className="bg-white border-b border-gray-200 px-8 py-5">
           <div className="flex justify-between items-center">
             <div>
@@ -130,7 +130,7 @@ export default function EditProject() {
                         ></textarea>
                       </div>
 
-                      <div className="grid grid-cols-2 gap-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                           <label className="block text-gray-700 mb-2">Category</label>
                           <select

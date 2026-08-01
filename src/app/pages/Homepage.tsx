@@ -95,7 +95,7 @@ export default function Homepage() {
       <section id="features" className="py-20 px-6 bg-white scroll-mt-[88px]">
         <div className="max-w-6xl mx-auto">
           <h2 className="text-4xl text-center mb-16">Our Features</h2>
-          <div className="grid grid-cols-3 gap-10">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-10">
             <div className="bg-white border border-gray-200 rounded-lg p-8 shadow-sm">
               <h3 className="text-xl mb-3">Project Selection</h3>
               <p className="text-gray-600">
@@ -124,7 +124,7 @@ export default function Homepage() {
       {/* About Section */}
 <section id="about" className="py-20 px-6 bg-[#f4f6f8] scroll-mt-[88px]">
   <div className="max-w-6xl mx-auto">
-    <div className="grid grid-cols-2 gap-12 items-center">
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
       <div>
         <h2 className="text-3xl mb-6">About Project Management System</h2>
         <p className="text-gray-700 mb-4">

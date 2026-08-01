@@ -2,7 +2,7 @@ import Sidebar from '../../components/Sidebar';
 import { Link } from 'react-router';
 import { useState, useEffect } from 'react';
 import { api } from '../../lib/api';
-import ProfileAvatar from '../../components/ProfileAvatar';
+
 interface ProjectFile {
   url: string;
   name: string;
@@ -12,32 +12,65 @@ interface ApiProject {
   _id: string;
   title: string;
   status: 'open' | 'allocated' | 'closed';
+  maxStudents: number;
   files?: ProjectFile[];
+}
+
+interface ApiAllocation {
+  _id: string;
+  project: { _id: string } | string;
+  student: { _id: string; name: string; email: string };
+  status: 'pending' | 'approved' | 'rejected';
 }
 
 export default function ManageProjects() {
   const [projects, setProjects] = useState<ApiProject[]>([]);
+  const [allocations, setAllocations] = useState<ApiAllocation[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
+  const loadData = async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const [projectsRes, allocationsRes] = await Promise.all([
+        api.get('/projects'),
+        api.get('/allocations?status=approved'),
+      ]);
+      setProjects(projectsRes.projects);
+      setAllocations(allocationsRes.allocations);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load projects');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const load = async () => {
-      try {
-        const data = await api.get('/projects');
-        setProjects(data.projects);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load projects');
-      } finally {
-        setLoading(false);
-      }
-    };
-    load();
+    loadData();
   }, []);
 
+  const handleDelete = async (id: string) => {
+    if (!confirm('Delete this project?')) return;
+    try {
+      await api.delete(`/projects/${id}`);
+      await loadData();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Failed to delete project');
+    }
+  };
+
+  const getGroupForProject = (projectId: string) => {
+    return allocations.filter((a) => {
+      const pId = typeof a.project === 'string' ? a.project : a.project._id;
+      return pId === projectId;
+    });
+  };
+
   return (
-    <div className="flex">
+    <div className="flex flex-col md:flex-row">
       <Sidebar role="supervisor" />
-      <div className="flex-1 bg-[#f4f6f8]">
+      <div className="flex-1 bg-[#f4f6f8] pt-16 md:pt-0">
         <div className="bg-white border-b border-gray-200 px-8 py-5">
           <div className="flex justify-between items-center">
             <div>
@@ -51,7 +84,9 @@ export default function ManageProjects() {
                 </div>
                 <div className="absolute top-0 right-0 w-3 h-3 bg-red-600 rounded-full"></div>
               </Link>
-              <ProfileAvatar role="supervisor" />
+              <Link to="/supervisor/profile" className="w-12 h-12 bg-[#2563a8] rounded-full flex items-center justify-center text-white hover:bg-[#1e4a8a] cursor-pointer">
+                SV
+              </Link>
             </div>
           </div>
         </div>
@@ -71,44 +106,68 @@ export default function ManageProjects() {
                   No projects assigned to you yet.
                 </div>
               )}
-              {projects.map((project) => (
-                <div key={project._id} className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
-                  <div className="flex justify-between items-start mb-3">
-                    <div>
-                      <h3 className="text-lg">{project.title}</h3>
-                      <span className={project.status === 'open' ? 'text-green-600 text-sm' : 'text-gray-500 text-sm'}>
-                        {project.status}
-                      </span>
+              {projects.map((project) => {
+                const group = getGroupForProject(project._id);
+                return (
+                  <div key={project._id} className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
+                    <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3 mb-3">
+                      <div>
+                        <h3 className="text-lg">{project.title}</h3>
+                        <span className={project.status === 'open' ? 'text-green-600 text-sm' : 'text-gray-500 text-sm'}>
+                          {project.status} · {group.length}/{project.maxStudents} seats filled
+                        </span>
+                      </div>
+                      <div className="flex gap-2">
+                        <Link
+                          to={`/supervisor/projects/${project._id}/edit`}
+                          className="bg-gray-200 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-300"
+                        >
+                          Edit
+                        </Link>
+                        <button
+                          onClick={() => handleDelete(project._id)}
+                          className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700"
+                        >
+                          Delete
+                        </button>
+                      </div>
                     </div>
-                    <div className="flex gap-2">
-                      <button className="bg-gray-200 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-300">
-                        Edit
-                      </button>
-                      <button className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700">
-                        Delete
-                      </button>
-                    </div>
-                  </div>
 
-                  <div className="border-t border-gray-200 pt-3 mt-3">
-                    <p className="text-sm text-gray-700 mb-2">Files</p>
-                    {(!project.files || project.files.length === 0) && (
-                      <p className="text-sm text-gray-400">No files uploaded yet.</p>
-                    )}
-                    {project.files && project.files.length > 0 && (
-                      <ul className="space-y-1">
-                        {project.files.map((f, idx) => (
-  <li key={idx}>
-    <a href={f.url} target="_blank" rel="noopener noreferrer" className="text-[#2563a8] hover:underline text-sm">
-      📎 {f.name}
-    </a>
-  </li>
-))}
-                      </ul>
-                    )}
+                    <div className="border-t border-gray-200 pt-3 mt-3">
+                      <p className="text-sm text-gray-700 mb-2">Group</p>
+                      {group.length === 0 ? (
+                        <p className="text-sm text-gray-400">No students allocated yet.</p>
+                      ) : (
+                        <ul className="space-y-1">
+                          {group.map((a) => (
+                            <li key={a._id} className="text-sm text-gray-700">
+                              👤 {a.student.name} <span className="text-gray-400">({a.student.email})</span>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
+
+                    <div className="border-t border-gray-200 pt-3 mt-3">
+                      <p className="text-sm text-gray-700 mb-2">Files</p>
+                      {(!project.files || project.files.length === 0) && (
+                        <p className="text-sm text-gray-400">No files uploaded yet.</p>
+                      )}
+                      {project.files && project.files.length > 0 && (
+                        <ul className="space-y-1">
+                          {project.files.map((f, idx) => (
+                            <li key={idx}>
+                              <a href={f.url} target="_blank" rel="noopener noreferrer" className="text-[#2563a8] hover:underline text-sm">
+                                📎 {f.name}
+                              </a>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>

@@ -1,28 +1,98 @@
 import Sidebar from '../../components/Sidebar';
 import { Link } from 'react-router';
-import ProfileAvatar from '../../components/ProfileAvatar';
+import { useEffect, useState } from 'react';
+import { api } from '../../lib/api';
+
+interface ApiProject {
+  _id: string;
+  title: string;
+  status: string;
+}
+
+interface ApiAllocation {
+  _id: string;
+  project: { _id: string; title: string };
+  student: { _id: string; name: string };
+  status: 'pending' | 'approved' | 'rejected';
+  createdAt: string;
+}
+
+interface ApiAssessment {
+  _id: string;
+  title: string;
+  status: 'not_submitted' | 'submitted' | 'graded';
+  submittedAt?: string;
+  student: { _id: string; name: string };
+  project: { name: string };
+}
 
 export default function SupervisorDashboard() {
-  const students = [
-    { id: 1, name: 'John Doe', project: 'AI-Based Recommendation System', progress: 65 },
-    { id: 2, name: 'Jane Smith', project: 'E-commerce Platform', progress: 45 },
-    { id: 3, name: 'Mike Johnson', project: 'Mobile Health App', progress: 80 },
-  ];
+  const [loading, setLoading] = useState(true);
+  const [projects, setProjects] = useState<ApiProject[]>([]);
+  const [allocations, setAllocations] = useState<ApiAllocation[]>([]);
+  const [assessments, setAssessments] = useState<ApiAssessment[]>([]);
+  const [decidingId, setDecidingId] = useState<string | null>(null);
+  const [error, setError] = useState('');
 
-  const requests = [
-    { id: 1, student: 'Alice Williams', project: 'Machine Learning for Medical Diagnosis', date: 'May 1, 2026' },
-    { id: 2, student: 'Bob Chen', project: 'Blockchain-Based Voting System', date: 'April 30, 2026' },
-  ];
+  const userName = localStorage.getItem('userName') || 'Supervisor';
+  const initial = userName.trim().charAt(0).toUpperCase();
+
+  const loadData = async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const [projectsRes, allocationsRes, assessmentsRes] = await Promise.all([
+        api.get('/projects'),
+        api.get('/allocations'),
+        api.get('/assessments/supervisor'),
+      ]);
+      setProjects(projectsRes.projects);
+      setAllocations(allocationsRes.allocations);
+      setAssessments(assessmentsRes.assessments);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load dashboard');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  const pendingRequests = allocations.filter((a) => a.status === 'pending');
+  const approvedAllocations = allocations.filter((a) => a.status === 'approved');
+  const activeStudentIds = new Set(approvedAllocations.map((a) => a.student._id));
+  const pendingReviews = assessments.filter((a) => a.status === 'submitted');
+
+  const getStudentProgress = (studentId: string) => {
+    const studentAssessments = assessments.filter((a) => a.student._id === studentId);
+    if (studentAssessments.length === 0) return 0;
+    const graded = studentAssessments.filter((a) => a.status === 'graded').length;
+    return Math.round((graded / studentAssessments.length) * 100);
+  };
+
+  const handleDecision = async (id: string, decision: 'approved' | 'rejected') => {
+    setDecidingId(id);
+    try {
+      await api.put(`/allocations/${id}/decision`, { decision });
+      await loadData();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Failed to update request');
+    } finally {
+      setDecidingId(null);
+    }
+  };
 
   return (
-    <div className="flex">
+    <div className="flex flex-col md:flex-row">
       <Sidebar role="supervisor" />
-      <div className="flex-1 bg-[#f4f6f8]">
+      <div className="flex-1 bg-[#f4f6f8] pt-16 md:pt-0">
         <div className="bg-white border-b border-gray-200 px-8 py-5">
           <div className="flex justify-between items-center">
             <div>
               <h1 className="text-2xl">Supervisor Dashboard</h1>
-              <p className="text-gray-600">Welcome back, Dr. Sarah Johnson</p>
+              <p className="text-gray-600">Welcome back, {userName}</p>
             </div>
             <div className="flex items-center gap-4">
               <Link to="/supervisor/notifications" className="relative">
@@ -31,50 +101,67 @@ export default function SupervisorDashboard() {
                 </div>
                 <div className="absolute top-0 right-0 w-3 h-3 bg-red-600 rounded-full"></div>
               </Link>
-              <ProfileAvatar role="supervisor" />
+              <Link to="/supervisor/profile" className="w-12 h-12 bg-[#2563a8] rounded-full flex items-center justify-center text-white hover:bg-[#1e4a8a] cursor-pointer">
+                {initial}
+              </Link>
             </div>
           </div>
         </div>
 
         <div className="p-8">
+          {error && (
+            <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-md px-4 py-3 mb-6">
+              {error}
+            </div>
+          )}
+
           {/* Stats Cards */}
-          <div className="grid grid-cols-4 gap-6 mb-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
             <div className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm">
               <div className="text-gray-600 mb-1">Total Projects</div>
-              <div className="text-3xl">5</div>
+              <div className="text-3xl">{loading ? '—' : projects.length}</div>
             </div>
             <div className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm">
               <div className="text-gray-600 mb-1">Active Students</div>
-              <div className="text-3xl">3</div>
+              <div className="text-3xl">{loading ? '—' : activeStudentIds.size}</div>
             </div>
             <div className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm">
               <div className="text-gray-600 mb-1">Pending Requests</div>
-              <div className="text-3xl">2</div>
+              <div className="text-3xl text-orange-600">{loading ? '—' : pendingRequests.length}</div>
             </div>
             <div className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm">
               <div className="text-gray-600 mb-1">To Review</div>
-              <div className="text-3xl">4</div>
+              <div className="text-3xl text-orange-600">{loading ? '—' : pendingReviews.length}</div>
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* My Students */}
             <div className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm">
               <h2 className="text-xl mb-5">My Students</h2>
               <div className="space-y-4">
-                {students.map((student) => (
-                  <div key={student.id} className="pb-4 border-b border-gray-200 last:border-b-0">
-                    <div className="mb-2">{student.name}</div>
-                    <div className="text-sm text-gray-600 mb-2">{student.project}</div>
-                    <div className="bg-gray-200 h-2 rounded-full">
-                      <div
-                        className="bg-[#2563a8] h-2 rounded-full"
-                        style={{ width: `${student.progress}%` }}
-                      ></div>
-                    </div>
-                    <div className="text-xs text-gray-600 mt-1">{student.progress}% Complete</div>
-                  </div>
-                ))}
+                {loading ? (
+                  <p className="text-gray-400 text-sm">Loading...</p>
+                ) : approvedAllocations.length === 0 ? (
+                  <p className="text-gray-400 text-sm">No students allocated yet.</p>
+                ) : (
+                  approvedAllocations.map((a) => {
+                    const progress = getStudentProgress(a.student._id);
+                    return (
+                      <div key={a._id} className="pb-4 border-b border-gray-200 last:border-b-0">
+                        <div className="mb-2">{a.student.name}</div>
+                        <div className="text-sm text-gray-600 mb-2">{a.project.title}</div>
+                        <div className="bg-gray-200 h-2 rounded-full">
+                          <div
+                            className="bg-[#2563a8] h-2 rounded-full"
+                            style={{ width: `${progress}%` }}
+                          ></div>
+                        </div>
+                        <div className="text-xs text-gray-600 mt-1">{progress}% Complete</div>
+                      </div>
+                    );
+                  })
+                )}
               </div>
             </div>
 
@@ -82,21 +169,37 @@ export default function SupervisorDashboard() {
             <div className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm">
               <h2 className="text-xl mb-5">Student Requests</h2>
               <div className="space-y-4">
-                {requests.map((request) => (
-                  <div key={request.id} className="pb-4 border-b border-gray-200 last:border-b-0">
-                    <div className="mb-1">{request.student}</div>
-                    <div className="text-sm text-gray-600 mb-2">{request.project}</div>
-                    <div className="text-xs text-gray-500 mb-3">Requested: {request.date}</div>
-                    <div className="flex gap-2">
-                      <button className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 text-sm">
-                        Approve
-                      </button>
-                      <button className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 text-sm">
-                        Reject
-                      </button>
+                {loading ? (
+                  <p className="text-gray-400 text-sm">Loading...</p>
+                ) : pendingRequests.length === 0 ? (
+                  <p className="text-gray-400 text-sm">No pending requests.</p>
+                ) : (
+                  pendingRequests.map((req) => (
+                    <div key={req._id} className="pb-4 border-b border-gray-200 last:border-b-0">
+                      <div className="mb-1">{req.student.name}</div>
+                      <div className="text-sm text-gray-600 mb-2">{req.project.title}</div>
+                      <div className="text-xs text-gray-500 mb-3">
+                        Requested: {new Date(req.createdAt).toLocaleDateString()}
+                      </div>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => handleDecision(req._id, 'approved')}
+                          disabled={decidingId === req._id}
+                          className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 text-sm disabled:opacity-60"
+                        >
+                          Approve
+                        </button>
+                        <button
+                          onClick={() => handleDecision(req._id, 'rejected')}
+                          disabled={decidingId === req._id}
+                          className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 text-sm disabled:opacity-60"
+                        >
+                          Reject
+                        </button>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  ))
+                )}
               </div>
             </div>
           </div>
@@ -105,24 +208,28 @@ export default function SupervisorDashboard() {
           <div className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm mt-6">
             <h2 className="text-xl mb-5">Pending Reviews</h2>
             <div className="space-y-3">
-              <div className="flex justify-between items-center pb-3 border-b border-gray-200">
-                <div>
-                  <div>John Doe - Project Proposal</div>
-                  <div className="text-sm text-gray-600">Submitted: May 1, 2026</div>
-                </div>
-                <button className="bg-[#2563a8] text-white px-4 py-2 rounded-md hover:bg-[#1e4a8a]">
-                  Review
-                </button>
-              </div>
-              <div className="flex justify-between items-center pb-3 border-b border-gray-200">
-                <div>
-                  <div>Jane Smith - Literature Review</div>
-                  <div className="text-sm text-gray-600">Submitted: April 30, 2026</div>
-                </div>
-                <button className="bg-[#2563a8] text-white px-4 py-2 rounded-md hover:bg-[#1e4a8a]">
-                  Review
-                </button>
-              </div>
+              {loading ? (
+                <p className="text-gray-400 text-sm">Loading...</p>
+              ) : pendingReviews.length === 0 ? (
+                <p className="text-gray-400 text-sm">Nothing waiting on review.</p>
+              ) : (
+                pendingReviews.map((a) => (
+                  <div key={a._id} className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 pb-3 border-b border-gray-200 last:border-b-0">
+                    <div>
+                      <div>{a.student.name} - {a.title}</div>
+                      <div className="text-sm text-gray-600">
+                        Submitted: {a.submittedAt ? new Date(a.submittedAt).toLocaleDateString() : '—'}
+                      </div>
+                    </div>
+                    <Link
+                      to={`/supervisor/assessments/grade/${a._id}`}
+                      className="bg-[#2563a8] text-white px-4 py-2 rounded-md hover:bg-[#1e4a8a] text-center"
+                    >
+                      Review
+                    </Link>
+                  </div>
+                ))
+              )}
             </div>
           </div>
         </div>

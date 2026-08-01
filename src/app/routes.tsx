@@ -46,7 +46,7 @@ import Profile from "./pages/admin/Profile";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
 import CreateAssessment from "./pages/admin/CreateAssessment";
-
+import SupervisorEditProject from './pages/supervisor/EditProject';
 export const router = createBrowserRouter([
 
   {
@@ -138,6 +138,10 @@ export const router = createBrowserRouter([
     path: "/student/profile",
     Component: () => <ProtectedRoute role="student"><StudentProfile /></ProtectedRoute>,
   },
+  {
+  path: "/supervisor/projects/:id/edit",
+  Component: () => <ProtectedRoute role="supervisor"><SupervisorEditProject /></ProtectedRoute>,
+},
   {
     path: "/supervisor/dashboard",
     Component: () => <ProtectedRoute role="supervisor"><SupervisorDashboard /></ProtectedRoute>,
