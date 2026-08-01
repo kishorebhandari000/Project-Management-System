@@ -47,9 +47,9 @@ export default function StudentDashboard() {
   }, []);
 
   return (
-    <div className="flex">
+    <div className="flex flex-col md:flex-row">
       <Sidebar role="student" />
-      <div className="flex-1 bg-[#f4f6f8]">
+      <div className="flex-1 bg-[#f4f6f8] pt-16 md:pt-0">
         {/* Top Bar */}
         <div className="bg-white border-b border-gray-200 px-8 py-5">
           <div className="flex justify-between items-center">
@@ -73,7 +73,7 @@ export default function StudentDashboard() {
 
         <div className="p-8">
           {/* Stats Cards */}
-          <div className="grid grid-cols-4 gap-6 mb-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
             <div className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm">
               <div className="text-gray-600 mb-1">Current Project</div>
               <div className="text-3xl">{currentAllocation ? 1 : 0}</div>
@@ -95,7 +95,7 @@ export default function StudentDashboard() {
             Pending Assessments / Submitted / Average Mark need the Assessments module, not built yet.
           </p>
 
-          <div className="grid grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Current Project */}
             <div className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm">
               <h2 className="text-xl mb-5">Current Project</h2>

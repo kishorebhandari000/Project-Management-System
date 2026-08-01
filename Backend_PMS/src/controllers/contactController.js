@@ -32,7 +32,7 @@ const sendContactMessage = asyncHandler(async (req, res) => {
             <td style="padding: 6px 0; color: #6b7280;">Email</td>
             <td style="padding: 6px 0; color: #111827;">${email}</td>
           </tr>
-        </table>
+        </table></div>
         <div style="background: #f4f6f8; border-radius: 8px; padding: 16px; color: #374151; line-height: 1.6;">
           ${message.replace(/\n/g, '<br/>')}
         </div>

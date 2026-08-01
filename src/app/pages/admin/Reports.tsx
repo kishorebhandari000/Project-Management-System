@@ -20,9 +20,9 @@ export default function Reports() {
   ];
 
   return (
-    <div className="flex">
+    <div className="flex flex-col md:flex-row">
       <Sidebar role="admin" />
-      <div className="flex-1 bg-[#f4f6f8]">
+      <div className="flex-1 bg-[#f4f6f8] pt-16 md:pt-0">
         <div className="bg-white border-b border-gray-200 px-8 py-5">
           <div className="flex justify-between items-center">
             <div>
@@ -43,7 +43,7 @@ export default function Reports() {
 
         <div className="p-8">
           {/* Summary Cards */}
-          <div className="grid grid-cols-4 gap-6 mb-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
             <div className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm">
               <div className="text-gray-600 mb-2">Total Projects</div>
               <div className="text-4xl text-[#2563a8]">98</div>

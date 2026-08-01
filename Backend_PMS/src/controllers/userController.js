@@ -33,14 +33,35 @@ const getUsers = asyncHandler(async (req, res) => {
   const users = await User.find(filter).sort({ createdAt: -1 });
   res.json({ count: users.length, users });
 });
-// @desc   Update my own name/email
+
+// @desc   Get my own profile
+// @route  GET /api/profile
+// @access Private (any logged-in user)
+const getMe = asyncHandler(async (req, res) => {
+  const user = await User.findById(req.user._id);
+  res.json({
+    user: {
+      id: user._id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      phone: user.phone,
+      address: user.address,
+      personalEmail: user.personalEmail,
+    },
+  });
+});
+
+// @desc   Update my own name/phone/address/personalEmail
 // @route  PUT /api/profile
 // @access Private (any logged-in user)
 const updateMe = asyncHandler(async (req, res) => {
-  const { name, email } = req.body;
+  const { name, phone, address, personalEmail } = req.body;
   const updates = {};
   if (name) updates.name = name;
-  if (email) updates.email = email;
+  if (phone !== undefined) updates.phone = phone;
+  if (address !== undefined) updates.address = address;
+  if (personalEmail !== undefined) updates.personalEmail = personalEmail;
 
   const user = await User.findByIdAndUpdate(req.user._id, updates, {
     new: true,
@@ -48,7 +69,15 @@ const updateMe = asyncHandler(async (req, res) => {
   });
 
   res.json({
-    user: { id: user._id, name: user.name, email: user.email, role: user.role },
+    user: {
+      id: user._id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      phone: user.phone,
+      address: user.address,
+      personalEmail: user.personalEmail,
+    },
   });
 });
 
@@ -112,4 +141,4 @@ const deleteUser = asyncHandler(async (req, res) => {
   res.json({ message: 'User deleted successfully' });
 });
 
-module.exports = { createUser, getUsers, updateMe, changePassword, updateUser, deleteUser };
+module.exports = { createUser, getUsers, getMe, updateMe, changePassword, updateUser, deleteUser };

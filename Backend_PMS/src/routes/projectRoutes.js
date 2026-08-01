@@ -17,7 +17,7 @@ router.use(protect);
 
 router.get('/', getProjects);
 router.get('/:id', getProjectById);
-router.post('/', roleGuard('admin', 'supervisor'), createProject);
+router.post('/', roleGuard('admin'), createProject);
 router.put('/:id', roleGuard('admin', 'supervisor'), updateProject);
 router.delete('/:id', roleGuard('admin', 'supervisor'), deleteProject);
 router.post('/:id/files', roleGuard('admin'), uploadProjectFile.single('file'), addProjectFile);

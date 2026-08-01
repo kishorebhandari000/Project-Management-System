@@ -64,9 +64,9 @@ export default function GradeSubmission() {
   };
 
   return (
-    <div className="flex">
+    <div className="flex flex-col md:flex-row">
       <Sidebar role="supervisor" />
-      <div className="flex-1 bg-[#f4f6f8]">
+      <div className="flex-1 bg-[#f4f6f8] pt-16 md:pt-0">
         <div className="bg-white border-b border-gray-200 px-8 py-5">
           <div className="flex justify-between items-center">
             <div>
@@ -94,7 +94,7 @@ export default function GradeSubmission() {
               {/* Info card */}
               <div className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm">
                 <h2 className="text-xl mb-4">{assessment.title}</h2>
-                <div className="grid grid-cols-2 gap-4 text-sm">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                   <div>
                     <span className="text-gray-500">Student:</span>
                     <span className="ml-2 text-gray-800">{assessment.student?.name}</span>

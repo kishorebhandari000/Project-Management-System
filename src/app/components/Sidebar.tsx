@@ -1,4 +1,6 @@
 import { Link, useLocation } from 'react-router';
+import { useState } from 'react';
+import { Menu, X } from 'lucide-react';
 import Logo from './Logo';
 
 interface SidebarProps {
@@ -7,6 +9,7 @@ interface SidebarProps {
 
 export default function Sidebar({ role }: SidebarProps) {
   const location = useLocation();
+  const [mobileOpen, setMobileOpen] = useState(false);
 
   const studentLinks = [
     { to: '/student/dashboard', label: 'Dashboard' },
@@ -40,16 +43,22 @@ export default function Sidebar({ role }: SidebarProps) {
 
   const links = role === 'student' ? studentLinks : role === 'supervisor' ? supervisorLinks : adminLinks;
 
-  return (
-    <div className="w-64 bg-[#1e3a5f] min-h-screen text-white p-5">
-    <Link to="/" className="mb-8 mt-2 block cursor-pointer hover:opacity-80 transition-opacity">
-        <Logo size="large" color="white" />
-      </Link>
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('userId');
+    localStorage.removeItem('userRole');
+    localStorage.removeItem('userName');
+    localStorage.removeItem('userEmail');
+  };
+
+  const navContent = (
+    <>
       <nav className="space-y-2">
         {links.map((link) => (
           <Link
             key={link.to}
             to={link.to}
+            onClick={() => setMobileOpen(false)}
             className={`px-4 py-3 rounded-md transition-colors block ${
               location.pathname === link.to
                 ? 'bg-[#2563a8]'
@@ -61,20 +70,63 @@ export default function Sidebar({ role }: SidebarProps) {
         ))}
       </nav>
       <div className="mt-10 pt-6 border-t border-gray-600">
-       <Link
+        <Link
           to="/login"
-          onClick={() => {
-            localStorage.removeItem('token');
-            localStorage.removeItem('userId');
-            localStorage.removeItem('userRole');
-            localStorage.removeItem('userName');
-            localStorage.removeItem('userEmail');
-          }}
+          onClick={handleLogout}
           className="px-4 py-3 rounded-md hover:bg-[#2a4a70] block"
         >
           Logout
         </Link>
       </div>
-    </div>
+    </>
+  );
+
+  return (
+    <>
+      {/* Mobile top bar */}
+      <div className="md:hidden fixed top-0 left-0 right-0 z-40 bg-[#1e3a5f] text-white flex items-center justify-between px-4 py-3">
+        <Link to="/" className="block">
+          <Logo size="small" color="white" />
+        </Link>
+        <button
+          onClick={() => setMobileOpen(true)}
+          aria-label="Open menu"
+          className="p-2 rounded-md hover:bg-[#2a4a70]"
+        >
+          <Menu size={24} />
+        </button>
+      </div>
+
+      {/* Mobile drawer + backdrop */}
+      {mobileOpen && (
+        <div className="md:hidden fixed inset-0 z-50">
+          <div
+            className="absolute inset-0 bg-black/50"
+            onClick={() => setMobileOpen(false)}
+          />
+          <div className="absolute top-0 left-0 h-full w-64 bg-[#1e3a5f] text-white p-5 overflow-y-auto">
+            <div className="flex items-center justify-between mb-8 mt-2">
+              <Logo size="small" color="white" />
+              <button
+                onClick={() => setMobileOpen(false)}
+                aria-label="Close menu"
+                className="p-2 rounded-md hover:bg-[#2a4a70]"
+              >
+                <X size={22} />
+              </button>
+            </div>
+            {navContent}
+          </div>
+        </div>
+      )}
+
+      {/* Desktop sidebar */}
+      <div className="hidden md:flex md:flex-col w-64 bg-[#1e3a5f] min-h-screen text-white p-5">
+        <Link to="/" className="mb-8 mt-2 block cursor-pointer hover:opacity-80 transition-opacity">
+          <Logo size="small" color="white" />
+        </Link>
+        {navContent}
+      </div>
+    </>
   );
 }
