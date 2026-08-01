@@ -6,10 +6,11 @@ const authRoutes = require('./routes/authRoutes');
 const projectRoutes = require('./routes/projectRoutes');
 const taskRoutes = require('./routes/taskRoutes');
 const { notFound, errorHandler } = require('./middleware/errorHandler');
+const { corsOriginCallback } = require('./config/corsOrigin');
 
 const app = express();
 
-app.use(cors({ origin: process.env.CLIENT_ORIGIN, credentials: true }));
+app.use(cors({ origin: corsOriginCallback, credentials: true }));
 app.use(express.json());
 app.use(morgan('dev'));
 

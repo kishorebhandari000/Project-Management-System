@@ -5,10 +5,11 @@ require('dotenv').config();
 const app = require('./app');
 const realtime = require('./utils/realtime');
 const connectDB = require('./config/db');
+const { corsOriginCallback } = require('./config/corsOrigin');
 
 const httpServer = http.createServer(app);
 const io = new Server(httpServer, {
-  cors: { origin: process.env.CLIENT_ORIGIN, credentials: true },
+  cors: { origin: corsOriginCallback, credentials: true },
 });
 
 realtime.init(io);
