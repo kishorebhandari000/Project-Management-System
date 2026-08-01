@@ -63,7 +63,7 @@ const getAllocations = asyncHandler(async (req, res) => {
   res.json({ count: allocations.length, allocations });
 });
 
-// @desc   Approve or reject a request
+// @desc   Approve or reject a request - the project's supervisor only (not admin)
 // @route  PUT /api/allocations/:id/decision
 const decideAllocation = asyncHandler(async (req, res) => {
   const { decision } = req.body; // 'approved' | 'rejected' | 'pending'
@@ -75,8 +75,8 @@ const decideAllocation = asyncHandler(async (req, res) => {
   if (!allocation) return res.status(404).json({ message: 'Allocation not found' });
 
   const isOwner = allocation.supervisor.toString() === req.user._id.toString();
-  if (req.user.role !== 'admin' && !isOwner) {
-    return res.status(403).json({ message: 'Not authorized to decide on this allocation' });
+  if (!isOwner) {
+    return res.status(403).json({ message: 'Only the project supervisor can decide on this allocation' });
   }
 
   const wasApproved = allocation.status === 'approved';
@@ -106,4 +106,71 @@ const decideAllocation = asyncHandler(async (req, res) => {
   res.json({ allocation });
 });
 
-module.exports = { requestAllocation, getAllocations, decideAllocation };
+// @desc   Admin safety-net override: directly assign/reassign a student to a
+//         project. Creates (or updates) an allocation already set to
+//         'approved'. Any other approved allocation the student holds is
+//         cleared so the student ends up on exactly one project.
+// @route  POST /api/allocations/assign
+const forceAssignAllocation = asyncHandler(async (req, res) => {
+  const { projectId, studentId } = req.body;
+  if (!projectId || !studentId) {
+    return res.status(400).json({ message: 'projectId and studentId are required' });
+  }
+
+  const project = await Project.findById(projectId);
+  if (!project) return res.status(404).json({ message: 'Project not found' });
+
+  const User = require('../models/User');
+  const student = await User.findById(studentId);
+  if (!student || student.role !== 'student') {
+    return res.status(400).json({ message: 'studentId must belong to a student' });
+  }
+
+  const previousApproved = await Allocation.find({
+    student: studentId,
+    status: 'approved',
+    project: { $ne: projectId },
+  });
+  for (const prev of previousApproved) {
+    prev.status = 'rejected';
+    prev.decidedAt = new Date();
+    await prev.save();
+    await Project.findByIdAndUpdate(prev.project, { status: 'open' });
+  }
+
+  let allocation = await Allocation.findOne({ project: projectId, student: studentId });
+  if (allocation) {
+    allocation.status = 'approved';
+    allocation.supervisor = project.supervisor;
+    allocation.decidedAt = new Date();
+    await allocation.save();
+  } else {
+    allocation = await Allocation.create({
+      project: project._id,
+      student: student._id,
+      supervisor: project.supervisor,
+      status: 'approved',
+      decidedAt: new Date(),
+    });
+  }
+
+  await Project.findByIdAndUpdate(project._id, { status: 'allocated' });
+
+  await createNotification({
+    user: student._id,
+    type: 'allocation_decision',
+    title: 'Allocation approved',
+    message: `An admin assigned you to "${project.title}".`,
+    link: '/student/projects',
+  });
+
+  await allocation.populate([
+    { path: 'project', select: 'title status description maxStudents files' },
+    { path: 'student', select: 'name email' },
+    { path: 'supervisor', select: 'name email' },
+  ]);
+
+  res.status(201).json({ allocation });
+});
+
+module.exports = { requestAllocation, getAllocations, decideAllocation, forceAssignAllocation };
