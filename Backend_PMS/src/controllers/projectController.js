@@ -2,6 +2,7 @@ const asyncHandler = require('../utils/asyncHandler');
 const Project = require('../models/Project');
 const Allocation = require('../models/Allocation');
 const Assessment = require('../models/Assessment');
+const { resolveFileUrl } = require('../config/cloudinary');
 
 // @desc   Create a project - admin only, admin picks the supervisor
 // @route  POST /api/projects
@@ -107,7 +108,7 @@ const addProjectFile = asyncHandler(async (req, res) => {
   const project = await Project.findById(req.params.id);
   if (!project) return res.status(404).json({ message: 'Project not found' });
 
-  project.files.push({ url: req.file.path, name: req.file.originalname });
+  project.files.push({ url: resolveFileUrl(req, req.file, 'project-files'), name: req.file.originalname });
   await project.save();
 
   res.status(201).json({ project });

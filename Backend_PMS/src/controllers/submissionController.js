@@ -2,6 +2,7 @@ const asyncHandler = require('../utils/asyncHandler');
 const Submission = require('../models/Submission');
 const Assessment = require('../models/Assessment');
 const sendNotification = require('../utils/notify');
+const { resolveFileUrl, cleanupUploadedFile } = require('../config/cloudinary');
 
 // @desc   Student uploads a file for an assessment assigned to them.
 //         Resubmitting before grading replaces the existing file.
@@ -18,21 +19,26 @@ const createSubmission = asyncHandler(async (req, res) => {
 
   const assessment = await Assessment.findById(assessmentId);
   if (!assessment) {
+    cleanupUploadedFile(req.file);
     return res.status(404).json({ message: 'Assessment not found' });
   }
 
   if (String(assessment.student) !== String(req.user._id)) {
+    cleanupUploadedFile(req.file);
     return res.status(403).json({ message: 'This assessment is not assigned to you' });
   }
 
   let submission = await Submission.findOne({ assessment: assessmentId, student: req.user._id });
 
   if (submission && submission.status === 'graded') {
+    cleanupUploadedFile(req.file);
     return res.status(400).json({ message: 'This assessment has already been graded' });
   }
 
+  const fileUrl = resolveFileUrl(req, req.file, 'submissions');
+
   if (submission) {
-    submission.fileUrl = req.file.path;
+    submission.fileUrl = fileUrl;
     submission.fileName = req.file.originalname;
     submission.submittedAt = new Date();
     submission.status = 'submitted';
@@ -41,7 +47,7 @@ const createSubmission = asyncHandler(async (req, res) => {
     submission = await Submission.create({
       assessment: assessmentId,
       student: req.user._id,
-      fileUrl: req.file.path,
+      fileUrl,
       fileName: req.file.originalname,
     });
   }

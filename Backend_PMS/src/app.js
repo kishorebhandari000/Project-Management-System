@@ -7,12 +7,17 @@ const projectRoutes = require('./routes/projectRoutes');
 const taskRoutes = require('./routes/taskRoutes');
 const { notFound, errorHandler } = require('./middleware/errorHandler');
 const { corsOriginCallback } = require('./config/corsOrigin');
+const { UPLOADS_ROOT } = require('./config/cloudinary');
 
 const app = express();
 
 app.use(cors({ origin: corsOriginCallback, credentials: true }));
 app.use(express.json());
 app.use(morgan('dev'));
+
+// Serves files saved by the local-disk storage fallback (used when
+// Cloudinary credentials aren't configured) - a no-op path otherwise.
+app.use('/uploads', express.static(UPLOADS_ROOT));
 
 app.get('/api/health', (req, res) => res.json({ status: 'ok' }));
 
