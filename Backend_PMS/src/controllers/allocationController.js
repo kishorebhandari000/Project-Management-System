@@ -63,7 +63,8 @@ const getAllocations = asyncHandler(async (req, res) => {
   res.json({ count: allocations.length, allocations });
 });
 
-// @desc   Approve or reject a request - the project's supervisor only (not admin)
+// @desc   Approve or reject a request - the project's supervisor (default) or
+//         admin (fallback)
 // @route  PUT /api/allocations/:id/decision
 const decideAllocation = asyncHandler(async (req, res) => {
   const { decision } = req.body; // 'approved' | 'rejected' | 'pending'
@@ -75,8 +76,8 @@ const decideAllocation = asyncHandler(async (req, res) => {
   if (!allocation) return res.status(404).json({ message: 'Allocation not found' });
 
   const isOwner = allocation.supervisor.toString() === req.user._id.toString();
-  if (!isOwner) {
-    return res.status(403).json({ message: 'Only the project supervisor can decide on this allocation' });
+  if (req.user.role !== 'admin' && !isOwner) {
+    return res.status(403).json({ message: 'Only the project supervisor or an admin can decide on this allocation' });
   }
 
   const wasApproved = allocation.status === 'approved';

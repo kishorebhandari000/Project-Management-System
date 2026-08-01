@@ -60,6 +60,15 @@ export default function ManageAllocation() {
     loadAll();
   }, []);
 
+  const handleDecision = async (id: string, decision: 'approved' | 'rejected' | 'pending') => {
+    try {
+      await api.put(`/allocations/${id}/decision`, { decision });
+      await loadAll();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Failed to update allocation');
+    }
+  };
+
   const handleForceAssign = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!assignProjectId || !assignStudentId) return;
@@ -89,7 +98,8 @@ export default function ManageAllocation() {
             <div>
               <h1 className="text-2xl">Manage Allocation</h1>
               <p className="text-gray-600">
-                Applications are approved by each project's supervisor. Use force-assign below as a safety-net override.
+                Applications are approved by each project's supervisor - admin can also decide as a fallback,
+                or use force-assign below as a safety-net override.
               </p>
             </div>
             <div className="flex items-center gap-4">
@@ -180,12 +190,13 @@ export default function ManageAllocation() {
                     <th className="text-left px-6 py-4 border-b border-gray-200">Project</th>
                     <th className="text-left px-6 py-4 border-b border-gray-200">Supervisor</th>
                     <th className="text-left px-6 py-4 border-b border-gray-200">Status</th>
+                    <th className="text-left px-6 py-4 border-b border-gray-200">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {allocations.length === 0 && (
                     <tr>
-                      <td colSpan={4} className="px-6 py-6 text-center text-gray-500">
+                      <td colSpan={5} className="px-6 py-6 text-center text-gray-500">
                         No allocations yet.
                       </td>
                     </tr>
@@ -207,6 +218,34 @@ export default function ManageAllocation() {
                         >
                           {allocation.status}
                         </span>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="flex gap-2">
+                          {allocation.status === 'pending' && (
+                            <>
+                              <button
+                                onClick={() => handleDecision(allocation._id, 'approved')}
+                                className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700"
+                              >
+                                Approve
+                              </button>
+                              <button
+                                onClick={() => handleDecision(allocation._id, 'rejected')}
+                                className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700"
+                              >
+                                Reject
+                              </button>
+                            </>
+                          )}
+                          {allocation.status !== 'pending' && (
+                            <button
+                              onClick={() => handleDecision(allocation._id, 'pending')}
+                              className="bg-gray-200 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-300"
+                            >
+                              Undo
+                            </button>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   ))}
