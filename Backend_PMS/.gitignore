@@ -2,3 +2,6 @@ node_modules/
 .env
 npm-debug.log*
 uploads/
+backend.out.log
+backend.err.log
+backend.pid
