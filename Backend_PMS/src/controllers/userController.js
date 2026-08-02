@@ -1,14 +1,20 @@
 const asyncHandler = require('../utils/asyncHandler');
 const User = require('../models/User');
-
 // @desc   Admin creates a user (student or supervisor)
 // @route  POST /api/users
 // @access Private/Admin
 const createUser = asyncHandler(async (req, res) => {
-  const { name, email, password, role } = req.body;
+  const { name, password, role } = req.body;
+  let { email } = req.body;
 
-  if (!name || !email || !password || !role) {
-    return res.status(400).json({ message: 'name, email, password and role are required' });
+  if (!name || !password || !role) {
+    return res.status(400).json({ message: 'name, password and role are required' });
+  }
+
+  if (role === 'supervisor') {
+    email = await generateSupervisorEmail(name);
+  } else if (!email) {
+    return res.status(400).json({ message: 'email is required for this role' });
   }
 
   const existing = await User.findOne({ email });
@@ -16,12 +22,58 @@ const createUser = asyncHandler(async (req, res) => {
     return res.status(409).json({ message: 'Email already in use' });
   }
 
-  const user = await User.create({ name, email, password, role });
+  const userData = { name, email, password, role };
+
+  if (role === 'student') {
+    userData.studentId = await generateStudentId();
+  }
+
+  const user = await User.create(userData);
 
   res.status(201).json({
-    user: { id: user._id, name: user.name, email: user.email, role: user.role },
+    user: {
+      id: user._id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      studentId: user.studentId,
+    },
   });
 });
+
+// Generates "firstname.lastname@pms.edu", appending a number if that's taken
+async function generateSupervisorEmail(name) {
+  const parts = name.trim().toLowerCase().split(/\s+/).filter(Boolean);
+  const clean = (s) => s.replace(/[^a-z]/g, '');
+  const first = clean(parts[0] || 'user');
+  const last = clean(parts[parts.length - 1] || first);
+  const base = parts.length > 1 ? `${first}.${last}` : first;
+
+  let candidate = `${base}@pms.edu`;
+  let suffix = 1;
+  while (await User.findOne({ email: candidate })) {
+    suffix += 1;
+    candidate = `${base}${suffix}@pms.edu`;
+  }
+  return candidate;
+}
+
+// Generates "2026" + zero-padded serial, e.g. "20260001", scoped to the current year
+async function generateStudentId() {
+  const year = new Date().getFullYear();
+  const lastStudent = await User.findOne({
+    role: 'student',
+    studentId: { $regex: `^${year}` },
+  }).sort({ studentId: -1 });
+
+  let nextSerial = 1;
+  if (lastStudent && lastStudent.studentId) {
+    const serialPart = lastStudent.studentId.slice(String(year).length);
+    nextSerial = parseInt(serialPart, 10) + 1;
+  }
+
+  return `${year}${String(nextSerial).padStart(4, '0')}`;
+}
 
 // @desc   List all users (optionally filter by role)
 // @route  GET /api/users?role=student
@@ -141,4 +193,24 @@ const deleteUser = asyncHandler(async (req, res) => {
   res.json({ message: 'User deleted successfully' });
 });
 
-module.exports = { createUser, getUsers, getMe, updateMe, changePassword, updateUser, deleteUser };
+// @desc   Search fellow students by name/email/studentId (for group formation)
+// @route  GET /api/users/search-students?q=...
+// @access Private (any logged-in user)
+const searchStudents = asyncHandler(async (req, res) => {
+  const q = (req.query.q || '').trim();
+  if (q.length < 2) {
+    return res.json({ users: [] });
+  }
+
+  const regex = new RegExp(q, 'i');
+  const users = await User.find({
+    role: 'student',
+    _id: { $ne: req.user._id },
+    $or: [{ name: regex }, { email: regex }, { studentId: regex }],
+  })
+    .select('name email studentId')
+    .limit(10);
+
+  res.json({ users });
+});
+module.exports = { createUser, getUsers, getMe, updateMe, changePassword, updateUser, deleteUser, searchStudents };

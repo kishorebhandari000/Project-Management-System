@@ -9,6 +9,7 @@ interface ApiUser {
   name: string;
   email: string;
   role: 'admin' | 'supervisor' | 'student';
+  studentId?: string;
   createdAt?: string;
 }
 
@@ -33,6 +34,7 @@ export default function ManageUsers() {
   const [formRole, setFormRole] = useState<'student' | 'supervisor'>('student');
   const [formError, setFormError] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [createdUser, setCreatedUser] = useState<ApiUser | null>(null);
 
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingUserId, setEditingUserId] = useState<string | null>(null);
@@ -65,7 +67,8 @@ export default function ManageUsers() {
 
   const matchesSearch = (user: ApiUser) =>
     user.name.toLowerCase().includes(search.toLowerCase()) ||
-    user.email.toLowerCase().includes(search.toLowerCase());
+    user.email.toLowerCase().includes(search.toLowerCase()) ||
+    (user.studentId ? user.studentId.includes(search) : false);
 
   const filteredStudents = students.filter(matchesSearch);
   const filteredSupervisors = supervisors.filter(matchesSearch);
@@ -76,7 +79,13 @@ export default function ManageUsers() {
     setFormPassword('');
     setFormRole(activeTab === 'students' ? 'student' : 'supervisor');
     setFormError('');
+    setCreatedUser(null);
     setShowModal(true);
+  };
+
+  const closeModal = () => {
+    setShowModal(false);
+    setCreatedUser(null);
   };
 
   const handleCreateUser = async (e: React.FormEvent) => {
@@ -85,13 +94,13 @@ export default function ManageUsers() {
     setSubmitting(true);
 
     try {
-      await api.post('/users', {
+      const data = await api.post('/users', {
         name: formName,
-        email: formEmail,
+        ...(formRole === 'student' ? { email: formEmail } : {}),
         password: formPassword,
         role: formRole,
       });
-      setShowModal(false);
+      setCreatedUser(normalizeUser(data.user));
       await loadUsers();
     } catch (err) {
       setFormError(err instanceof Error ? err.message : 'Failed to create user');
@@ -200,7 +209,7 @@ export default function ManageUsers() {
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search by name or email..."
+              placeholder="Search by name, email, or student ID..."
               className="w-full border border-gray-300 rounded-md px-4 py-2 focus:outline-none focus:border-[#2563a8]"
             />
           </div>
@@ -217,6 +226,7 @@ export default function ManageUsers() {
               <div className="overflow-x-auto"><table className="w-full">
                 <thead className="bg-gray-100">
                   <tr>
+                    <th className="text-left px-6 py-4 border-b border-gray-200">Student ID</th>
                     <th className="text-left px-6 py-4 border-b border-gray-200">Name</th>
                     <th className="text-left px-6 py-4 border-b border-gray-200">Email</th>
                     <th className="text-left px-6 py-4 border-b border-gray-200">Actions</th>
@@ -225,7 +235,7 @@ export default function ManageUsers() {
                 <tbody>
                   {filteredStudents.length === 0 && (
                     <tr>
-                      <td colSpan={3} className="px-6 py-6 text-center text-gray-500">
+                      <td colSpan={4} className="px-6 py-6 text-center text-gray-500">
                         {students.length === 0
                           ? 'No students yet. Click "Add User" to create one.'
                           : 'No students match your search.'}
@@ -234,6 +244,7 @@ export default function ManageUsers() {
                   )}
                   {filteredStudents.map((student) => (
                     <tr key={student.id} className="border-b border-gray-200">
+                      <td className="px-6 py-4 text-gray-600">{student.studentId || '—'}</td>
                       <td className="px-6 py-4">{student.name}</td>
                       <td className="px-6 py-4">{student.email}</td>
                       <td className="px-6 py-4">
@@ -309,86 +320,125 @@ export default function ManageUsers() {
       </div>
 
       {showModal && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4">
           <div className="bg-white rounded-lg shadow-lg p-8 w-full max-w-md">
-            <h2 className="text-xl mb-5">Add New User</h2>
-
-            <form onSubmit={handleCreateUser} className="space-y-4">
-              {formError && (
-                <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-md px-4 py-3">
-                  {formError}
+            {createdUser ? (
+              <>
+                <h2 className="text-xl mb-5">User Created</h2>
+                <div className="bg-green-50 border border-green-200 text-green-800 rounded-md px-4 py-4 mb-5 space-y-2">
+                  <p>{createdUser.name} was created successfully.</p>
+                  {createdUser.role === 'supervisor' && (
+                    <p>
+                      Login email: <strong>{createdUser.email}</strong>
+                    </p>
+                  )}
+                  {createdUser.role === 'student' && createdUser.studentId && (
+                    <p>
+                      Student ID: <strong>{createdUser.studentId}</strong>
+                    </p>
+                  )}
+                  <p className="text-sm text-green-700">Make sure to share these details with the user.</p>
                 </div>
-              )}
-
-              <div>
-                <label className="block text-gray-700 mb-1">Full Name</label>
-                <input
-                  type="text"
-                  value={formName}
-                  onChange={(e) => setFormName(e.target.value)}
-                  className="w-full border border-gray-300 rounded-md px-4 py-2 focus:outline-none focus:border-[#2563a8]"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-gray-700 mb-1">Email</label>
-                <input
-                  type="email"
-                  value={formEmail}
-                  onChange={(e) => setFormEmail(e.target.value)}
-                  className="w-full border border-gray-300 rounded-md px-4 py-2 focus:outline-none focus:border-[#2563a8]"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-gray-700 mb-1">Temporary Password</label>
-                <input
-                  type="text"
-                  value={formPassword}
-                  onChange={(e) => setFormPassword(e.target.value)}
-                  className="w-full border border-gray-300 rounded-md px-4 py-2 focus:outline-none focus:border-[#2563a8]"
-                  minLength={6}
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-gray-700 mb-1">Role</label>
-                <select
-                  value={formRole}
-                  onChange={(e) => setFormRole(e.target.value as 'student' | 'supervisor')}
-                  className="w-full border border-gray-300 rounded-md px-4 py-2 focus:outline-none focus:border-[#2563a8]"
-                >
-                  <option value="student">Student</option>
-                  <option value="supervisor">Supervisor</option>
-                </select>
-              </div>
-
-              <div className="flex gap-3 pt-2">
                 <button
-                  type="button"
-                  onClick={() => setShowModal(false)}
-                  className="flex-1 bg-gray-200 text-gray-700 px-5 py-2 rounded-md hover:bg-gray-300"
+                  onClick={closeModal}
+                  className="w-full bg-[#2563a8] text-white px-5 py-2 rounded-md hover:bg-[#1e4a8a]"
                 >
-                  Cancel
+                  Done
                 </button>
-                <button
-                  type="submit"
-                  disabled={submitting}
-                  className="flex-1 bg-[#2563a8] text-white px-5 py-2 rounded-md hover:bg-[#1e4a8a] disabled:opacity-60"
-                >
-                  {submitting ? 'Creating...' : 'Create User'}
-                </button>
-              </div>
-            </form>
+              </>
+            ) : (
+              <>
+                <h2 className="text-xl mb-5">Add New User</h2>
+
+                <form onSubmit={handleCreateUser} className="space-y-4">
+                  {formError && (
+                    <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-md px-4 py-3">
+                      {formError}
+                    </div>
+                  )}
+
+                  <div>
+                    <label className="block text-gray-700 mb-1">Role</label>
+                    <select
+                      value={formRole}
+                      onChange={(e) => setFormRole(e.target.value as 'student' | 'supervisor')}
+                      className="w-full border border-gray-300 rounded-md px-4 py-2 focus:outline-none focus:border-[#2563a8]"
+                    >
+                      <option value="student">Student</option>
+                      <option value="supervisor">Supervisor</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-gray-700 mb-1">Full Name</label>
+                    <input
+                      type="text"
+                      value={formName}
+                      onChange={(e) => setFormName(e.target.value)}
+                      className="w-full border border-gray-300 rounded-md px-4 py-2 focus:outline-none focus:border-[#2563a8]"
+                      required
+                    />
+                  </div>
+
+                  {formRole === 'student' && (
+                    <div>
+                      <label className="block text-gray-700 mb-1">Email</label>
+                      <input
+                        type="email"
+                        value={formEmail}
+                        onChange={(e) => setFormEmail(e.target.value)}
+                        className="w-full border border-gray-300 rounded-md px-4 py-2 focus:outline-none focus:border-[#2563a8]"
+                        required
+                      />
+                      <p className="text-xs text-gray-400 mt-1">
+                        Student ID will be assigned automatically (e.g. 20260001).
+                      </p>
+                    </div>
+                  )}
+
+                  {formRole === 'supervisor' && (
+                    <div className="bg-blue-50 border border-blue-200 rounded-md px-4 py-3 text-sm text-blue-800">
+                      Login email will be generated automatically as firstname.lastname@pms.edu
+                    </div>
+                  )}
+
+                  <div>
+                    <label className="block text-gray-700 mb-1">Temporary Password</label>
+                    <input
+                      type="text"
+                      value={formPassword}
+                      onChange={(e) => setFormPassword(e.target.value)}
+                      className="w-full border border-gray-300 rounded-md px-4 py-2 focus:outline-none focus:border-[#2563a8]"
+                      minLength={6}
+                      required
+                    />
+                  </div>
+
+                  <div className="flex gap-3 pt-2">
+                    <button
+                      type="button"
+                      onClick={closeModal}
+                      className="flex-1 bg-gray-200 text-gray-700 px-5 py-2 rounded-md hover:bg-gray-300"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={submitting}
+                      className="flex-1 bg-[#2563a8] text-white px-5 py-2 rounded-md hover:bg-[#1e4a8a] disabled:opacity-60"
+                    >
+                      {submitting ? 'Creating...' : 'Create User'}
+                    </button>
+                  </div>
+                </form>
+              </>
+            )}
           </div>
         </div>
       )}
 
       {showEditModal && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4">
           <div className="bg-white rounded-lg shadow-lg p-8 w-full max-w-md">
             <h2 className="text-xl mb-5">Edit User</h2>
 

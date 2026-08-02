@@ -1,8 +1,7 @@
 import Sidebar from '../../components/Sidebar';
 import { Link } from 'react-router';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { api } from '../../lib/api';
-import ProfileAvatar from '../../components/ProfileAvatar';
 
 interface ProjectFile {
   url: string;
@@ -14,6 +13,7 @@ interface ApiProject {
   title: string;
   description: string;
   status: 'open' | 'allocated' | 'closed';
+  maxStudents: number;
   supervisor?: { name: string };
   files?: ProjectFile[];
 }
@@ -24,24 +24,50 @@ interface ApiAllocation {
   status: 'pending' | 'approved' | 'rejected';
 }
 
+interface ApiGroup {
+  _id: string;
+  project: { _id: string } | string;
+  status: 'pending' | 'approved' | 'rejected';
+}
+
+interface StudentResult {
+  _id: string;
+  name: string;
+  email: string;
+  studentId?: string;
+}
+
 export default function BrowseProjects() {
   const [projects, setProjects] = useState<ApiProject[]>([]);
   const [myAllocations, setMyAllocations] = useState<ApiAllocation[]>([]);
+  const [myGroups, setMyGroups] = useState<ApiGroup[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [requestingId, setRequestingId] = useState<string | null>(null);
-  const [requestError, setRequestError] = useState('');
+  const [withdrawingId, setWithdrawingId] = useState<string | null>(null);
+
+  // Group application modal state
+  const [groupModalProjectId, setGroupModalProjectId] = useState<string | null>(null);
+  const [groupName, setGroupName] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<StudentResult[]>([]);
+  const [searching, setSearching] = useState(false);
+  const [selectedMembers, setSelectedMembers] = useState<StudentResult[]>([]);
+  const [groupSubmitting, setGroupSubmitting] = useState(false);
+  const [groupError, setGroupError] = useState('');
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const loadData = async () => {
     setLoading(true);
     setError('');
     try {
-      const [projectsRes, allocationsRes] = await Promise.all([
+      const [projectsRes, allocationsRes, groupsRes] = await Promise.all([
         api.get('/projects'),
         api.get('/allocations'),
+        api.get('/groups/my'),
       ]);
       setProjects(projectsRes.projects);
       setMyAllocations(allocationsRes.allocations);
+      setMyGroups(groupsRes.groups);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load projects');
     } finally {
@@ -54,25 +80,96 @@ export default function BrowseProjects() {
   }, []);
 
   const getAllocationForProject = (projectId: string) => {
-  return myAllocations.find((a) => {
-    if (!a.project) return false;
-    const pId = typeof a.project === 'string' ? a.project : a.project._id;
-    return pId === projectId;
-  });
-};
+    return myAllocations.find((a) => {
+      const pId = typeof a.project === 'string' ? a.project : a.project._id;
+      return pId === projectId;
+    });
+  };
 
-  const handleRequest = async (projectId: string) => {
-    setRequestError('');
-    setRequestingId(projectId);
+  const getGroupForProject = (projectId: string) => {
+    return myGroups.find((g) => {
+      const pId = typeof g.project === 'string' ? g.project : g.project._id;
+      return pId === projectId && g.status !== 'rejected';
+    });
+  };
+
+  const handleWithdraw = async (allocationId: string) => {
+    if (!confirm('Withdraw this request?')) return;
+    setWithdrawingId(allocationId);
     try {
-      await api.post('/allocations', { projectId });
+      await api.delete(`/allocations/${allocationId}`);
       await loadData();
     } catch (err) {
-      setRequestError(err instanceof Error ? err.message : 'Failed to request project');
+      setError(err instanceof Error ? err.message : 'Failed to withdraw request');
     } finally {
-      setRequestingId(null);
+      setWithdrawingId(null);
     }
   };
+
+  const openGroupModal = (projectId: string) => {
+    setGroupModalProjectId(projectId);
+    setGroupName('');
+    setSearchQuery('');
+    setSearchResults([]);
+    setSelectedMembers([]);
+    setGroupError('');
+  };
+
+  const handleSearchChange = (value: string) => {
+    setSearchQuery(value);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+
+    if (value.trim().length < 2) {
+      setSearchResults([]);
+      return;
+    }
+
+    debounceRef.current = setTimeout(async () => {
+      setSearching(true);
+      try {
+        const data = await api.get(`/users/search-students?q=${encodeURIComponent(value.trim())}`);
+        setSearchResults(data.users);
+      } catch {
+        setSearchResults([]);
+      } finally {
+        setSearching(false);
+      }
+    }, 300);
+  };
+
+  const addMember = (student: StudentResult) => {
+    if (selectedMembers.some((m) => m._id === student._id)) return;
+    setSelectedMembers([...selectedMembers, student]);
+    setSearchQuery('');
+    setSearchResults([]);
+  };
+
+  const removeMember = (id: string) => {
+    setSelectedMembers(selectedMembers.filter((m) => m._id !== id));
+  };
+
+  const handleCreateGroup = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!groupModalProjectId) return;
+    setGroupError('');
+    setGroupSubmitting(true);
+
+    try {
+      await api.post('/groups', {
+        project: groupModalProjectId,
+        name: groupName,
+        memberIds: selectedMembers.map((m) => m._id),
+      });
+      setGroupModalProjectId(null);
+      await loadData();
+    } catch (err) {
+      setGroupError(err instanceof Error ? err.message : 'Failed to submit group request');
+    } finally {
+      setGroupSubmitting(false);
+    }
+  };
+
+  const activeProject = projects.find((p) => p._id === groupModalProjectId);
 
   return (
     <div className="flex flex-col md:flex-row">
@@ -91,7 +188,9 @@ export default function BrowseProjects() {
                 </div>
                 <div className="absolute top-0 right-0 w-3 h-3 bg-red-600 rounded-full"></div>
               </Link>
-              <ProfileAvatar role="student" />
+              <Link to="/student/profile" className="w-12 h-12 bg-[#2563a8] rounded-full flex items-center justify-center text-white hover:bg-[#1e4a8a] cursor-pointer">
+                JD
+              </Link>
             </div>
           </div>
         </div>
@@ -111,37 +210,29 @@ export default function BrowseProjects() {
               {error}
             </div>
           )}
-          {requestError && (
-            <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-md px-4 py-3 mb-4">
-              {requestError}
-            </div>
-          )}
 
           {!loading && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {projects.length === 0 && (
-                <p className="text-gray-500 col-span-2">No open projects available right now.</p>
+                <p className="text-gray-500 col-span-full">No open projects available right now.</p>
               )}
               {projects.map((project) => {
                 const allocation = getAllocationForProject(project._id);
-                const isRequesting = requestingId === project._id;
+                const group = getGroupForProject(project._id);
 
-                let buttonLabel = 'Request';
+                let buttonLabel = 'Apply as a Group';
                 let buttonDisabled = false;
+                let showWithdraw = false;
 
                 if (allocation) {
-                  buttonLabel =
-                    allocation.status === 'pending'
-                      ? 'Requested (pending)'
-                      : allocation.status === 'approved'
-                      ? 'Approved'
-                      : 'Rejected';
+                  buttonLabel = allocation.status === 'approved' ? 'Approved' : 'Rejected';
                   buttonDisabled = true;
+                } else if (group) {
+                  buttonLabel = group.status === 'pending' ? 'Group Request Pending' : 'Approved';
+                  buttonDisabled = true;
+                  showWithdraw = group.status === 'pending';
                 } else if (project.status !== 'open') {
                   buttonLabel = 'Not Available';
-                  buttonDisabled = true;
-                } else if (isRequesting) {
-                  buttonLabel = 'Requesting...';
                   buttonDisabled = true;
                 }
 
@@ -158,6 +249,7 @@ export default function BrowseProjects() {
                     <div className="text-sm text-gray-600 mb-3">
                       <span>Supervisor: </span>
                       <span>{project.supervisor?.name || 'Unassigned'}</span>
+                      <span className="ml-3 text-gray-400">Max {project.maxStudents} student(s)</span>
                     </div>
                     <p className="text-gray-700 mb-4">{project.description}</p>
 
@@ -166,27 +258,39 @@ export default function BrowseProjects() {
                         <p className="text-sm text-gray-600 mb-1">Files:</p>
                         <ul className="space-y-1">
                           {project.files.map((f, idx) => (
-  <li key={idx}>
-    <a href={f.url} target="_blank" rel="noopener noreferrer" className="text-[#2563a8] hover:underline text-sm">
-      📎 {f.name}
-    </a>
-  </li>
-))}
+                            <li key={idx}>
+                              <a href={f.url} target="_blank" rel="noopener noreferrer" className="text-[#2563a8] hover:underline text-sm">
+                                📎 {f.name}
+                              </a>
+                            </li>
+                          ))}
                         </ul>
                       </div>
                     )}
 
-                    <button
-                      onClick={() => handleRequest(project._id)}
-                      disabled={buttonDisabled}
-                      className={`px-5 py-2 rounded-md ${
-                        buttonDisabled
-                          ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                          : 'bg-[#2563a8] text-white hover:bg-[#1e4a8a]'
-                      }`}
-                    >
-                      {buttonLabel}
-                    </button>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => openGroupModal(project._id)}
+                        disabled={buttonDisabled}
+                        className={`px-5 py-2 rounded-md ${
+                          buttonDisabled
+                            ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                            : 'bg-[#2563a8] text-white hover:bg-[#1e4a8a]'
+                        }`}
+                      >
+                        {buttonLabel}
+                      </button>
+
+                      {showWithdraw && group && (
+                        <button
+                          onClick={() => handleWithdraw(group._id)}
+                          disabled={withdrawingId === group._id}
+                          className="px-5 py-2 rounded-md bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 disabled:opacity-60"
+                        >
+                          {withdrawingId === group._id ? 'Withdrawing...' : 'Withdraw'}
+                        </button>
+                      )}
+                    </div>
                   </div>
                 );
               })}
@@ -194,6 +298,109 @@ export default function BrowseProjects() {
           )}
         </div>
       </div>
+
+      {groupModalProjectId && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4">
+          <div className="bg-white rounded-lg shadow-lg p-8 w-full max-w-md">
+            <h2 className="text-xl mb-1">Apply as a Group</h2>
+            <p className="text-gray-600 text-sm mb-5">
+              {activeProject?.title} — max {activeProject?.maxStudents} student(s)
+            </p>
+
+            <form onSubmit={handleCreateGroup} className="space-y-4">
+              {groupError && (
+                <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-md px-4 py-3">
+                  {groupError}
+                </div>
+              )}
+
+              <div>
+                <label className="block text-gray-700 mb-1">Group Name</label>
+                <input
+                  type="text"
+                  value={groupName}
+                  onChange={(e) => setGroupName(e.target.value)}
+                  placeholder="e.g. Team Innovate"
+                  className="w-full border border-gray-300 rounded-md px-4 py-2 focus:outline-none focus:border-[#2563a8]"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-gray-700 mb-1">Add Teammates (optional)</label>
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => handleSearchChange(e.target.value)}
+                  placeholder="Search by name, email, or student ID..."
+                  className="w-full border border-gray-300 rounded-md px-4 py-2 focus:outline-none focus:border-[#2563a8]"
+                />
+
+                {searching && <p className="text-xs text-gray-400 mt-1">Searching...</p>}
+
+                {searchResults.length > 0 && (
+                  <div className="border border-gray-200 rounded-md mt-1 max-h-40 overflow-y-auto">
+                    {searchResults.map((student) => (
+                      <button
+                        type="button"
+                        key={student._id}
+                        onClick={() => addMember(student)}
+                        className="w-full text-left px-3 py-2 hover:bg-gray-50 border-b border-gray-100 last:border-b-0"
+                      >
+                        <div className="text-sm">{student.name}</div>
+                        <div className="text-xs text-gray-500">
+                          {student.studentId ? `${student.studentId} · ` : ''}{student.email}
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                {selectedMembers.length > 0 && (
+                  <div className="flex flex-wrap gap-2 mt-3">
+                    {selectedMembers.map((m) => (
+                      <span
+                        key={m._id}
+                        className="bg-blue-50 text-blue-800 text-sm px-3 py-1 rounded-full flex items-center gap-2"
+                      >
+                        {m.name}
+                        <button
+                          type="button"
+                          onClick={() => removeMember(m._id)}
+                          className="text-blue-500 hover:text-blue-700"
+                        >
+                          ×
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+
+                <p className="text-xs text-gray-400 mt-2">
+                  You'll be included automatically as the group leader.
+                </p>
+              </div>
+
+              <div className="flex gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setGroupModalProjectId(null)}
+                  className="flex-1 bg-gray-200 text-gray-700 px-5 py-2 rounded-md hover:bg-gray-300"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={groupSubmitting}
+                  className="flex-1 bg-[#2563a8] text-white px-5 py-2 rounded-md hover:bg-[#1e4a8a] disabled:opacity-60"
+                >
+                  {groupSubmitting ? 'Submitting...' : 'Submit Request'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

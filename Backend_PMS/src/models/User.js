@@ -13,6 +13,7 @@ const userSchema = new mongoose.Schema(
     personalEmail: { type: String, trim: true, lowercase: true, default: '' },
     resetPasswordToken: { type: String, select: false },
     resetPasswordExpires: { type: Date, select: false },
+  studentId: { type: String, unique: true, sparse: true },
   },
   { timestamps: true }
 );
