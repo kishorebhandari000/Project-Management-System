@@ -1,4 +1,5 @@
 import Sidebar from '../../components/Sidebar';
+import NotificationBell from '../../components/NotificationBell';
 import { Link } from 'react-router';
 import { useState, useEffect } from 'react';
 import { api } from '../../lib/api';
@@ -61,12 +62,7 @@ export default function SupervisorProfile() {
               <h1 className="text-2xl">My Profile</h1>
               <p className="text-gray-600">Manage your account information</p>
             </div>
-            <Link to="/supervisor/notifications" className="relative">
-              <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center text-gray-700 hover:bg-gray-300">
-                <span className="text-xl">🔔</span>
-              </div>
-              <div className="absolute top-0 right-0 w-3 h-3 bg-red-600 rounded-full"></div>
-            </Link>
+            <NotificationBell role="supervisor" />
           </div>
         </div>
 

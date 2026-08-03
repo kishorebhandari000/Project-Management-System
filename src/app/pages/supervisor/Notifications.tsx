@@ -33,6 +33,7 @@ function typeColor(type: string) {
 
 export default function Notifications() {
   const [notifications, setNotifications] = useState<ApiNotification[]>([]);
+  const [justReadIds, setJustReadIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [filter, setFilter] = useState<'all' | 'unread'>('all');
@@ -43,6 +44,18 @@ export default function Notifications() {
     try {
       const data = await api.get('/notifications');
       setNotifications(data.notifications);
+
+      // Facebook-style: simply viewing this list marks everything read. We
+      // keep track of which ones were unread *at the moment we opened this
+      // page* so they can still stay visually highlighted for this visit,
+      // even though they're already marked read in the database (and the
+      // bell icon clears immediately).
+      const unreadIds = data.notifications.filter((n: ApiNotification) => !n.read).map((n: ApiNotification) => n._id);
+      if (unreadIds.length > 0) {
+        setJustReadIds(new Set(unreadIds));
+        await api.put('/notifications/read-all', {});
+        window.dispatchEvent(new Event('notificationsRead'));
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load notifications');
     } finally {
@@ -54,17 +67,8 @@ export default function Notifications() {
     loadNotifications();
   }, []);
 
-  const unreadCount = notifications.filter((n) => !n.read).length;
-  const visibleNotifications = filter === 'unread' ? notifications.filter((n) => !n.read) : notifications;
-
-  const markAsRead = async (id: string) => {
-    try {
-      await api.put(`/notifications/${id}/read`, {});
-      setNotifications((prev) => prev.map((n) => (n._id === id ? { ...n, read: true } : n)));
-    } catch (err) {
-      alert(err instanceof Error ? err.message : 'Failed to mark as read');
-    }
-  };
+  const unreadCount = justReadIds.size;
+  const visibleNotifications = filter === 'unread' ? notifications.filter((n) => justReadIds.has(n._id)) : notifications;
 
   return (
     <div className="flex flex-col md:flex-row">
@@ -113,35 +117,30 @@ export default function Notifications() {
                   {visibleNotifications.length === 0 && (
                     <p className="text-gray-500">No notifications to show.</p>
                   )}
-                  {visibleNotifications.map((notification) => (
-                    <div
-                      key={notification._id}
-                      className={`bg-white rounded-lg p-5 border border-gray-200 shadow-sm ${
-                        !notification.read ? 'border-l-4 border-l-[#2563a8]' : ''
-                      }`}
-                    >
-                      <div className="flex justify-between items-start mb-2">
-                        <div className="flex items-center gap-3">
-                          <span className={`px-3 py-1 rounded-md text-sm ${typeColor(notification.type)}`}>
-                            {notification.type.replace(/_/g, ' ')}
-                          </span>
-                          <h3 className={`text-lg ${!notification.read ? 'font-bold' : ''}`}>
-                            {notification.title}
-                          </h3>
+                  {visibleNotifications.map((notification) => {
+                    const isNew = justReadIds.has(notification._id);
+                    return (
+                      <div
+                        key={notification._id}
+                        className={`bg-white rounded-lg p-5 border border-gray-200 shadow-sm ${
+                          isNew ? 'border-l-4 border-l-[#2563a8]' : ''
+                        }`}
+                      >
+                        <div className="flex justify-between items-start mb-2">
+                          <div className="flex items-center gap-3">
+                            <span className={`px-3 py-1 rounded-md text-sm ${typeColor(notification.type)}`}>
+                              {notification.type.replace(/_/g, ' ')}
+                            </span>
+                            <h3 className={`text-lg ${isNew ? 'font-bold' : ''}`}>
+                              {notification.title}
+                            </h3>
+                          </div>
+                          <span className="text-sm text-gray-500">{timeAgo(notification.createdAt)}</span>
                         </div>
-                        <span className="text-sm text-gray-500">{timeAgo(notification.createdAt)}</span>
+                        <p className="text-gray-700">{notification.message}</p>
                       </div>
-                      <p className="text-gray-700 mb-3">{notification.message}</p>
-                      {!notification.read && (
-                        <button
-                          onClick={() => markAsRead(notification._id)}
-                          className="bg-gray-200 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-300 text-sm"
-                        >
-                          Mark as Read
-                        </button>
-                      )}
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </>
             )}

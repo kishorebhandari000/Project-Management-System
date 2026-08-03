@@ -1,5 +1,6 @@
 import Sidebar from '../../components/Sidebar';
 import ProfileAvatar from '../../components/ProfileAvatar';
+import NotificationBell from '../../components/NotificationBell';
 import { useState, useRef, useEffect } from 'react';
 import { sendDirectMessage } from '../../utils/emailService';
 import { useMessages } from '../../hooks/useMessages';
@@ -161,7 +162,7 @@ function EmailPanel() {
       await sendDirectMessage({
         recipientEmail,
         recipientName: 'Student',
-        senderName: 'Dr. Sarah Johnson',
+        senderName: localStorage.getItem('userName') || 'Supervisor',
         senderRole: 'Supervisor',
         subject,
         message,
@@ -290,7 +291,10 @@ export default function Messages() {
               <h1 className="text-2xl">Messages</h1>
               <p className="text-gray-600">Chat with your students in real time, or send them an email</p>
             </div>
-            <ProfileAvatar role="supervisor" />
+            <div className="flex items-center gap-4">
+              <NotificationBell role="supervisor" />
+              <ProfileAvatar role="supervisor" />
+            </div>
           </div>
         </div>
 

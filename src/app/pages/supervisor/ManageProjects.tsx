@@ -1,4 +1,6 @@
 import Sidebar from '../../components/Sidebar';
+import ProfileAvatar from '../../components/ProfileAvatar';
+import NotificationBell from '../../components/NotificationBell';
 import { Link } from 'react-router';
 import { useState, useEffect } from 'react';
 import { api } from '../../lib/api';
@@ -86,8 +88,6 @@ export default function ManageProjects() {
   const forwardedGroups = groups.filter((g) => g.status === 'supervisor_approved');
   const decidedGroups = groups.filter((g) => g.status === 'approved' || g.status === 'rejected');
 
-  // Students actually enrolled on a project (an approved allocation - created
-  // once a group's final allocation is approved, or via admin force-assign).
   const getEnrolledStudents = (projectId: string) => {
     return allocations.filter((a) => {
       if (!a.project || a.status !== 'approved') return false;
@@ -163,15 +163,8 @@ export default function ManageProjects() {
               <p className="text-gray-600">Manage your project offerings and student group applications</p>
             </div>
             <div className="flex items-center gap-4">
-              <Link to="/supervisor/notifications" className="relative">
-                <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center text-gray-700 cursor-pointer hover:bg-gray-300">
-                  <span className="text-xl">🔔</span>
-                </div>
-                <div className="absolute top-0 right-0 w-3 h-3 bg-red-600 rounded-full"></div>
-              </Link>
-              <Link to="/supervisor/profile" className="w-12 h-12 bg-[#2563a8] rounded-full flex items-center justify-center text-white hover:bg-[#1e4a8a] cursor-pointer">
-                SV
-              </Link>
+              <NotificationBell role="supervisor" />
+              <ProfileAvatar role="supervisor" />
             </div>
           </div>
         </div>
@@ -186,7 +179,6 @@ export default function ManageProjects() {
 
           {!loading && (
             <>
-              {/* Group Requests */}
               <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden mb-6">
                 <div className="px-6 py-4 border-b border-gray-200 bg-gray-50">
                   <h2 className="text-xl">Pending Your Review ({pendingGroups.length})</h2>
@@ -227,7 +219,6 @@ export default function ManageProjects() {
                 </div>
               )}
 
-              {/* Project List */}
               <div className="space-y-4">
                 {projects.length === 0 && (
                   <div className="bg-white rounded-lg border border-gray-200 shadow-sm px-6 py-6 text-center text-gray-500">

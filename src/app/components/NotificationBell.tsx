@@ -18,8 +18,12 @@ export default function NotificationBell({ role }: NotificationBellProps) {
     const handleNotification = () => setUnreadCount((prev) => prev + 1);
     socket.on('notification', handleNotification);
 
+    const handleRead = () => setUnreadCount(0);
+    window.addEventListener('notificationsRead', handleRead);
+
     return () => {
       socket.off('notification', handleNotification);
+      window.removeEventListener('notificationsRead', handleRead);
     };
   }, []);
 
