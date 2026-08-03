@@ -35,6 +35,7 @@ app.use('/api/submissions', require('./routes/submissionRoutes'));
 app.use('/api/reports', require('./routes/reportsRoutes'));
 app.use('/api/messages', require('./routes/messageRoutes'));
 app.use('/api/contact', require('./routes/contactRoutes'));
+app.use('/api/groups', require('./routes/groupRoutes'));
 app.use(notFound);
 app.use(errorHandler);
 
