@@ -11,8 +11,8 @@ interface ApiProject {
 
 interface ApiAllocation {
   _id: string;
-  project: { _id: string; title: string };
-  student: { _id: string; name: string };
+  project: { _id: string; title: string } | null;
+  student: { _id: string; name: string } | null;
   status: 'pending' | 'approved' | 'rejected';
   createdAt: string;
 }
@@ -22,8 +22,8 @@ interface ApiAssessment {
   title: string;
   status: 'not_submitted' | 'submitted' | 'graded';
   submittedAt?: string;
-  student: { _id: string; name: string };
-  project: { title: string };
+  student: { _id: string; name: string } | null;
+  project: { title: string } | null;
 }
 
 export default function SupervisorDashboard() {
@@ -47,7 +47,8 @@ export default function SupervisorDashboard() {
         api.get('/assessments/supervisor'),
       ]);
       setProjects(projectsRes.projects);
-      setAllocations(allocationsRes.allocations);
+      // Skip any allocation whose linked project or student no longer exists (deleted record)
+      setAllocations(allocationsRes.allocations.filter((a: ApiAllocation) => a.project && a.student));
       setAssessments(assessmentsRes.assessments);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load dashboard');
@@ -62,11 +63,11 @@ export default function SupervisorDashboard() {
 
   const pendingRequests = allocations.filter((a) => a.status === 'pending');
   const approvedAllocations = allocations.filter((a) => a.status === 'approved');
-  const activeStudentIds = new Set(approvedAllocations.map((a) => a.student._id));
+  const activeStudentIds = new Set(approvedAllocations.map((a) => a.student!._id));
   const pendingReviews = assessments.filter((a) => a.status === 'submitted');
 
   const getStudentProgress = (studentId: string) => {
-    const studentAssessments = assessments.filter((a) => a.student._id === studentId);
+    const studentAssessments = assessments.filter((a) => a.student?._id === studentId);
     if (studentAssessments.length === 0) return 0;
     const graded = studentAssessments.filter((a) => a.status === 'graded').length;
     return Math.round((graded / studentAssessments.length) * 100);
@@ -146,11 +147,11 @@ export default function SupervisorDashboard() {
                   <p className="text-gray-400 text-sm">No students allocated yet.</p>
                 ) : (
                   approvedAllocations.map((a) => {
-                    const progress = getStudentProgress(a.student._id);
+                    const progress = getStudentProgress(a.student!._id);
                     return (
                       <div key={a._id} className="pb-4 border-b border-gray-200 last:border-b-0">
-                        <div className="mb-2">{a.student.name}</div>
-                        <div className="text-sm text-gray-600 mb-2">{a.project.title}</div>
+                        <div className="mb-2">{a.student?.name || 'Unknown student'}</div>
+                        <div className="text-sm text-gray-600 mb-2">{a.project?.title || 'Deleted project'}</div>
                         <div className="bg-gray-200 h-2 rounded-full">
                           <div
                             className="bg-[#2563a8] h-2 rounded-full"
@@ -176,8 +177,8 @@ export default function SupervisorDashboard() {
                 ) : (
                   pendingRequests.map((req) => (
                     <div key={req._id} className="pb-4 border-b border-gray-200 last:border-b-0">
-                      <div className="mb-1">{req.student.name}</div>
-                      <div className="text-sm text-gray-600 mb-2">{req.project.title}</div>
+                      <div className="mb-1">{req.student?.name || 'Unknown student'}</div>
+                      <div className="text-sm text-gray-600 mb-2">{req.project?.title || 'Deleted project'}</div>
                       <div className="text-xs text-gray-500 mb-3">
                         Requested: {new Date(req.createdAt).toLocaleDateString()}
                       </div>
@@ -216,7 +217,7 @@ export default function SupervisorDashboard() {
                 pendingReviews.map((a) => (
                   <div key={a._id} className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 pb-3 border-b border-gray-200 last:border-b-0">
                     <div>
-                      <div>{a.student.name} - {a.title}</div>
+                      <div>{a.student?.name || 'Unknown student'} - {a.title}</div>
                       <div className="text-sm text-gray-600">
                         Submitted: {a.submittedAt ? new Date(a.submittedAt).toLocaleDateString() : '—'}
                       </div>

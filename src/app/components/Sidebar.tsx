@@ -24,12 +24,12 @@ export default function Sidebar({ role }: SidebarProps) {
   const supervisorLinks = [
     { to: '/supervisor/dashboard', label: 'Dashboard' },
     { to: '/supervisor/projects', label: 'Manage Projects' },
-    { to: '/supervisor/allocations', label: 'Pending Applications' },
     { to: '/supervisor/assessments', label: 'Assessments' },
     { to: '/supervisor/feedback', label: 'Feedback' },
     { to: '/forum', label: 'Forum' },
     { to: '/supervisor/discussions', label: 'Discussions' },
     { to: '/supervisor/messages', label: 'Messages' },
+   
   ];
 
   const adminLinks = [

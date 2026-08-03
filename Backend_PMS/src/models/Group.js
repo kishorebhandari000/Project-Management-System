@@ -7,7 +7,7 @@ const groupSchema = new mongoose.Schema(
     supervisor: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
     leader: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
     members: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true }],
-    status: { type: String, enum: ['pending', 'approved', 'rejected'], default: 'pending' },
+    status: { type: String, enum: ['pending', 'supervisor_approved', 'approved', 'rejected'], default: 'pending' },
     decidedAt: { type: Date },
   },
   { timestamps: true }

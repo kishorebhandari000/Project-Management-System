@@ -25,7 +25,7 @@ const requestAllocation = asyncHandler(async (req, res) => {
     type: 'allocation_request',
     title: 'New allocation request',
     message: `${req.user.name} requested to join "${project.title}"`,
-    link: '/supervisor/allocations',
+    link: '/supervisor/projects',
   });
 
   // Also notify all admins
@@ -38,7 +38,7 @@ const requestAllocation = asyncHandler(async (req, res) => {
         type: 'allocation_request',
         title: 'New allocation request',
         message: `${req.user.name} requested to join "${project.title}"`,
-        link: '/admin/allocations',
+        link: '/admin/allocation',
       })
     )
   );
@@ -51,8 +51,15 @@ const requestAllocation = asyncHandler(async (req, res) => {
 const getAllocations = asyncHandler(async (req, res) => {
   const filter = {};
   if (req.user.role === 'student') filter.student = req.user._id;
-  if (req.user.role === 'supervisor') filter.supervisor = req.user._id;
   if (req.query.status) filter.status = req.query.status;
+
+  if (req.user.role === 'supervisor') {
+    // Scope by the project's current supervisor, not the supervisor snapshot
+    // stored on the allocation - that snapshot goes stale if an admin later
+    // reassigns the project to someone else.
+    const myProjectIds = await Project.find({ supervisor: req.user._id }).distinct('_id');
+    filter.project = { $in: myProjectIds };
+  }
 
   const allocations = await Allocation.find(filter)
     .populate('project', 'title status description maxStudents files')
@@ -72,10 +79,16 @@ const decideAllocation = asyncHandler(async (req, res) => {
     return res.status(400).json({ message: "decision must be 'approved', 'rejected', or 'pending'" });
   }
 
-  const allocation = await Allocation.findById(req.params.id).populate('project', 'title');
+  const allocation = await Allocation.findById(req.params.id).populate('project', 'title supervisor');
   if (!allocation) return res.status(404).json({ message: 'Allocation not found' });
+  if (!allocation.project) {
+    return res.status(409).json({ message: 'This request\'s project no longer exists' });
+  }
 
-  const isOwner = !!allocation.supervisor && allocation.supervisor.toString() === req.user._id.toString();
+  // Authorize against the project's CURRENT supervisor, not the supervisor
+  // snapshot stored on the allocation - that snapshot is only set once, at
+  // request time, and goes stale if an admin later reassigns the project.
+  const isOwner = allocation.project.supervisor && allocation.project.supervisor.toString() === req.user._id.toString();
   if (req.user.role !== 'admin' && !isOwner) {
     return res.status(403).json({ message: 'Only the project supervisor or an admin can decide on this allocation' });
   }
@@ -84,6 +97,8 @@ const decideAllocation = asyncHandler(async (req, res) => {
 
   allocation.status = decision;
   allocation.decidedAt = decision === 'pending' ? undefined : new Date();
+  // Keep the stored snapshot in sync with reality whenever we touch this record.
+  allocation.supervisor = allocation.project.supervisor;
   await allocation.save();
 
   if (decision === 'approved') {

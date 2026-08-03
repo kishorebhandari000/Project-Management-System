@@ -19,7 +19,6 @@ import StudentNotifications from "./pages/student/Notifications";
 import StudentProfile from "./pages/student/Profile";
 import SupervisorDashboard from "./pages/supervisor/Dashboard";
 import ManageProjects from "./pages/supervisor/ManageProjects";
-import SupervisorAllocations from "./pages/supervisor/Allocations";
 import SupervisorAssessments from "./pages/supervisor/Assessments";
 import GradeSubmission from "./pages/supervisor/GradeSubmission";
 import SupervisorFeedback from "./pages/supervisor/Feedback";
@@ -46,7 +45,7 @@ import Profile from "./pages/admin/Profile";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
 import CreateAssessment from "./pages/admin/CreateAssessment";
-import SupervisorEditProject from './pages/supervisor/EditProject';
+import SupervisorViewProject from './pages/supervisor/ViewProject';
 export const router = createBrowserRouter([
 
   {
@@ -134,13 +133,14 @@ export const router = createBrowserRouter([
     path: "/student/notifications",
     Component: () => <ProtectedRoute role="student"><StudentNotifications /></ProtectedRoute>,
   },
+  
   {
     path: "/student/profile",
     Component: () => <ProtectedRoute role="student"><StudentProfile /></ProtectedRoute>,
   },
   {
-  path: "/supervisor/projects/:id/edit",
-  Component: () => <ProtectedRoute role="supervisor"><SupervisorEditProject /></ProtectedRoute>,
+  path: "/supervisor/projects/:id/view",
+  Component: () => <ProtectedRoute role="supervisor"><SupervisorViewProject /></ProtectedRoute>,
 },
   {
     path: "/supervisor/dashboard",
@@ -149,10 +149,6 @@ export const router = createBrowserRouter([
   {
     path: "/supervisor/projects",
     Component: () => <ProtectedRoute role="supervisor"><ManageProjects /></ProtectedRoute>,
-  },
-  {
-    path: "/supervisor/allocations",
-    Component: () => <ProtectedRoute role="supervisor"><SupervisorAllocations /></ProtectedRoute>,
   },
   {
     path: "/supervisor/assessments",

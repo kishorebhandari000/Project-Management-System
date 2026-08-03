@@ -16,6 +16,7 @@ interface ApiProject {
   _id: string;
   title: string;
   status: 'open' | 'allocated' | 'closed';
+  maxStudents: number;
 }
 
 interface ApiUser {
@@ -24,12 +25,31 @@ interface ApiUser {
   email: string;
 }
 
+interface Member {
+  _id: string;
+  name: string;
+  email: string;
+  studentId?: string;
+}
+
+interface ApiGroup {
+  _id: string;
+  name: string;
+  status: 'pending' | 'supervisor_approved' | 'approved' | 'rejected';
+  project: { _id: string; title: string; maxStudents: number };
+  supervisor: { name: string };
+  leader: { _id: string; name: string };
+  members: Member[];
+}
+
 export default function ManageAllocation() {
   const [allocations, setAllocations] = useState<ApiAllocation[]>([]);
   const [projects, setProjects] = useState<ApiProject[]>([]);
   const [students, setStudents] = useState<ApiUser[]>([]);
+  const [groups, setGroups] = useState<ApiGroup[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [decidingGroupId, setDecidingGroupId] = useState<string | null>(null);
 
   const [assignProjectId, setAssignProjectId] = useState('');
   const [assignStudentId, setAssignStudentId] = useState('');
@@ -41,14 +61,16 @@ export default function ManageAllocation() {
     setLoading(true);
     setError('');
     try {
-      const [allocationsRes, projectsRes, studentsRes] = await Promise.all([
+      const [allocationsRes, projectsRes, studentsRes, groupsRes] = await Promise.all([
         api.get('/allocations'),
         api.get('/projects'),
         api.get('/users?role=student'),
+        api.get('/groups'),
       ]);
       setAllocations(allocationsRes.allocations);
       setProjects(projectsRes.projects);
       setStudents(studentsRes.users);
+      setGroups(groupsRes.groups);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load allocations');
     } finally {
@@ -66,6 +88,18 @@ export default function ManageAllocation() {
       await loadAll();
     } catch (err) {
       alert(err instanceof Error ? err.message : 'Failed to update allocation');
+    }
+  };
+
+  const handleGroupDecision = async (id: string, decision: 'approved' | 'rejected') => {
+    setDecidingGroupId(id);
+    try {
+      await api.put(`/groups/${id}/decision`, { decision });
+      await loadAll();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Failed to finalize group');
+    } finally {
+      setDecidingGroupId(null);
     }
   };
 
@@ -88,6 +122,8 @@ export default function ManageAllocation() {
       setAssigning(false);
     }
   };
+
+  const awaitingFinalAllocation = groups.filter((g) => g.status === 'supervisor_approved');
 
   return (
     <div className="flex flex-col md:flex-row">
@@ -119,6 +155,62 @@ export default function ManageAllocation() {
           {error && (
             <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-md px-4 py-3 mb-4">
               {error}
+            </div>
+          )}
+
+          {!loading && (
+            <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden mb-6">
+              <div className="px-6 py-4 border-b border-gray-200 bg-gray-50">
+                <h2 className="text-xl">Groups Awaiting Final Allocation ({awaitingFinalAllocation.length})</h2>
+                <p className="text-sm text-gray-500">Recommended by the supervisor — approve to lock in the seats.</p>
+              </div>
+
+              <div className="p-6 space-y-4">
+                {awaitingFinalAllocation.length === 0 && (
+                  <p className="text-gray-400 text-sm">Nothing waiting on final allocation right now.</p>
+                )}
+                {awaitingFinalAllocation.map((group) => (
+                  <div key={group._id} className="border border-gray-200 rounded-lg p-5">
+                    <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2 mb-3">
+                      <div>
+                        <h3 className="text-lg">{group.name || 'Untitled Group'}</h3>
+                        <p className="text-sm text-gray-600">
+                          {group.project.title} · Supervisor: {group.supervisor?.name}
+                        </p>
+                      </div>
+                      <span className="text-xs px-3 py-1 rounded bg-blue-100 text-blue-700">
+                        {group.members.length}/{group.project.maxStudents} seats
+                      </span>
+                    </div>
+
+                    <ul className="space-y-1 mb-4">
+                      {group.members.map((m) => (
+                        <li key={m._id} className="text-sm text-gray-700">
+                          👤 {m.name} {m._id === group.leader._id && <span className="text-xs text-gray-400">(leader)</span>}
+                          <span className="text-gray-400"> — {m.studentId || m.email}</span>
+                        </li>
+                      ))}
+                    </ul>
+
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => handleGroupDecision(group._id, 'approved')}
+                        disabled={decidingGroupId === group._id}
+                        className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 text-sm disabled:opacity-60"
+                      >
+                        {decidingGroupId === group._id ? 'Allocating...' : 'Approve Final Allocation'}
+                      </button>
+                      <button
+                        onClick={() => handleGroupDecision(group._id, 'rejected')}
+                        disabled={decidingGroupId === group._id}
+                        className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 text-sm disabled:opacity-60"
+                      >
+                        Reject
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
 

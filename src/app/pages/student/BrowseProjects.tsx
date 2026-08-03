@@ -93,11 +93,11 @@ export default function BrowseProjects() {
     });
   };
 
-  const handleWithdraw = async (allocationId: string) => {
+  const handleWithdraw = async (groupId: string) => {
     if (!confirm('Withdraw this request?')) return;
-    setWithdrawingId(allocationId);
+    setWithdrawingId(groupId);
     try {
-      await api.delete(`/allocations/${allocationId}`);
+      await api.delete(`/groups/${groupId}`);
       await loadData();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to withdraw request');

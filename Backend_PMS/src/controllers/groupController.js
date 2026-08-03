@@ -4,6 +4,7 @@ const Project = require('../models/Project');
 const Allocation = require('../models/Allocation');
 const User = require('../models/User');
 const sendNotification = require('../utils/notify');
+const { createNotification } = require('./notificationController');
 
 // @desc   Student proposes a group and applies to a project together
 // @route  POST /api/groups
@@ -84,8 +85,14 @@ const getMyGroups = asyncHandler(async (req, res) => {
 // @access Private/Supervisor,Admin
 const getGroups = asyncHandler(async (req, res) => {
   const filter = {};
-  if (req.user.role === 'supervisor') filter.supervisor = req.user._id;
   if (req.query.status) filter.status = req.query.status;
+
+  if (req.user.role === 'supervisor') {
+    // Scope by the project's current supervisor, not the supervisor snapshot
+    // stored on the group - see the same fix in allocationController.js.
+    const myProjectIds = await Project.find({ supervisor: req.user._id }).distinct('_id');
+    filter.project = { $in: myProjectIds };
+  }
 
   const groups = await Group.find(filter)
     .populate('project', 'title status maxStudents')
@@ -96,7 +103,64 @@ const getGroups = asyncHandler(async (req, res) => {
   res.json({ count: groups.length, groups });
 });
 
-// @desc   Supervisor/Admin approves or rejects a pending group request
+// Locks in allocations for every member of a group, once it has final
+// (admin) approval. Returns { ok: false, message } if there isn't enough
+// room left on the project; otherwise finalizes the group and returns
+// { ok: true }.
+async function finalizeGroupAllocation(group) {
+  const approvedSeats = await Allocation.countDocuments({
+    project: group.project._id,
+    status: 'approved',
+  });
+  if (approvedSeats + group.members.length > group.project.maxStudents) {
+    return { ok: false, message: 'Not enough open seats left on this project for the whole group' };
+  }
+
+  for (const memberId of group.members) {
+    await Allocation.findOneAndUpdate(
+      { project: group.project._id, student: memberId },
+      {
+        project: group.project._id,
+        student: memberId,
+        supervisor: group.project.supervisor,
+        status: 'approved',
+        decidedAt: new Date(),
+      },
+      { upsert: true, new: true }
+    );
+  }
+
+  const newApprovedCount = approvedSeats + group.members.length;
+  if (newApprovedCount >= group.project.maxStudents) {
+    await Project.findByIdAndUpdate(group.project._id, { status: 'allocated' });
+  }
+
+  group.status = 'approved';
+  group.decidedAt = new Date();
+  group.supervisor = group.project.supervisor;
+  await group.save();
+
+  return { ok: true };
+}
+
+async function notifyMembers(group, decision) {
+  const memberUsers = await User.find({ _id: { $in: group.members } });
+  for (const memberUser of memberUsers) {
+    await sendNotification(null, {
+      userId: memberUser._id,
+      email: memberUser.email,
+      title: `Group request ${decision}`,
+      message: `Your group request for "${group.project.title}" was ${decision}.`,
+    }).catch(() => {});
+  }
+}
+
+// @desc   Supervisor recommends/rejects a pending group, or admin gives the
+//         final allocation decision on a group the supervisor already
+//         recommended. Two-stage workflow:
+//           pending -> (supervisor decides) -> supervisor_approved -> (admin decides) -> approved
+//         An admin can also act directly on a still-pending group as a
+//         fallback, in which case it skips straight to a final decision.
 // @route  PUT /api/groups/:id/decision
 // @access Private/Supervisor,Admin
 const decideGroup = asyncHandler(async (req, res) => {
@@ -105,62 +169,75 @@ const decideGroup = asyncHandler(async (req, res) => {
     return res.status(400).json({ message: "decision must be 'approved' or 'rejected'" });
   }
 
-  const group = await Group.findById(req.params.id).populate('project', 'title maxStudents');
+  const group = await Group.findById(req.params.id).populate('project', 'title maxStudents supervisor');
   if (!group) return res.status(404).json({ message: 'Group not found' });
+  if (!group.project) {
+    return res.status(409).json({ message: 'This group\'s project no longer exists' });
+  }
 
-  const isOwner = group.supervisor.toString() === req.user._id.toString();
+  const isOwner = group.project.supervisor && group.project.supervisor.toString() === req.user._id.toString();
   if (req.user.role !== 'admin' && !isOwner) {
     return res.status(403).json({ message: 'Not authorized to decide on this group' });
   }
 
-  if (group.status !== 'pending') {
-    return res.status(400).json({ message: 'This group has already been decided on' });
-  }
-
-  if (decision === 'approved') {
-    const approvedSeats = await Allocation.countDocuments({
-      project: group.project._id,
-      status: 'approved',
-    });
-    if (approvedSeats + group.members.length > group.project.maxStudents) {
-      return res.status(409).json({ message: 'Not enough open seats left on this project for the whole group' });
+  if (group.status === 'pending') {
+    if (decision === 'rejected') {
+      group.status = 'rejected';
+      group.decidedAt = new Date();
+      await group.save();
+      await notifyMembers(group, 'rejected');
+      return res.json({ group });
     }
 
-    for (const memberId of group.members) {
-      await Allocation.findOneAndUpdate(
-        { project: group.project._id, student: memberId },
-        {
-          project: group.project._id,
-          student: memberId,
-          supervisor: group.supervisor,
-          status: 'approved',
-          decidedAt: new Date(),
-        },
-        { upsert: true, new: true }
-      );
+    if (req.user.role === 'admin') {
+      // Admin fallback: no need to wait on the supervisor, finalize now.
+      const result = await finalizeGroupAllocation(group);
+      if (!result.ok) return res.status(409).json({ message: result.message });
+      await notifyMembers(group, 'approved');
+      return res.json({ group });
     }
 
-    const newApprovedCount = approvedSeats + group.members.length;
-    if (newApprovedCount >= group.project.maxStudents) {
-      await Project.findByIdAndUpdate(group.project._id, { status: 'allocated' });
+    // Supervisor recommendation: forward to admin, don't lock in seats yet.
+    group.status = 'supervisor_approved';
+    group.decidedAt = new Date();
+    await group.save();
+
+    const admins = await User.find({ role: 'admin' });
+    await Promise.all(
+      admins.map((admin) =>
+        createNotification({
+          user: admin._id,
+          type: 'group_forwarded',
+          title: 'Group recommended for allocation',
+          message: `A supervisor recommended a group of ${group.members.length} for "${group.project.title}" - final allocation needed`,
+          link: '/admin/allocation',
+        })
+      )
+    );
+
+    return res.json({ group });
+  }
+
+  if (group.status === 'supervisor_approved') {
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ message: 'Only an admin can give the final allocation decision' });
     }
+
+    if (decision === 'rejected') {
+      group.status = 'rejected';
+      group.decidedAt = new Date();
+      await group.save();
+      await notifyMembers(group, 'rejected');
+      return res.json({ group });
+    }
+
+    const result = await finalizeGroupAllocation(group);
+    if (!result.ok) return res.status(409).json({ message: result.message });
+    await notifyMembers(group, 'approved');
+    return res.json({ group });
   }
 
-  group.status = decision;
-  group.decidedAt = new Date();
-  await group.save();
-
-  const memberUsers = await User.find({ _id: { $in: group.members } });
-  for (const memberUser of memberUsers) {
-    await sendNotification(req.app, {
-      userId: memberUser._id,
-      email: memberUser.email,
-      title: `Group request ${decision}`,
-      message: `Your group request for "${group.project.title}" was ${decision}.`,
-    }).catch(() => {});
-  }
-
-  res.json({ group });
+  return res.status(400).json({ message: 'This group has already been decided on' });
 });
 
 // @desc   Admin/Supervisor edits the membership of an existing group (add/remove students)
@@ -169,10 +246,13 @@ const decideGroup = asyncHandler(async (req, res) => {
 const updateGroupMembers = asyncHandler(async (req, res) => {
   const { memberIds = [] } = req.body;
 
-  const group = await Group.findById(req.params.id).populate('project', 'title maxStudents');
+  const group = await Group.findById(req.params.id).populate('project', 'title maxStudents supervisor');
   if (!group) return res.status(404).json({ message: 'Group not found' });
+  if (!group.project) {
+    return res.status(409).json({ message: 'This group\'s project no longer exists' });
+  }
 
-  const isOwner = group.supervisor.toString() === req.user._id.toString();
+  const isOwner = group.project.supervisor && group.project.supervisor.toString() === req.user._id.toString();
   if (req.user.role !== 'admin' && !isOwner) {
     return res.status(403).json({ message: 'Not authorized to edit this group' });
   }
@@ -196,7 +276,7 @@ const updateGroupMembers = asyncHandler(async (req, res) => {
         {
           project: group.project._id,
           student: memberId,
-          supervisor: group.supervisor,
+          supervisor: group.project.supervisor,
           status: 'approved',
           decidedAt: new Date(),
         },

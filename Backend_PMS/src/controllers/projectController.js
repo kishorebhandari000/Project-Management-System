@@ -58,9 +58,10 @@ const updateProject = asyncHandler(async (req, res) => {
   const project = await Project.findById(req.params.id);
   if (!project) return res.status(404).json({ message: 'Project not found' });
 
-  const isOwner = !!project.supervisor && project.supervisor.toString() === req.user._id.toString();
-  if (req.user.role !== 'admin' && !isOwner) {
-    return res.status(403).json({ message: 'Not authorized to update this project' });
+  // Supervisors can view their projects but only an admin may edit them
+  // (this includes reassigning the supervisor).
+  if (req.user.role !== 'admin') {
+    return res.status(403).json({ message: 'Only an admin can update this project' });
   }
 
   Object.assign(project, req.body);
@@ -77,9 +78,8 @@ const deleteProject = asyncHandler(async (req, res) => {
   const project = await Project.findById(req.params.id);
   if (!project) return res.status(404).json({ message: 'Project not found' });
 
-  const isOwner = !!project.supervisor && project.supervisor.toString() === req.user._id.toString();
-  if (req.user.role !== 'admin' && !isOwner) {
-    return res.status(403).json({ message: 'Not authorized to delete this project' });
+  if (req.user.role !== 'admin') {
+    return res.status(403).json({ message: 'Only an admin can delete this project' });
   }
 
   const [allocationCount, assessmentCount] = await Promise.all([
