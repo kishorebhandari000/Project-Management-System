@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router';
 import Sidebar from '../../components/Sidebar';
 import { api } from '../../lib/api';
@@ -19,6 +19,7 @@ interface Submission {
   fileName: string;
   status: 'submitted' | 'graded';
   marks: number | null;
+  feedback: string;
   submittedAt: string;
 }
 
@@ -27,6 +28,7 @@ export default function AdminAssessments() {
   const [submissions, setSubmissions] = useState<Submission[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [expandedId, setExpandedId] = useState<string | null>(null);
 
   useEffect(() => {
     Promise.all([api.get('/assessments/all'), api.get('/submissions')])
@@ -106,6 +108,7 @@ export default function AdminAssessments() {
                     <th className="text-left px-6 py-4 text-sm text-gray-600">Submitted</th>
                     <th className="text-left px-6 py-4 text-sm text-gray-600">Status</th>
                     <th className="text-left px-6 py-4 text-sm text-gray-600">Mark</th>
+                    <th className="text-left px-6 py-4 text-sm text-gray-600">Feedback</th>
                     <th className="text-left px-6 py-4 text-sm text-gray-600">File</th>
                   </tr>
                 </thead>
@@ -113,42 +116,70 @@ export default function AdminAssessments() {
                   {assessments.map((a) => {
                     const submission = submissionFor(a._id);
                     const status = submission?.status ?? 'not_submitted';
+                    const isExpanded = expandedId === submission?._id;
                     return (
-                      <tr key={a._id} className="border-t border-gray-200">
-                        <td className="px-6 py-4">{a.student?.name}</td>
-                        <td className="px-6 py-4 text-gray-600">{a.supervisor?.name}</td>
-                        <td className="px-6 py-4">{a.title}</td>
-                        <td className="px-6 py-4 text-gray-500">{a.project?.title}</td>
-                        <td className="px-6 py-4 text-gray-500 text-sm">
-                          {submission?.submittedAt ? new Date(submission.submittedAt).toLocaleDateString() : '—'}
-                        </td>
-                        <td className="px-6 py-4">
-                          <span className={
-                            status === 'graded' ? 'text-green-600' :
-                            status === 'submitted' ? 'text-orange-600' : 'text-gray-400'
-                          }>
-                            {status === 'not_submitted' ? 'Not submitted' :
-                             status === 'submitted' ? 'Pending review' : 'Graded'}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4">
-                          {submission?.marks !== null && submission?.marks !== undefined ? (
-                            <span className="text-green-600">{submission.marks}/100</span>
-                          ) : '—'}
-                        </td>
-                        <td className="px-6 py-4">
-                          {submission?.fileUrl ? (
-                            <a
-                              href={submission.fileUrl}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="text-[#2563a8] hover:underline text-sm"
-                            >
-                              📎 {submission.fileName}
-                            </a>
-                          ) : '—'}
-                        </td>
-                      </tr>
+                      <React.Fragment key={a._id}>
+                        <tr className="border-t border-gray-200 hover:bg-gray-50">
+                          <td className="px-6 py-4">{a.student?.name}</td>
+                          <td className="px-6 py-4 text-gray-600">{a.supervisor?.name}</td>
+                          <td className="px-6 py-4">{a.title}</td>
+                          <td className="px-6 py-4 text-gray-500">{a.project?.title}</td>
+                          <td className="px-6 py-4 text-gray-500 text-sm">
+                            {submission?.submittedAt ? new Date(submission.submittedAt).toLocaleDateString() : '—'}
+                          </td>
+                          <td className="px-6 py-4">
+                            <span className={
+                              status === 'graded' ? 'text-green-600' :
+                              status === 'submitted' ? 'text-orange-600' : 'text-gray-400'
+                            }>
+                              {status === 'not_submitted' ? 'Not submitted' :
+                               status === 'submitted' ? 'Pending review' : 'Graded'}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4">
+                            {submission?.marks !== null && submission?.marks !== undefined ? (
+                              <span className="text-green-600">{submission.marks}/100</span>
+                            ) : '—'}
+                          </td>
+                          <td className="px-6 py-4 max-w-xs">
+                            {submission?.feedback ? (
+                              <button
+                                onClick={() => setExpandedId(isExpanded ? null : submission._id)}
+                                className="text-[#2563a8] hover:underline text-sm text-left"
+                              >
+                                {isExpanded ? 'Hide feedback' : 'View feedback'}
+                              </button>
+                            ) : (
+                              <span className="text-gray-400 text-sm italic">—</span>
+                            )}
+                          </td>
+                          <td className="px-6 py-4">
+                            {submission?.fileUrl ? (
+                              <a
+                                href={submission.fileUrl}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="text-[#2563a8] hover:underline text-sm"
+                              >
+                                📎 {submission.fileName}
+                              </a>
+                            ) : '—'}
+                          </td>
+                        </tr>
+
+                        {isExpanded && submission?.feedback && (
+                          <tr className="border-t border-gray-200 bg-gray-50">
+                            <td colSpan={9} className="px-6 py-5">
+                              <div className="max-w-2xl">
+                                <div className="text-gray-600 mb-2 text-sm">Supervisor Feedback</div>
+                                <div className="bg-white border border-gray-200 rounded-lg p-4">
+                                  <p className="text-gray-700">{submission.feedback}</p>
+                                </div>
+                              </div>
+                            </td>
+                          </tr>
+                        )}
+                      </React.Fragment>
                     );
                   })}
                 </tbody>
