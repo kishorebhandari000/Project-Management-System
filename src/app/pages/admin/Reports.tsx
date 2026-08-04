@@ -27,16 +27,41 @@ interface Summary {
   projectCategories: ProjectCategory[];
 }
 
+const LIVE_REFRESH_MS = 10000;
+
 export default function Reports() {
   const [summary, setSummary] = useState<Summary | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
   useEffect(() => {
-    api.get('/reports/summary')
-      .then((d) => setSummary(d))
-      .catch((e) => setError(e instanceof Error ? e.message : 'Failed to load reports'))
-      .finally(() => setLoading(false));
+    let cancelled = false;
+
+    const load = (showLoading: boolean) => {
+      if (showLoading) setLoading(true);
+      api.get('/reports/summary')
+        .then((d) => {
+          if (!cancelled) setSummary(d);
+        })
+        .catch((e) => {
+          if (!cancelled) setError(e instanceof Error ? e.message : 'Failed to load reports');
+        })
+        .finally(() => {
+          if (!cancelled && showLoading) setLoading(false);
+        });
+    };
+
+    load(true);
+    const interval = setInterval(() => load(false), LIVE_REFRESH_MS);
+
+    const handleFocus = () => load(false);
+    window.addEventListener('focus', handleFocus);
+
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+      window.removeEventListener('focus', handleFocus);
+    };
   }, []);
 
   return (
@@ -85,7 +110,13 @@ export default function Reports() {
 
               {/* Submission Statistics */}
               <div className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm mb-6">
-                <h2 className="text-xl mb-6">Submission Statistics</h2>
+                <div className="flex items-center gap-2 mb-6">
+                  <h2 className="text-xl">Submission Statistics</h2>
+                  <span className="flex items-center gap-1.5 text-xs text-green-600">
+                    <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
+                    Live
+                  </span>
+                </div>
                 {summary.assessmentStats.length === 0 ? (
                   <p className="text-gray-500">No assessments created yet.</p>
                 ) : (

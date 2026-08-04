@@ -52,6 +52,13 @@ const createSubmission = asyncHandler(async (req, res) => {
     });
   }
 
+  // Keep the assessment record's own status in sync so admin reports and
+  // supervisor pending-review counts (which read Assessment.status) reflect
+  // submissions made through this file-upload flow.
+  assessment.submittedAt = submission.submittedAt;
+  assessment.status = 'submitted';
+  await assessment.save();
+
   const assessmentWithSupervisor = await assessment.populate('supervisor', 'name email');
   await sendNotification(req.app, {
     userId: assessmentWithSupervisor.supervisor._id,
@@ -124,6 +131,11 @@ const gradeSubmission = asyncHandler(async (req, res) => {
   submission.status = 'graded';
   submission.gradedAt = new Date();
   await submission.save();
+
+  submission.assessment.mark = marks;
+  submission.assessment.feedback = feedback || '';
+  submission.assessment.status = 'graded';
+  await submission.assessment.save();
 
   const studentUser = await submission.populate('student', 'name email');
   await sendNotification(req.app, {
