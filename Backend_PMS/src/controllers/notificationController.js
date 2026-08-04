@@ -43,4 +43,12 @@ const markAsRead = asyncHandler(async (req, res) => {
   res.json({ notification });
 });
 
-module.exports = { createNotification, getMyNotifications, markAsRead };
+// @desc   Mark every one of the current user's notifications as read at once
+//         (e.g. simply opening the notifications list, Facebook-style)
+// @route  PUT /api/notifications/read-all
+const markAllAsRead = asyncHandler(async (req, res) => {
+  await Notification.updateMany({ user: req.user._id, read: false }, { read: true });
+  res.json({ message: 'All notifications marked as read' });
+});
+
+module.exports = { createNotification, getMyNotifications, markAsRead, markAllAsRead };
