@@ -10,7 +10,6 @@ import AuthenticatedRoute from "./components/AuthenticatedRoute";
 import StudentDashboard from "./pages/student/Dashboard";
 import BrowseProjects from "./pages/student/BrowseProjects";
 import Assessments from "./pages/student/Assessments";
-import Feedback from "./pages/student/Feedback";
 import StudentDiscussions from "./pages/student/Discussions";
 import StudentDiscussionThread from "./pages/student/DiscussionThread";
 import StudentNewDiscussion from "./pages/student/NewDiscussion";
@@ -20,8 +19,6 @@ import StudentProfile from "./pages/student/Profile";
 import SupervisorDashboard from "./pages/supervisor/Dashboard";
 import ManageProjects from "./pages/supervisor/ManageProjects";
 import SupervisorAssessments from "./pages/supervisor/Assessments";
-import GradeSubmission from "./pages/supervisor/GradeSubmission";
-import SupervisorFeedback from "./pages/supervisor/Feedback";
 import SupervisorDiscussions from "./pages/supervisor/Discussions";
 import SupervisorDiscussionThread from "./pages/supervisor/DiscussionThread";
 import SupervisorNewDiscussion from "./pages/supervisor/NewDiscussion";
@@ -110,10 +107,6 @@ export const router = createBrowserRouter([
     Component: () => <ProtectedRoute role="student"><Assessments /></ProtectedRoute>,
   },
   {
-    path: "/student/feedback",
-    Component: () => <ProtectedRoute role="student"><Feedback /></ProtectedRoute>,
-  },
-  {
     path: "/student/discussions",
     Component: () => <ProtectedRoute role="student"><StudentDiscussions /></ProtectedRoute>,
   },
@@ -153,14 +146,6 @@ export const router = createBrowserRouter([
   {
     path: "/supervisor/assessments",
     Component: () => <ProtectedRoute role="supervisor"><SupervisorAssessments /></ProtectedRoute>,
-  },
-  {
-    path: "/supervisor/assessments/grade/:id",
-    Component: () => <ProtectedRoute role="supervisor"><GradeSubmission /></ProtectedRoute>,
-  },
-  {
-    path: "/supervisor/feedback",
-    Component: () => <ProtectedRoute role="supervisor"><SupervisorFeedback /></ProtectedRoute>,
   },
   {
     path: "/supervisor/discussions",

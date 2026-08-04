@@ -84,7 +84,11 @@ export default function Assessments() {
 
   const total = assessments.length;
   const submittedCount = submissions.length;
-  const gradedCount = submissions.filter((s) => s.status === 'graded').length;
+  const gradedSubmissions = submissions.filter((s) => s.status === 'graded');
+  const gradedCount = gradedSubmissions.length;
+  const avgMark = gradedCount
+    ? Math.round(gradedSubmissions.reduce((sum, s) => sum + (s.marks ?? 0), 0) / gradedCount)
+    : null;
 
   return (
     <div className="flex flex-col md:flex-row">
@@ -94,7 +98,7 @@ export default function Assessments() {
           <div className="flex justify-between items-center">
             <div>
               <h1 className="text-2xl">Assessments</h1>
-              <p className="text-gray-600">Submit and track your project assessments</p>
+              <p className="text-gray-600">Submit your work and view feedback and marks</p>
             </div>
             <div className="flex items-center gap-4">
               <Link to="/student/notifications" className="relative">
@@ -127,6 +131,10 @@ export default function Assessments() {
             <div className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm">
               <div className="text-gray-600 mb-1">Graded</div>
               <div className="text-3xl text-green-600">{gradedCount}</div>
+            </div>
+            <div className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm">
+              <div className="text-gray-600 mb-1">Average Mark</div>
+              <div className="text-3xl text-[#2563a8]">{avgMark !== null ? `${avgMark}%` : '—'}</div>
             </div>
           </div>
 
@@ -170,12 +178,31 @@ export default function Assessments() {
                     </div>
 
                     {submission?.status === 'graded' && (
-                      <div className="mt-4 bg-green-50 border border-green-200 rounded-lg p-4">
-                        <div className="flex items-center gap-4 mb-2">
+                      <div className="mt-4 bg-green-50 border border-green-200 rounded-lg p-4 space-y-4">
+                        <div className="flex items-center gap-4">
                           <span className="text-gray-600">Mark:</span>
                           <span className="text-2xl text-green-600 font-semibold">{submission.marks}/100</span>
                         </div>
-                        <a href={submission.fileUrl} target="_blank" rel="noopener noreferrer" className="text-[#2563a8] hover:underline text-sm">
+
+                        <div className="bg-gray-200 h-2.5 rounded-full">
+                          <div
+                            className="bg-[#2563a8] h-2.5 rounded-full"
+                            style={{ width: `${submission.marks ?? 0}%` }}
+                          />
+                        </div>
+
+                        <div>
+                          <div className="text-gray-600 mb-2 text-sm">Supervisor Feedback</div>
+                          {submission.feedback ? (
+                            <div className="bg-white border border-gray-200 rounded-lg p-4">
+                              <p className="text-gray-700">{submission.feedback}</p>
+                            </div>
+                          ) : (
+                            <p className="text-gray-400 italic text-sm">No written feedback provided.</p>
+                          )}
+                        </div>
+
+                        <a href={submission.fileUrl} target="_blank" rel="noopener noreferrer" className="inline-block text-[#2563a8] hover:underline text-sm">
                           📎 {submission.fileName}
                         </a>
                       </div>

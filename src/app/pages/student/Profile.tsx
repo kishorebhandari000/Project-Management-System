@@ -40,11 +40,9 @@ export default function StudentProfile() {
     setSaveMessage('');
     setSaving(true);
     try {
-      const data = await api.put('/profile', { name, email });
+      const data = await api.put('/profile', { name });
       setName(data.user.name);
-      setEmail(data.user.email);
       localStorage.setItem('userName', data.user.name);
-      localStorage.setItem('userEmail', data.user.email);
       window.dispatchEvent(new Event('userNameUpdated'));
       setSaveMessage('Profile updated successfully.');
     } catch (err) {
@@ -139,10 +137,10 @@ export default function StudentProfile() {
                   <input
                     type="email"
                     value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="w-full border border-gray-300 rounded-md px-4 py-3 focus:outline-none focus:border-[#2563a8]"
-                    required
+                    readOnly
+                    className="w-full border border-gray-300 rounded-md px-4 py-3 bg-gray-50 text-gray-500 cursor-not-allowed"
                   />
+                  <p className="text-xs text-gray-400 mt-1">Contact an administrator to change your email.</p>
                 </div>
                 <div className="pt-4">
                   <button
