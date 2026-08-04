@@ -7,25 +7,42 @@ import ProfileAvatar from '../../components/ProfileAvatar';
 interface Assessment {
   _id: string;
   title: string;
-  status: 'not_submitted' | 'submitted' | 'graded';
-  mark: number | null;
-  submittedAt?: string;
   student: { name: string; email: string };
   supervisor: { name: string; email: string };
   project: { title: string };
 }
 
+interface Submission {
+  _id: string;
+  assessment: { _id: string };
+  fileUrl: string;
+  fileName: string;
+  status: 'submitted' | 'graded';
+  marks: number | null;
+  submittedAt: string;
+}
+
 export default function AdminAssessments() {
   const [assessments, setAssessments] = useState<Assessment[]>([]);
+  const [submissions, setSubmissions] = useState<Submission[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
   useEffect(() => {
-    api.get('/assessments/all')
-      .then((d) => setAssessments(d.assessments))
-      .catch((e) => setError(e.message))
+    Promise.all([api.get('/assessments/all'), api.get('/submissions')])
+      .then(([a, s]) => {
+        setAssessments(a.assessments);
+        setSubmissions(s.submissions);
+      })
+      .catch((e) => setError(e instanceof Error ? e.message : 'Failed to load'))
       .finally(() => setLoading(false));
   }, []);
+
+  const submissionFor = (assessmentId: string) =>
+    submissions.find((s) => s.assessment._id === assessmentId);
+
+  const pending = submissions.filter((s) => s.status === 'submitted');
+  const graded = submissions.filter((s) => s.status === 'graded');
 
   return (
     <div className="flex flex-col md:flex-row">
@@ -60,11 +77,11 @@ export default function AdminAssessments() {
             </div>
             <div className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm">
               <div className="text-gray-600 mb-1">Pending Review</div>
-              <div className="text-3xl text-orange-600">{assessments.filter(a => a.status === 'submitted').length}</div>
+              <div className="text-3xl text-orange-600">{pending.length}</div>
             </div>
             <div className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm">
               <div className="text-gray-600 mb-1">Graded</div>
-              <div className="text-3xl text-green-600">{assessments.filter(a => a.status === 'graded').length}</div>
+              <div className="text-3xl text-green-600">{graded.length}</div>
             </div>
           </div>
 
@@ -89,32 +106,51 @@ export default function AdminAssessments() {
                     <th className="text-left px-6 py-4 text-sm text-gray-600">Submitted</th>
                     <th className="text-left px-6 py-4 text-sm text-gray-600">Status</th>
                     <th className="text-left px-6 py-4 text-sm text-gray-600">Mark</th>
+                    <th className="text-left px-6 py-4 text-sm text-gray-600">File</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {assessments.map((a) => (
-                    <tr key={a._id} className="border-t border-gray-200">
-                      <td className="px-6 py-4">{a.student?.name}</td>
-                      <td className="px-6 py-4 text-gray-600">{a.supervisor?.name}</td>
-                      <td className="px-6 py-4">{a.title}</td>
-                      <td className="px-6 py-4 text-gray-500">{a.project?.title}</td>
-                      <td className="px-6 py-4 text-gray-500 text-sm">
-                        {a.submittedAt ? new Date(a.submittedAt).toLocaleDateString() : '—'}
-                      </td>
-                      <td className="px-6 py-4">
-                        <span className={
-                          a.status === 'graded' ? 'text-green-600' :
-                          a.status === 'submitted' ? 'text-orange-600' : 'text-gray-400'
-                        }>
-                          {a.status === 'not_submitted' ? 'Not submitted' :
-                           a.status === 'submitted' ? 'Pending review' : 'Graded'}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4">
-                        {a.mark !== null ? <span className="text-green-600">{a.mark}/100</span> : '—'}
-                      </td>
-                    </tr>
-                  ))}
+                  {assessments.map((a) => {
+                    const submission = submissionFor(a._id);
+                    const status = submission?.status ?? 'not_submitted';
+                    return (
+                      <tr key={a._id} className="border-t border-gray-200">
+                        <td className="px-6 py-4">{a.student?.name}</td>
+                        <td className="px-6 py-4 text-gray-600">{a.supervisor?.name}</td>
+                        <td className="px-6 py-4">{a.title}</td>
+                        <td className="px-6 py-4 text-gray-500">{a.project?.title}</td>
+                        <td className="px-6 py-4 text-gray-500 text-sm">
+                          {submission?.submittedAt ? new Date(submission.submittedAt).toLocaleDateString() : '—'}
+                        </td>
+                        <td className="px-6 py-4">
+                          <span className={
+                            status === 'graded' ? 'text-green-600' :
+                            status === 'submitted' ? 'text-orange-600' : 'text-gray-400'
+                          }>
+                            {status === 'not_submitted' ? 'Not submitted' :
+                             status === 'submitted' ? 'Pending review' : 'Graded'}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4">
+                          {submission?.marks !== null && submission?.marks !== undefined ? (
+                            <span className="text-green-600">{submission.marks}/100</span>
+                          ) : '—'}
+                        </td>
+                        <td className="px-6 py-4">
+                          {submission?.fileUrl ? (
+                            <a
+                              href={submission.fileUrl}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="text-[#2563a8] hover:underline text-sm"
+                            >
+                              📎 {submission.fileName}
+                            </a>
+                          ) : '—'}
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table></div>
             </div>
