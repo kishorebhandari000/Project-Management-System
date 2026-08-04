@@ -1,0 +1,112 @@
+.send-btn {
+  --primary: #2563a8;
+  cursor: pointer;
+  border: none;
+  border-radius: 10px;
+  box-shadow: 0 0.5px 0.5px 1px rgba(255,255,255,0.2), 0 6px 12px rgba(37,99,168,0.2), 0 2px 3px rgba(0,0,0,0.05);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  transition: all 0.3s ease;
+  min-width: 100px;
+  padding: 0 20px;
+  height: 42px;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  color: #fff;
+  background: linear-gradient(var(--primary), #1e4a8a);
+}
+.send-btn:hover:not(:disabled) {
+  transform: scale(1.03);
+  box-shadow: 0 0 1px 2px rgba(255,255,255,0.3), 0 10px 20px rgba(37,99,168,0.3);
+}
+.send-btn:active:not(:disabled) {
+  transform: scale(1);
+}
+.send-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.send-btn .outline {
+  position: absolute;
+  border-radius: inherit;
+  overflow: hidden;
+  z-index: 1;
+  opacity: 0;
+  transition: opacity 0.4s ease;
+  inset: -2px;
+  pointer-events: none;
+}
+.send-btn .outline::before {
+  content: "";
+  position: absolute;
+  inset: -100%;
+  background: conic-gradient(from 180deg, transparent 60%, white 80%, transparent 100%);
+  animation: send-spin 2s linear infinite;
+  animation-play-state: paused;
+}
+.send-btn:hover .outline {
+  opacity: 0.5;
+}
+.send-btn:hover .outline::before {
+  animation-play-state: running;
+}
+@keyframes send-spin {
+  to { transform: rotate(360deg); }
+}
+.send-btn .state {
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  position: relative;
+}
+.send-btn .state--sent {
+  display: none;
+}
+.send-btn.is-sent .state--default {
+  display: none;
+}
+.send-btn.is-sent .state--sent {
+  display: flex;
+}
+.send-btn .icon {
+  display: flex;
+  align-items: center;
+  transition: transform 0.3s ease;
+}
+.send-btn:hover .state--default .icon {
+  transform: rotate(20deg) scale(1.1);
+}
+.send-btn p {
+  display: flex;
+  margin: 0;
+}
+.send-btn p span {
+  display: inline-block;
+}
+.send-btn:hover .state--default p span {
+  animation: send-wave 0.4s ease forwards calc(var(--i) * 0.04s);
+}
+@keyframes send-wave {
+  30% { transform: translateY(3px); }
+  50% { transform: translateY(-2px); }
+  100% { transform: translateY(0); }
+}
+.send-btn.is-sent .state--sent svg {
+  animation: send-appear 0.5s ease forwards;
+}
+.send-btn.is-sent .state--sent p span {
+  opacity: 0;
+  animation: send-slide-down 0.5s ease forwards calc(var(--i) * 0.05s);
+}
+@keyframes send-appear {
+  0% { opacity: 0; transform: scale(2) rotate(-30deg); }
+  100% { opacity: 1; transform: scale(1) rotate(0); }
+}
+@keyframes send-slide-down {
+  0% { opacity: 0; transform: translateY(-10px); }
+  100% { opacity: 1; transform: translateY(0); }
+}

@@ -2,6 +2,7 @@ import Sidebar from '../../components/Sidebar';
 import ProfileAvatar from '../../components/ProfileAvatar';
 import { useState, useRef, useEffect } from 'react';
 import { useMessages } from '../../hooks/useMessages';
+import SendButton from '../../components/SendButton';
 
 function initials(name: string) {
   return name.split(' ').map((n) => n[0]).join('').toUpperCase();
@@ -14,7 +15,6 @@ function timeLabel(iso: string) {
 export default function AdminMessages() {
   const { contacts, loadingContacts, selectedId, selectContact, messages, loadingMessages, sendMessage, error } = useMessages();
   const [input, setInput] = useState('');
-  const [sending, setSending] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
   const userId = localStorage.getItem('userId');
 
@@ -26,13 +26,8 @@ export default function AdminMessages() {
 
   const handleSend = async () => {
     if (!input.trim()) return;
-    setSending(true);
-    try {
-      await sendMessage(input);
-      setInput('');
-    } finally {
-      setSending(false);
-    }
+    await sendMessage(input);
+    setInput('');
   };
 
   return (
@@ -139,13 +134,7 @@ export default function AdminMessages() {
                     placeholder="Type a message..."
                     className="flex-1 border border-gray-300 rounded-md px-4 py-2 focus:outline-none focus:border-[#2563a8]"
                   />
-                  <button
-                    onClick={handleSend}
-                    disabled={sending || !input.trim()}
-                    className="bg-[#2563a8] text-white px-5 py-2 rounded-md hover:bg-[#1e4a8a] disabled:opacity-50"
-                  >
-                    Send
-                  </button>
+                  <SendButton onSend={handleSend} disabled={!input.trim()} />
                 </div>
               </>
             )}
