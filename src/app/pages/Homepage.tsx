@@ -5,7 +5,7 @@ import Footer from '../components/Footer';
 import GetStartedButton from '../components/GetStartedButton';
 import { api } from '../lib/api';
 import aboutImage from '../../assets/image.jpeg';
-
+import SubmitButton from '../components/SubmitButton';
 interface ForumPost {
   _id: string;
   title: string;
@@ -271,13 +271,9 @@ export default function Homepage() {
                   required
                 ></textarea>
               </div>
-              <button
-                type="submit"
-                disabled={contactStatus === 'sending'}
-                className="w-full bg-[#2563a8] text-white px-6 py-3 rounded-md hover:bg-[#1e4a8a] disabled:opacity-60"
-              >
-                {contactStatus === 'sending' ? 'Sending...' : 'Submit'}
-              </button>
+                <SubmitButton disabled={contactStatus === 'sending'}>
+                  {contactStatus === 'sending' ? 'Sending...' : 'Submit'}
+                </SubmitButton>
             </form>
           )}
         </div>
