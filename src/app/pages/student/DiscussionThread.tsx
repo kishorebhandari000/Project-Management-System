@@ -1,8 +1,9 @@
 import Sidebar from '../../components/Sidebar';
-import { Link, useNavigate, useParams } from 'react-router';
+import { useNavigate, useParams } from 'react-router';
 import { useEffect, useState } from 'react';
 import { api } from '../../lib/api';
 import ProfileAvatar from '../../components/ProfileAvatar';
+import NotificationBell from '../../components/NotificationBell';
 interface Person {
   _id: string;
   name: string;
@@ -120,12 +121,8 @@ export default function DiscussionThread() {
               <p className="text-gray-600">{thread ? thread.project.title : 'Discussion Thread'}</p>
             </div>
             <div className="flex items-center gap-4">
-              <Link to="/student/notifications" className="relative">
-                <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center text-gray-700 cursor-pointer hover:bg-gray-300">
-                  <span className="text-xl">🔔</span>
-                </div>
-                <div className="absolute top-0 right-0 w-3 h-3 bg-red-600 rounded-full"></div>
-              </Link>
+              <NotificationBell role="student" />
+
               <ProfileAvatar role="student" />
             </div>
           </div>

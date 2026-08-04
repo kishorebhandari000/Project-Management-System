@@ -1,7 +1,8 @@
 import Sidebar from '../../components/Sidebar';
-import { useNavigate, useParams, Link } from 'react-router';
+import { useNavigate, useParams } from 'react-router';
 import { useState, useEffect } from 'react';
 import { api } from '../../lib/api';
+import NotificationBell from '../../components/NotificationBell';
 
 interface ApiProject {
   title: string;
@@ -44,12 +45,8 @@ export default function ViewProject() {
               <h1 className="text-2xl">Project Details</h1>
               <p className="text-gray-600">View-only — contact an admin to make changes</p>
             </div>
-            <Link to="/supervisor/notifications" className="relative">
-              <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center text-gray-700 hover:bg-gray-300">
-                <span className="text-xl">🔔</span>
-              </div>
-              <div className="absolute top-0 right-0 w-3 h-3 bg-red-600 rounded-full"></div>
-            </Link>
+            <NotificationBell role="supervisor" />
+
           </div>
         </div>
 

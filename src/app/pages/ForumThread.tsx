@@ -5,6 +5,7 @@ import ProfileAvatar from '../components/ProfileAvatar';
 import { Link, useParams, useNavigate } from 'react-router';
 import { useEffect, useState } from 'react';
 import { api } from '../lib/api';
+import NotificationBell from '../components/NotificationBell';
 
 type Role = 'admin' | 'supervisor' | 'student';
 
@@ -251,12 +252,8 @@ export default function ForumThread() {
         <div className="flex-1 bg-[#f4f6f8] pt-16 md:pt-0">
           <div className="bg-white border-b border-gray-200 px-8 py-5 flex justify-end">
             <div className="flex items-center gap-4">
-              <Link to={`/${role}/notifications`} className="relative">
-                <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center text-gray-700 cursor-pointer hover:bg-gray-300">
-                  <span className="text-xl">🔔</span>
-                </div>
-                <div className="absolute top-0 right-0 w-3 h-3 bg-red-600 rounded-full"></div>
-              </Link>
+              <NotificationBell role={role} />
+
               <ProfileAvatar role={role} />
             </div>
           </div>

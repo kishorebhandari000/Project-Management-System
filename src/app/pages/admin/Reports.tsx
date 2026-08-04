@@ -1,8 +1,8 @@
 import Sidebar from '../../components/Sidebar';
-import { Link } from 'react-router';
 import { useEffect, useState } from 'react';
 import { api } from '../../lib/api';
 import ProfileAvatar from '../../components/ProfileAvatar';
+import NotificationBell from '../../components/NotificationBell';
 
 interface AssessmentStat {
   title: string;
@@ -50,12 +50,8 @@ export default function Reports() {
               <p className="text-gray-600">System statistics and analytics</p>
             </div>
             <div className="flex items-center gap-4">
-              <Link to="/admin/notifications" className="relative">
-                <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center text-gray-700 cursor-pointer hover:bg-gray-300">
-                  <span className="text-xl">🔔</span>
-                </div>
-                <div className="absolute top-0 right-0 w-3 h-3 bg-red-600 rounded-full"></div>
-              </Link>
+              <NotificationBell role="admin" />
+
               <ProfileAvatar role="admin" />
             </div>
           </div>

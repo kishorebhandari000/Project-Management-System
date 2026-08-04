@@ -3,6 +3,7 @@ import { Link } from 'react-router';
 import { useState, useEffect } from 'react';
 import { api } from '../../lib/api';
 import ProfileAvatar from '../../components/ProfileAvatar';
+import NotificationBell from '../../components/NotificationBell';
 
 interface ProjectFile {
   url: string;
@@ -58,12 +59,8 @@ export default function StudentDashboard() {
               <p className="text-gray-600">Welcome back, {userName}</p>
             </div>
             <div className="flex items-center gap-4">
-              <Link to="/student/notifications" className="relative">
-                <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center text-gray-700 cursor-pointer hover:bg-gray-300">
-                  <span className="text-xl">🔔</span>
-                </div>
-                <div className="absolute top-0 right-0 w-3 h-3 bg-red-600 rounded-full"></div>
-              </Link>
+              <NotificationBell role="student" />
+
               <Link to="/student/profile" className="w-12 h-12 bg-[#2563a8] rounded-full flex items-center justify-center text-white hover:bg-[#1e4a8a] cursor-pointer">
                 {userName ? userName.split(' ').map((p) => p[0]).join('').toUpperCase().slice(0, 2) : 'ST'}
               </Link>

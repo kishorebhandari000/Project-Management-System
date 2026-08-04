@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { api } from '../../lib/api';
 import { useMyProjects } from '../../hooks/useMyProjects';
 import ProfileAvatar from '../../components/ProfileAvatar';
+import NotificationBell from '../../components/NotificationBell';
 interface Thread {
   _id: string;
   title: string;
@@ -82,12 +83,8 @@ export default function StudentDiscussions() {
               <Link to="/student/discussions/new" className="bg-[#2563a8] text-white px-5 py-2 rounded-md hover:bg-[#1e4a8a]">
                 New Discussion
               </Link>
-              <Link to="/student/notifications" className="relative">
-                <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center text-gray-700 hover:bg-gray-300">
-                  <span className="text-xl">🔔</span>
-                </div>
-                <div className="absolute top-0 right-0 w-3 h-3 bg-red-600 rounded-full"></div>
-              </Link>
+              <NotificationBell role="student" />
+
               <ProfileAvatar role="student" />
             </div>
           </div>

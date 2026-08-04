@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router';
 import Sidebar from '../../components/Sidebar';
 import { api } from '../../lib/api';
 import ProfileAvatar from '../../components/ProfileAvatar';
+import NotificationBell from '../../components/NotificationBell';
 
 interface Assessment {
   _id: string;
@@ -101,12 +101,8 @@ export default function Assessments() {
               <p className="text-gray-600">Submit your work and view feedback and marks</p>
             </div>
             <div className="flex items-center gap-4">
-              <Link to="/student/notifications" className="relative">
-                <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center hover:bg-gray-300">
-                  <span className="text-xl">🔔</span>
-                </div>
-                <div className="absolute top-0 right-0 w-3 h-3 bg-red-600 rounded-full" />
-              </Link>
+              <NotificationBell role="student" />
+
               <ProfileAvatar role="student" />
             </div>
           </div>
