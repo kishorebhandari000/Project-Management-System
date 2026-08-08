@@ -1,6 +1,7 @@
 import { Link, useNavigate, useParams } from 'react-router';
 import { useState, type FormEvent } from 'react';
 import { api } from '../lib/api';
+import { validatePasswordStrength, PASSWORD_REQUIREMENTS_HINT } from '../lib/validatePassword';
 
 export default function ResetPassword() {
   const { token } = useParams();
@@ -16,6 +17,12 @@ export default function ResetPassword() {
 
     if (password !== confirmPassword) {
       setError("Passwords don't match");
+      return;
+    }
+
+    const passwordCheck = validatePasswordStrength(password);
+    if (!passwordCheck.valid) {
+      setError(passwordCheck.message ?? 'Invalid password');
       return;
     }
 
@@ -43,15 +50,18 @@ export default function ResetPassword() {
         )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          <input
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            placeholder="New password"
-            className="w-full border border-gray-300 rounded-md px-4 py-3 focus:outline-none focus:border-[#2563a8]"
-            required
-            minLength={6}
-          />
+          <div>
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="New password"
+              className="w-full border border-gray-300 rounded-md px-4 py-3 focus:outline-none focus:border-[#2563a8]"
+              required
+              minLength={8}
+            />
+            <p className="text-xs text-gray-400 mt-1">{PASSWORD_REQUIREMENTS_HINT}</p>
+          </div>
           <input
             type="password"
             value={confirmPassword}
@@ -59,7 +69,7 @@ export default function ResetPassword() {
             placeholder="Confirm new password"
             className="w-full border border-gray-300 rounded-md px-4 py-3 focus:outline-none focus:border-[#2563a8]"
             required
-            minLength={6}
+            minLength={8}
           />
           <button
             type="submit"

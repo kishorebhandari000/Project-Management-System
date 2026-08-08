@@ -1,18 +1,28 @@
 const asyncHandler = require('../utils/asyncHandler');
 const User = require('../models/User');
+const validatePasswordStrength = require('../utils/validatePassword');
 // @desc   Admin creates a user (student or supervisor)
 // @route  POST /api/users
 // @access Private/Admin
 const createUser = asyncHandler(async (req, res) => {
   const { name, password, role } = req.body;
   let { email } = req.body;
+  let studentId;
 
   if (!name || !password || !role) {
     return res.status(400).json({ message: 'name, password and role are required' });
   }
 
+  const passwordCheck = validatePasswordStrength(password);
+  if (!passwordCheck.valid) {
+    return res.status(400).json({ message: passwordCheck.message });
+  }
+
   if (role === 'supervisor') {
     email = await generateSupervisorEmail(name);
+  } else if (role === 'student') {
+    studentId = await generateStudentId();
+    email = await generateStudentEmail(studentId);
   } else if (!email) {
     return res.status(400).json({ message: 'email is required for this role' });
   }
@@ -25,7 +35,7 @@ const createUser = asyncHandler(async (req, res) => {
   const userData = { name, email, password, role };
 
   if (role === 'student') {
-    userData.studentId = await generateStudentId();
+    userData.studentId = studentId;
   }
 
   const user = await User.create(userData);
@@ -54,6 +64,18 @@ async function generateSupervisorEmail(name) {
   while (await User.findOne({ email: candidate })) {
     suffix += 1;
     candidate = `${base}${suffix}@pms.edu`;
+  }
+  return candidate;
+}
+
+// Generates "{studentId}@pms.edu", appending a number if that's taken
+// (should be effectively impossible since studentId is already unique)
+async function generateStudentEmail(studentId) {
+  let candidate = `${studentId}@pms.edu`;
+  let suffix = 1;
+  while (await User.findOne({ email: candidate })) {
+    suffix += 1;
+    candidate = `${studentId}${suffix}@pms.edu`;
   }
   return candidate;
 }
@@ -141,6 +163,11 @@ const changePassword = asyncHandler(async (req, res) => {
 
   if (!currentPassword || !newPassword) {
     return res.status(400).json({ message: 'currentPassword and newPassword are required' });
+  }
+
+  const passwordCheck = validatePasswordStrength(newPassword);
+  if (!passwordCheck.valid) {
+    return res.status(400).json({ message: passwordCheck.message });
   }
 
   const user = await User.findById(req.user._id).select('+password');

@@ -1,6 +1,7 @@
 import Sidebar from '../../components/Sidebar';
 import { useState, useEffect, type FormEvent } from 'react';
 import { api } from '../../lib/api';
+import { validatePasswordStrength, PASSWORD_REQUIREMENTS_HINT } from '../../lib/validatePassword';
 import NotificationBell from '../../components/NotificationBell';
 
 function getInitials(name: string): string {
@@ -61,6 +62,12 @@ export default function Profile() {
 
     if (newPassword !== confirmPassword) {
       setPasswordError("New passwords don't match");
+      return;
+    }
+
+    const passwordCheck = validatePasswordStrength(newPassword);
+    if (!passwordCheck.valid) {
+      setPasswordError(passwordCheck.message ?? 'Invalid password');
       return;
     }
 
@@ -186,8 +193,9 @@ export default function Profile() {
                   onChange={(e) => setNewPassword(e.target.value)}
                   className="w-full border border-gray-300 rounded-md px-4 py-3 focus:outline-none focus:border-[#2563a8]"
                   required
-                  minLength={6}
+                  minLength={8}
                 />
+                <p className="text-xs text-gray-400 mt-1">{PASSWORD_REQUIREMENTS_HINT}</p>
               </div>
               <div>
                 <label className="block text-gray-600 mb-2">Confirm New Password</label>
@@ -197,7 +205,7 @@ export default function Profile() {
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   className="w-full border border-gray-300 rounded-md px-4 py-3 focus:outline-none focus:border-[#2563a8]"
                   required
-                  minLength={6}
+                  minLength={8}
                 />
               </div>
               <div className="pt-4">

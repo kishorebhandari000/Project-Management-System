@@ -3,11 +3,17 @@ const generateToken = require('../utils/generateToken');
 const asyncHandler = require('../utils/asyncHandler');
 const crypto = require('crypto');
 const transporter = require('../utils/mailer');
+const validatePasswordStrength = require('../utils/validatePassword');
 
 const register = asyncHandler(async (req, res) => {
   const { name, email, password } = req.body;
   if (!name || !email || !password) {
     return res.status(400).json({ message: 'name, email and password are required' });
+  }
+
+  const passwordCheck = validatePasswordStrength(password);
+  if (!passwordCheck.valid) {
+    return res.status(400).json({ message: passwordCheck.message });
   }
 
   const existing = await User.findOne({ email });
@@ -81,6 +87,11 @@ const resetPassword = asyncHandler(async (req, res) => {
 
   if (!password) {
     return res.status(400).json({ message: 'password is required' });
+  }
+
+  const passwordCheck = validatePasswordStrength(password);
+  if (!passwordCheck.valid) {
+    return res.status(400).json({ message: passwordCheck.message });
   }
 
   const hashedToken = crypto.createHash('sha256').update(token).digest('hex');

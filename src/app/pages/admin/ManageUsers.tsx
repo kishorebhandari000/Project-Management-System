@@ -1,6 +1,7 @@
 import Sidebar from '../../components/Sidebar';
 import { useState, useEffect } from 'react';
 import { api } from '../../lib/api';
+import { validatePasswordStrength, PASSWORD_REQUIREMENTS_HINT } from '../../lib/validatePassword';
 import ProfileAvatar from '../../components/ProfileAvatar';
 import NotificationBell from '../../components/NotificationBell';
 
@@ -29,7 +30,6 @@ export default function ManageUsers() {
 
   const [showModal, setShowModal] = useState(false);
   const [formName, setFormName] = useState('');
-  const [formEmail, setFormEmail] = useState('');
   const [formPassword, setFormPassword] = useState('');
   const [formRole, setFormRole] = useState<'student' | 'supervisor'>('student');
   const [formError, setFormError] = useState('');
@@ -75,7 +75,6 @@ export default function ManageUsers() {
 
   const openModal = () => {
     setFormName('');
-    setFormEmail('');
     setFormPassword('');
     setFormRole(activeTab === 'students' ? 'student' : 'supervisor');
     setFormError('');
@@ -91,12 +90,18 @@ export default function ManageUsers() {
   const handleCreateUser = async (e: React.FormEvent) => {
     e.preventDefault();
     setFormError('');
+
+    const passwordCheck = validatePasswordStrength(formPassword);
+    if (!passwordCheck.valid) {
+      setFormError(passwordCheck.message ?? 'Invalid password');
+      return;
+    }
+
     setSubmitting(true);
 
     try {
       const data = await api.post('/users', {
         name: formName,
-        ...(formRole === 'student' ? { email: formEmail } : {}),
         password: formPassword,
         role: formRole,
       });
@@ -329,9 +334,14 @@ export default function ManageUsers() {
                     </p>
                   )}
                   {createdUser.role === 'student' && createdUser.studentId && (
-                    <p>
-                      Student ID: <strong>{createdUser.studentId}</strong>
-                    </p>
+                    <>
+                      <p>
+                        Student ID: <strong>{createdUser.studentId}</strong>
+                      </p>
+                      <p>
+                        Login email: <strong>{createdUser.email}</strong>
+                      </p>
+                    </>
                   )}
                   <p className="text-sm text-green-700">Make sure to share these details with the user.</p>
                 </div>
@@ -377,18 +387,9 @@ export default function ManageUsers() {
                   </div>
 
                   {formRole === 'student' && (
-                    <div>
-                      <label className="block text-gray-700 mb-1">Email</label>
-                      <input
-                        type="email"
-                        value={formEmail}
-                        onChange={(e) => setFormEmail(e.target.value)}
-                        className="w-full border border-gray-300 rounded-md px-4 py-2 focus:outline-none focus:border-[#2563a8]"
-                        required
-                      />
-                      <p className="text-xs text-gray-400 mt-1">
-                        Student ID will be assigned automatically (e.g. 20260001).
-                      </p>
+                    <div className="bg-blue-50 border border-blue-200 rounded-md px-4 py-3 text-sm text-blue-800">
+                      Student ID and login email will be generated automatically (e.g. student ID
+                      20260001 → login email 20260001@pms.edu).
                     </div>
                   )}
 
@@ -405,9 +406,10 @@ export default function ManageUsers() {
                       value={formPassword}
                       onChange={(e) => setFormPassword(e.target.value)}
                       className="w-full border border-gray-300 rounded-md px-4 py-2 focus:outline-none focus:border-[#2563a8]"
-                      minLength={6}
+                      minLength={8}
                       required
                     />
+                    <p className="text-xs text-gray-400 mt-1">{PASSWORD_REQUIREMENTS_HINT}</p>
                   </div>
 
                   <div className="flex gap-3 pt-2">
