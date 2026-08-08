@@ -18,6 +18,11 @@ export default function Profile() {
   const [saveError, setSaveError] = useState('');
   const [saveMessage, setSaveMessage] = useState('');
 
+  const [phone, setPhone] = useState('');
+  const [address, setAddress] = useState('');
+  const [personalEmail, setPersonalEmail] = useState('');
+
+  const [showPasswordForm, setShowPasswordForm] = useState(false);
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -26,10 +31,13 @@ export default function Profile() {
   const [passwordMessage, setPasswordMessage] = useState('');
 
   useEffect(() => {
-    api.get('/auth/me')
+    api.get('/profile')
       .then((data) => {
         setName(data.user.name);
         setEmail(data.user.email);
+        setPhone(data.user.phone || '');
+        setAddress(data.user.address || '');
+        setPersonalEmail(data.user.personalEmail || '');
       })
       .catch((err) => setSaveError(err instanceof Error ? err.message : 'Failed to load profile'))
       .finally(() => setLoading(false));
@@ -41,7 +49,7 @@ export default function Profile() {
     setSaveMessage('');
     setSaving(true);
     try {
-      const data = await api.put('/profile', { name, email });
+      const data = await api.put('/profile', { name, email, phone, address, personalEmail });
       setName(data.user.name);
       setEmail(data.user.email);
       localStorage.setItem('userName', data.user.name);
@@ -147,6 +155,36 @@ export default function Profile() {
                     required
                   />
                 </div>
+                <div>
+                  <label className="block text-gray-600 mb-2">Personal Email</label>
+                  <input
+                    type="email"
+                    value={personalEmail}
+                    onChange={(e) => setPersonalEmail(e.target.value)}
+                    placeholder="you@example.com"
+                    className="w-full border border-gray-300 rounded-md px-4 py-3 focus:outline-none focus:border-[#2563a8]"
+                  />
+                </div>
+                <div>
+                  <label className="block text-gray-600 mb-2">Phone Number</label>
+                  <input
+                    type="tel"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    placeholder="+61 4XX XXX XXX"
+                    className="w-full border border-gray-300 rounded-md px-4 py-3 focus:outline-none focus:border-[#2563a8]"
+                  />
+                </div>
+                <div>
+                  <label className="block text-gray-600 mb-2">Address</label>
+                  <input
+                    type="text"
+                    value={address}
+                    onChange={(e) => setAddress(e.target.value)}
+                    placeholder="Street, suburb, state"
+                    className="w-full border border-gray-300 rounded-md px-4 py-3 focus:outline-none focus:border-[#2563a8]"
+                  />
+                </div>
                 <div className="pt-4">
                   <button
                     type="submit"
@@ -161,63 +199,76 @@ export default function Profile() {
           )}
 
           <div className="bg-white rounded-lg p-8 border border-gray-200 shadow-sm">
-            <h2 className="text-xl mb-4">Change Password</h2>
+            <div className="flex items-center justify-between">
+              <h2 className="text-xl">{showPasswordForm ? 'Change Password' : 'Password'}</h2>
+              <button
+                type="button"
+                onClick={() => setShowPasswordForm((v) => !v)}
+                className="text-[#2563a8] hover:underline text-sm"
+              >
+                {showPasswordForm ? 'Cancel' : 'Change Password'}
+              </button>
+            </div>
 
-            {passwordError && (
-              <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-md px-4 py-3 mb-4">
-                {passwordError}
+            {showPasswordForm && (
+              <div className="mt-4">
+                {passwordError && (
+                  <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-md px-4 py-3 mb-4">
+                    {passwordError}
+                  </div>
+                )}
+                {passwordMessage && (
+                  <div className="bg-green-50 border border-green-200 text-green-700 text-sm rounded-md px-4 py-3 mb-4">
+                    {passwordMessage}
+                  </div>
+                )}
+
+                <form onSubmit={handleChangePassword} className="space-y-5">
+                  <div>
+                    <label className="block text-gray-600 mb-2">Current Password</label>
+                    <input
+                      type="password"
+                      value={currentPassword}
+                      onChange={(e) => setCurrentPassword(e.target.value)}
+                      className="w-full border border-gray-300 rounded-md px-4 py-3 focus:outline-none focus:border-[#2563a8]"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-gray-600 mb-2">New Password</label>
+                    <input
+                      type="password"
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      className="w-full border border-gray-300 rounded-md px-4 py-3 focus:outline-none focus:border-[#2563a8]"
+                      required
+                      minLength={8}
+                    />
+                    <p className="text-xs text-gray-400 mt-1">{PASSWORD_REQUIREMENTS_HINT}</p>
+                  </div>
+                  <div>
+                    <label className="block text-gray-600 mb-2">Confirm New Password</label>
+                    <input
+                      type="password"
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      className="w-full border border-gray-300 rounded-md px-4 py-3 focus:outline-none focus:border-[#2563a8]"
+                      required
+                      minLength={8}
+                    />
+                  </div>
+                  <div className="pt-4">
+                    <button
+                      type="submit"
+                      disabled={changingPassword}
+                      className="bg-[#2563a8] text-white px-6 py-3 rounded-md hover:bg-[#1e4a8a] transition-colors disabled:opacity-60"
+                    >
+                      {changingPassword ? 'Changing...' : 'Change Password'}
+                    </button>
+                  </div>
+                </form>
               </div>
             )}
-            {passwordMessage && (
-              <div className="bg-green-50 border border-green-200 text-green-700 text-sm rounded-md px-4 py-3 mb-4">
-                {passwordMessage}
-              </div>
-            )}
-
-            <form onSubmit={handleChangePassword} className="space-y-5">
-              <div>
-                <label className="block text-gray-600 mb-2">Current Password</label>
-                <input
-                  type="password"
-                  value={currentPassword}
-                  onChange={(e) => setCurrentPassword(e.target.value)}
-                  className="w-full border border-gray-300 rounded-md px-4 py-3 focus:outline-none focus:border-[#2563a8]"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-gray-600 mb-2">New Password</label>
-                <input
-                  type="password"
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                  className="w-full border border-gray-300 rounded-md px-4 py-3 focus:outline-none focus:border-[#2563a8]"
-                  required
-                  minLength={8}
-                />
-                <p className="text-xs text-gray-400 mt-1">{PASSWORD_REQUIREMENTS_HINT}</p>
-              </div>
-              <div>
-                <label className="block text-gray-600 mb-2">Confirm New Password</label>
-                <input
-                  type="password"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  className="w-full border border-gray-300 rounded-md px-4 py-3 focus:outline-none focus:border-[#2563a8]"
-                  required
-                  minLength={8}
-                />
-              </div>
-              <div className="pt-4">
-                <button
-                  type="submit"
-                  disabled={changingPassword}
-                  className="bg-[#2563a8] text-white px-6 py-3 rounded-md hover:bg-[#1e4a8a] transition-colors disabled:opacity-60"
-                >
-                  {changingPassword ? 'Changing...' : 'Change Password'}
-                </button>
-              </div>
-            </form>
           </div>
         </div>
       </div>

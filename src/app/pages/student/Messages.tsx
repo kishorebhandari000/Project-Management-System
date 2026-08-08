@@ -1,5 +1,6 @@
 import Sidebar from '../../components/Sidebar';
 import ProfileAvatar from '../../components/ProfileAvatar';
+import NotificationBell from '../../components/NotificationBell';
 import { useState, useRef, useEffect } from 'react';
 import { useMessages } from '../../hooks/useMessages';
 import SendButton from '../../components/SendButton';
@@ -40,7 +41,10 @@ export default function StudentMessages() {
               <h1 className="text-2xl">Messages</h1>
               <p className="text-gray-600">Communicate with your supervisor</p>
             </div>
-            <ProfileAvatar role="student" />
+            <div className="flex items-center gap-4">
+              <NotificationBell role="student" />
+              <ProfileAvatar role="student" />
+            </div>
           </div>
         </div>
 

@@ -1,8 +1,8 @@
 import Sidebar from '../../components/Sidebar';
-import { Link } from 'react-router';
 import { useState, useEffect, useRef } from 'react';
 import { api } from '../../lib/api';
 import NotificationBell from '../../components/NotificationBell';
+import ProfileAvatar from '../../components/ProfileAvatar';
 
 interface ProjectFile {
   url: string;
@@ -36,6 +36,7 @@ interface StudentResult {
   name: string;
   email: string;
   studentId?: string;
+  alreadyCommitted: boolean;
 }
 
 export default function BrowseProjects() {
@@ -139,6 +140,7 @@ export default function BrowseProjects() {
   };
 
   const addMember = (student: StudentResult) => {
+    if (student.alreadyCommitted) return;
     if (selectedMembers.some((m) => m._id === student._id)) return;
     setSelectedMembers([...selectedMembers, student]);
     setSearchQuery('');
@@ -184,10 +186,7 @@ export default function BrowseProjects() {
             </div>
             <div className="flex items-center gap-4">
               <NotificationBell role="student" />
-
-              <Link to="/student/profile" className="w-12 h-12 bg-[#2563a8] rounded-full flex items-center justify-center text-white hover:bg-[#1e4a8a] cursor-pointer">
-                JD
-              </Link>
+              <ProfileAvatar role="student" />
             </div>
           </div>
         </div>
@@ -337,19 +336,33 @@ export default function BrowseProjects() {
 
                 {searchResults.length > 0 && (
                   <div className="border border-gray-200 rounded-md mt-1 max-h-40 overflow-y-auto">
-                    {searchResults.map((student) => (
-                      <button
-                        type="button"
-                        key={student._id}
-                        onClick={() => addMember(student)}
-                        className="w-full text-left px-3 py-2 hover:bg-gray-50 border-b border-gray-100 last:border-b-0"
-                      >
-                        <div className="text-sm">{student.name}</div>
-                        <div className="text-xs text-gray-500">
-                          {student.studentId ? `${student.studentId} · ` : ''}{student.email}
+                    {searchResults.map((student) =>
+                      student.alreadyCommitted ? (
+                        <div
+                          key={student._id}
+                          className="w-full text-left px-3 py-2 border-b border-gray-100 last:border-b-0 opacity-50 cursor-not-allowed"
+                        >
+                          <div className="text-sm text-gray-500">
+                            {student.name} <span className="text-xs">(already in a group)</span>
+                          </div>
+                          <div className="text-xs text-gray-400">
+                            {student.studentId ? `${student.studentId} · ` : ''}{student.email}
+                          </div>
                         </div>
-                      </button>
-                    ))}
+                      ) : (
+                        <button
+                          type="button"
+                          key={student._id}
+                          onClick={() => addMember(student)}
+                          className="w-full text-left px-3 py-2 hover:bg-gray-50 border-b border-gray-100 last:border-b-0"
+                        >
+                          <div className="text-sm">{student.name}</div>
+                          <div className="text-xs text-gray-500">
+                            {student.studentId ? `${student.studentId} · ` : ''}{student.email}
+                          </div>
+                        </button>
+                      )
+                    )}
                   </div>
                 )}
 

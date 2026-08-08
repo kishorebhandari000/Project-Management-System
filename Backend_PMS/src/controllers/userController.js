@@ -1,6 +1,7 @@
 const asyncHandler = require('../utils/asyncHandler');
 const User = require('../models/User');
 const validatePasswordStrength = require('../utils/validatePassword');
+const { getCommittedStudentIds } = require('../utils/studentCommitment');
 // @desc   Admin creates a user (student or supervisor)
 // @route  POST /api/users
 // @access Private/Admin
@@ -238,6 +239,15 @@ const searchStudents = asyncHandler(async (req, res) => {
     .select('name email studentId')
     .limit(10);
 
-  res.json({ users });
+  const committedIds = await getCommittedStudentIds(users.map((u) => u._id));
+  const usersWithStatus = users.map((u) => ({
+    _id: u._id,
+    name: u.name,
+    email: u.email,
+    studentId: u.studentId,
+    alreadyCommitted: committedIds.has(u._id.toString()),
+  }));
+
+  res.json({ users: usersWithStatus });
 });
 module.exports = { createUser, getUsers, getMe, updateMe, changePassword, updateUser, deleteUser, searchStudents };

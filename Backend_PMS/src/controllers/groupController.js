@@ -5,6 +5,7 @@ const Allocation = require('../models/Allocation');
 const User = require('../models/User');
 const sendNotification = require('../utils/notify');
 const { createNotification } = require('./notificationController');
+const { getCommittedStudentIds } = require('../utils/studentCommitment');
 
 // @desc   Student proposes a group and applies to a project together
 // @route  POST /api/groups
@@ -36,14 +37,17 @@ const createGroup = asyncHandler(async (req, res) => {
     });
   }
 
-  // Prevent a student from having another active (pending/approved) group on this same project
-  const existing = await Group.findOne({
-    project: projectId,
-    members: { $in: members },
-    status: { $in: ['pending', 'approved'] },
-  });
-  if (existing) {
-    return res.status(409).json({ message: 'One or more selected students already have an active group request for this project' });
+  // Every selected member (including the leader) must not already be committed
+  // elsewhere - via an approved allocation, or an in-flight group request on ANY
+  // project (this subsumes the old same-project-only check, since a pending/
+  // supervisor_approved group on this same project is also "committed").
+  const committedIds = await getCommittedStudentIds(members);
+  if (committedIds.size > 0) {
+    const committedUsers = await User.find({ _id: { $in: Array.from(committedIds) } }).select('name');
+    const names = committedUsers.map((u) => u.name).join(', ');
+    return res.status(409).json({
+      message: `${names} ${committedUsers.length > 1 ? 'are' : 'is'} already committed to another project and can't join this group`,
+    });
   }
 
   const group = await Group.create({

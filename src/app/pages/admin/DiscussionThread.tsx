@@ -1,8 +1,9 @@
 import Sidebar from '../../components/Sidebar';
-import { Link, useNavigate, useParams } from 'react-router';
+import { useNavigate, useParams } from 'react-router';
 import { useEffect, useState } from 'react';
 import { api } from '../../lib/api';
 import NotificationBell from '../../components/NotificationBell';
+import ProfileAvatar from '../../components/ProfileAvatar';
 
 interface Person {
   _id: string;
@@ -122,10 +123,7 @@ export default function AdminDiscussionThread() {
             </div>
             <div className="flex items-center gap-4">
               <NotificationBell role="admin" />
-
-              <Link to="/admin/profile" className="w-12 h-12 bg-[#2563a8] rounded-full flex items-center justify-center text-white hover:bg-[#1e4a8a] cursor-pointer">
-                {(localStorage.getItem('userName') ?? '?').split(' ').map((n) => n[0]).join('').toUpperCase()}
-              </Link>
+              <ProfileAvatar role="admin" />
             </div>
           </div>
         </div>

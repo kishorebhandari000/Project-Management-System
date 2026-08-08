@@ -2,8 +2,8 @@ import Sidebar from '../../components/Sidebar';
 import { Link } from 'react-router';
 import { useState, useEffect } from 'react';
 import { api } from '../../lib/api';
-import ProfileAvatar from '../../components/ProfileAvatar';
 import NotificationBell from '../../components/NotificationBell';
+import ProfileAvatar from '../../components/ProfileAvatar';
 
 interface ProjectFile {
   url: string;
@@ -60,10 +60,7 @@ export default function StudentDashboard() {
             </div>
             <div className="flex items-center gap-4">
               <NotificationBell role="student" />
-
-              <Link to="/student/profile" className="w-12 h-12 bg-[#2563a8] rounded-full flex items-center justify-center text-white hover:bg-[#1e4a8a] cursor-pointer">
-                {userName ? userName.split(' ').map((p) => p[0]).join('').toUpperCase().slice(0, 2) : 'ST'}
-              </Link>
+              <ProfileAvatar role="student" />
             </div>
           </div>
         </div>

@@ -32,38 +32,45 @@ function typeColor(type: string) {
 
 export default function Notifications() {
   const [notifications, setNotifications] = useState<ApiNotification[]>([]);
+  // Snapshot of which notifications were unread when this page was opened - used purely
+  // for this visit's highlighting, since opening the list marks everything read right away.
+  const [unreadIdsThisVisit, setUnreadIdsThisVisit] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [filter, setFilter] = useState<'all' | 'unread'>('all');
 
-  const loadNotifications = async () => {
-    setLoading(true);
-    setError('');
-    try {
-      const data = await api.get('/notifications');
-      setNotifications(data.notifications);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load notifications');
-    } finally {
-      setLoading(false);
-    }
-  };
-
   useEffect(() => {
-    loadNotifications();
+    const loadAndMarkRead = async () => {
+      setLoading(true);
+      setError('');
+      try {
+        const data = await api.get('/notifications');
+        const fetched: ApiNotification[] = data.notifications;
+        const unreadIds = new Set(fetched.filter((n) => !n.read).map((n) => n._id));
+        setNotifications(fetched);
+        setUnreadIdsThisVisit(unreadIds);
+
+        if (unreadIds.size > 0) {
+          // Facebook-style: opening the list marks everything read. Fire this in the
+          // background so the bell badge clears instantly without blocking the page.
+          api
+            .put('/notifications/read-all', {})
+            .then(() => window.dispatchEvent(new Event('notificationsRead')))
+            .catch(() => {});
+        }
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to load notifications');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadAndMarkRead();
   }, []);
 
-  const unreadCount = notifications.filter((n) => !n.read).length;
-  const visibleNotifications = filter === 'unread' ? notifications.filter((n) => !n.read) : notifications;
-
-  const markAsRead = async (id: string) => {
-    try {
-      await api.put(`/notifications/${id}/read`, {});
-      setNotifications((prev) => prev.map((n) => (n._id === id ? { ...n, read: true } : n)));
-    } catch (err) {
-      alert(err instanceof Error ? err.message : 'Failed to mark as read');
-    }
-  };
+  const unreadCount = unreadIdsThisVisit.size;
+  const visibleNotifications =
+    filter === 'unread' ? notifications.filter((n) => unreadIdsThisVisit.has(n._id)) : notifications;
 
   return (
     <div className="flex flex-col md:flex-row">
@@ -116,7 +123,7 @@ export default function Notifications() {
                     <div
                       key={notification._id}
                       className={`bg-white rounded-lg p-5 border border-gray-200 shadow-sm ${
-                        !notification.read ? 'border-l-4 border-l-[#2563a8]' : ''
+                        unreadIdsThisVisit.has(notification._id) ? 'border-l-4 border-l-[#2563a8]' : ''
                       }`}
                     >
                       <div className="flex justify-between items-start mb-2">
@@ -124,21 +131,13 @@ export default function Notifications() {
                           <span className={`px-3 py-1 rounded-md text-sm ${typeColor(notification.type)}`}>
                             {notification.type.replace(/_/g, ' ')}
                           </span>
-                          <h3 className={`text-lg ${!notification.read ? 'font-bold' : ''}`}>
+                          <h3 className={`text-lg ${unreadIdsThisVisit.has(notification._id) ? 'font-bold' : ''}`}>
                             {notification.title}
                           </h3>
                         </div>
                         <span className="text-sm text-gray-500">{timeAgo(notification.createdAt)}</span>
                       </div>
                       <p className="text-gray-700 mb-3">{notification.message}</p>
-                      {!notification.read && (
-                        <button
-                          onClick={() => markAsRead(notification._id)}
-                          className="bg-gray-200 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-300 text-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg active:translate-y-0 active:shadow-none"
-                        >
-                          Mark as Read
-                        </button>
-                      )}
                     </div>
                   ))}
                 </div>

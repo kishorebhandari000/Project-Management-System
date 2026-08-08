@@ -1,5 +1,6 @@
 import Sidebar from '../../components/Sidebar';
 import ProfileAvatar from '../../components/ProfileAvatar';
+import NotificationBell from '../../components/NotificationBell';
 import { useState, useRef, useEffect } from 'react';
 import { useMessages } from '../../hooks/useMessages';
 import SendButton from '../../components/SendButton';
@@ -40,7 +41,10 @@ export default function AdminMessages() {
               <h1 className="text-2xl">Messages</h1>
               <p className="text-gray-600">Communicate with users</p>
             </div>
-            <ProfileAvatar role="admin" />
+            <div className="flex items-center gap-4">
+              <NotificationBell role="admin" />
+              <ProfileAvatar role="admin" />
+            </div>
           </div>
         </div>
 
