@@ -73,16 +73,14 @@ export default function SectionHint({ text, side = 'bottom', className = '' }: S
       if (triggerRef.current?.contains(target) || bubbleRef.current?.contains(target)) return;
       close();
     };
-    const handleScroll = () => close();
+    const handleResize = () => close();
     document.addEventListener('keydown', handleKey);
     document.addEventListener('mousedown', handleOutside);
-    window.addEventListener('scroll', handleScroll, true);
-    window.addEventListener('resize', handleScroll);
+    window.addEventListener('resize', handleResize);
     return () => {
       document.removeEventListener('keydown', handleKey);
       document.removeEventListener('mousedown', handleOutside);
-      window.removeEventListener('scroll', handleScroll, true);
-      window.removeEventListener('resize', handleScroll);
+      window.removeEventListener('resize', handleResize);
     };
   }, [open]);
 
@@ -98,6 +96,15 @@ export default function SectionHint({ text, side = 'bottom', className = '' }: S
     else if (placement === 'top' && trigger.top - bubble.height - VIEWPORT_MARGIN < 0) placement = 'bottom';
     else if (placement === 'right' && trigger.right + bubble.width + VIEWPORT_MARGIN > vw) placement = 'left';
     else if (placement === 'left' && trigger.left - bubble.width - VIEWPORT_MARGIN < 0) placement = 'right';
+
+    // Neither side has room for a horizontally-placed bubble (e.g. a narrow drawer) —
+    // fall back to stacking it above/below so it can never end up covering the trigger.
+    if (
+      (placement === 'left' || placement === 'right') &&
+      bubble.width + VIEWPORT_MARGIN * 2 > vw
+    ) {
+      placement = trigger.bottom + bubble.height + VIEWPORT_MARGIN <= vh ? 'bottom' : 'top';
+    }
 
     let top = 0;
     let left = 0;
