@@ -228,12 +228,12 @@ export default function ManageAllocation() {
               </div>
             )}
             <form onSubmit={handleForceAssign} className="flex flex-wrap items-end gap-4">
-              <div>
+              <div className="w-full sm:w-auto">
                 <label className="block text-gray-700 mb-2 text-sm">Student</label>
                 <select
                   value={assignStudentId}
                   onChange={(e) => setAssignStudentId(e.target.value)}
-                  className="border border-gray-300 rounded-md px-4 py-2 focus:outline-none focus:border-[#2563a8] min-w-[220px]"
+                  className="w-full border border-gray-300 rounded-md px-4 py-2 focus:outline-none focus:border-[#2563a8] sm:min-w-[220px]"
                   required
                 >
                   <option value="">Select a student...</option>
@@ -242,12 +242,12 @@ export default function ManageAllocation() {
                   ))}
                 </select>
               </div>
-              <div>
+              <div className="w-full sm:w-auto">
                 <label className="block text-gray-700 mb-2 text-sm">Project</label>
                 <select
                   value={assignProjectId}
                   onChange={(e) => setAssignProjectId(e.target.value)}
-                  className="border border-gray-300 rounded-md px-4 py-2 focus:outline-none focus:border-[#2563a8] min-w-[220px]"
+                  className="w-full border border-gray-300 rounded-md px-4 py-2 focus:outline-none focus:border-[#2563a8] sm:min-w-[220px]"
                   required
                 >
                   <option value="">Select a project...</option>
@@ -259,7 +259,7 @@ export default function ManageAllocation() {
               <button
                 type="submit"
                 disabled={assigning || !assignProjectId || !assignStudentId}
-                className="bg-[#2563a8] text-white px-6 py-2 rounded-md hover:bg-[#1e4a8a] disabled:opacity-50"
+                className="w-full sm:w-auto bg-[#2563a8] text-white px-6 py-2 rounded-md hover:bg-[#1e4a8a] disabled:opacity-50"
               >
                 {assigning ? 'Assigning...' : 'Assign & Approve'}
               </button>
