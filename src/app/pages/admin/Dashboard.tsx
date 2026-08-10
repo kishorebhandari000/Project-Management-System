@@ -4,6 +4,8 @@ import { Link } from 'react-router';
 import { api } from '../../lib/api';
 import ProfileAvatar from '../../components/ProfileAvatar';
 import NotificationBell from '../../components/NotificationBell';
+import SectionHint from '../../components/SectionHint';
+import { sectionHints } from '../../lib/sectionHints';
 
 interface ActivityItem {
   text: string;
@@ -121,7 +123,10 @@ export default function AdminDashboard() {
               <div className="text-3xl">{loading ? '—' : stats.activeProjects}</div>
             </div>
             <div className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm">
-              <div className="text-gray-600 mb-1">Pending Allocations</div>
+              <div className="text-gray-600 mb-1 flex items-center">
+                Pending Allocations
+                <SectionHint text={sectionHints.adminStatPendingAllocations} />
+              </div>
               <div className="text-3xl text-orange-600">{loading ? '—' : stats.pendingAllocations}</div>
             </div>
           </div>
@@ -146,7 +151,10 @@ export default function AdminDashboard() {
             </div>
 
             <div className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm">
-              <h2 className="text-xl mb-5">Quick Actions</h2>
+              <h2 className="text-xl mb-5 flex items-center">
+                Quick Actions
+                <SectionHint text={sectionHints.adminQuickActions} />
+              </h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <Link to="/admin/users" className="bg-gray-50 border border-gray-200 rounded-lg p-4 hover:bg-gray-100 text-center">
                   <div className="text-2xl mb-2">👤</div>

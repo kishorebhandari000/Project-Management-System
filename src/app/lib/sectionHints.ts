@@ -34,11 +34,6 @@ export const sectionHints = {
 
   // Student dashboard
   studentCurrentProject: "The project you're currently working on, including your group and supervisor.",
-  studentUpcomingDeadlines: 'Assessment due dates coming up soon.',
-
-  // Profile / notifications widgets (top bar, all roles)
-  notificationBell: 'Alerts about allocations, grades, and messages. Click to see them all.',
-  profileAvatar: 'View or edit your profile, or change your password.',
 } as const;
 
 export type SectionHintKey = keyof typeof sectionHints;
