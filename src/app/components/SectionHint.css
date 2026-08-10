@@ -1,0 +1,92 @@
+.section-hint {
+  display: inline-flex;
+  vertical-align: middle;
+  margin-left: 6px;
+}
+
+.section-hint__trigger {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  border: 1px solid #2563a8;
+  color: #2563a8;
+  background: transparent;
+  font-size: 11px;
+  font-style: italic;
+  font-family: Georgia, 'Times New Roman', serif;
+  line-height: 1;
+  padding: 0;
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.section-hint__trigger:hover,
+.section-hint__trigger:focus-visible {
+  background: #2563a8;
+  color: #fff;
+  outline: none;
+}
+
+.section-hint__trigger:focus-visible {
+  box-shadow: 0 0 0 2px rgba(37, 99, 168, 0.3);
+}
+
+/* Use on sidebar links / dark navy backgrounds so the dot stays legible */
+.section-hint__trigger--on-dark {
+  border-color: rgba(255, 255, 255, 0.7);
+  color: #fff;
+}
+
+.section-hint__trigger--on-dark:hover,
+.section-hint__trigger--on-dark:focus-visible {
+  background: rgba(255, 255, 255, 0.85);
+  color: #1e3a5f;
+}
+
+.section-hint__bubble {
+  position: fixed;
+  z-index: 1000;
+  max-width: 240px;
+  background: #1e3a5f;
+  color: #fff;
+  font-size: 12.5px;
+  line-height: 1.4;
+  padding: 8px 10px;
+  border-radius: 8px;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.18), 0 2px 4px rgba(0, 0, 0, 0.08);
+  animation: section-hint-fade-in 0.12s ease-out;
+}
+
+@media (prefers-color-scheme: dark) {
+  .section-hint__bubble {
+    background: #f4f6f8;
+    color: #1e3a5f;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .section-hint__bubble {
+    animation: none;
+  }
+}
+
+@keyframes section-hint-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(2px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (max-width: 480px) {
+  .section-hint__bubble {
+    max-width: min(240px, calc(100vw - 16px));
+  }
+}
