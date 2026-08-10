@@ -91,6 +91,18 @@ failed network requests (4xx/5xx) and broken images, and checked
 4. Security: grepped the repo for API keys/tokens/hardcoded credentials
    — none found. `.env` is properly gitignored in both the frontend and
    `Backend_PMS`.
+5. **Backend wouldn't start at all**, unrelated to this feature: a
+   teammate's same-day commit ("Update messaging and search feature")
+   had corrupted `Backend_PMS/src/controllers/messageController.js`
+   with frontend React/JSX content, and the paired `messageRoutes.js`
+   both required a middleware file that doesn't exist
+   (`authMiddleware.js` instead of the real `auth.js`) and never
+   called `express.Router()`. Reconstructed the controller from the
+   last known-good commit, matched it to the new route names/params,
+   added the `deleteMessage` handler the routes already expected, and
+   fixed both bugs in the routes file. Verified end-to-end (contacts
+   load, a real message sends and appears in the thread, zero
+   console/API errors) before pushing to `main`.
 
 ## Known issues / deferred (not fixed this week)
 
@@ -115,14 +127,22 @@ failed network requests (4xx/5xx) and broken images, and checked
 - Consider hints on a few more admin-only controls if the team wants
   broader coverage (e.g. individual "Approve/Reject" buttons).
 - Revisit the bundle-size warning if it becomes a real problem.
+- Let jaspreets0 know their messaging/search commit got reconstructed
+  from the last working version plus the new route shape they'd
+  already written — worth a quick check that nothing about the
+  intended "search" part of that feature got missed, since only the
+  controller/routes were recoverable, not whatever search UI they may
+  have had in mind.
 
 ## Branch / commits
 
-Branch: `feature/week6-section-hints` (pushed, PR not yet opened by
-end of this session — link was handed to the repo owner to open from
-the browser since `gh` CLI wasn't available in this environment).
+Developed on `feature/week6-section-hints`, merged into `main` and
+pushed after the full health check and a production build passed.
 
 - `a6f5b87` — feat(ui): add reusable SectionHint tooltip component
 - `35b896b` — fix(ui): SectionHint tooltip self-closing when opened by tap/click
 - `fc5652a` — feat(ui): wire SectionHint into nav and dashboard cards
 - `53a135a` — fix: resolve horizontal overflow on Manage Allocation at mobile width
+- `afa4824` — docs: add Week 6 progress summary
+- `7f41cbd` — Merge branch 'feature/week6-section-hints' into main
+- `a91e45f` — fix(messages): repair backend broken by previous commit (see above)
