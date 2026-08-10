@@ -5,9 +5,9 @@ const {
   sendMessage,
   deleteMessage,
 } = require('../controllers/messageController');
+const { protect } = require('../middleware/auth');
 
-// Change this path only if your middleware file has a different name
-const { protect } = require('../middleware/authMiddleware');
+const router = express.Router();
 
 /*
 |--------------------------------------------------------------------------

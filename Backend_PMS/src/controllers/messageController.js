@@ -1,308 +1,154 @@
-import Sidebar from '../../components/Sidebar';
-import ProfileAvatar from '../../components/ProfileAvatar';
-import { useState, useRef, useEffect } from 'react';
-import { useMessages } from '../../hooks/useMessages';
-import SendButton from '../../components/SendButton';
+const asyncHandler = require('../utils/asyncHandler');
+const Message = require('../models/Message');
+const User = require('../models/User');
+const Allocation = require('../models/Allocation');
+const realtime = require('../utils/realtime');
 
-function initials(name = '') {
-  if (!name) return '?';
+// Who a user is allowed to message - based on real project relationships,
+// not a free-for-all directory:
+//  - admin: anyone
+//  - supervisor: students with an approved allocation on one of their
+//    projects, plus all admins
+//  - student: the supervisor(s) of their approved allocation(s), plus all
+//    admins
+async function getAllowedContacts(user) {
+  if (user.role === 'admin') {
+    return User.find({ _id: { $ne: user._id } }).select('name email role');
+  }
 
-  return name
-    .split(' ')
-    .filter(Boolean)
-    .map((n) => n[0])
-    .join('')
-    .toUpperCase();
+  const admins = await User.find({ role: 'admin' }).select('name email role');
+
+  if (user.role === 'supervisor') {
+    const studentIds = await Allocation.find({ supervisor: user._id, status: 'approved' }).distinct('student');
+    const students = await User.find({ _id: { $in: studentIds } }).select('name email role');
+    return [...students, ...admins];
+  }
+
+  // student
+  const supervisorIds = await Allocation.find({ student: user._id, status: 'approved' }).distinct('supervisor');
+  const supervisors = await User.find({ _id: { $in: supervisorIds } }).select('name email role');
+  return [...supervisors, ...admins];
 }
 
-function timeLabel(iso) {
-  if (!iso) return '';
-
-  return new Date(iso).toLocaleTimeString([], {
-    hour: '2-digit',
-    minute: '2-digit',
-  });
+async function isAllowedContact(user, recipientId) {
+  if (user.role === 'admin') return true;
+  const contacts = await getAllowedContacts(user);
+  return contacts.some((c) => String(c._id) === String(recipientId));
 }
 
-export default function StudentMessages() {
-  const {
-    contacts = [],
-    loadingContacts,
-    selectedId,
-    selectContact,
-    messages = [],
-    loadingMessages,
-    sendMessage,
-    error,
-  } = useMessages();
+// @desc   Real contact list for the Messages page - each contact's last
+//         message preview and unread count, not fake hardcoded names
+// @route  GET /api/messages/contacts
+const getContacts = asyncHandler(async (req, res) => {
+  const contacts = await getAllowedContacts(req.user);
 
-  const [input, setInput] = useState('');
-  const [search, setSearch] = useState('');
+  const enriched = await Promise.all(
+    contacts.map(async (contact) => {
+      const lastMessage = await Message.findOne({
+        $or: [
+          { sender: req.user._id, recipient: contact._id },
+          { sender: contact._id, recipient: req.user._id },
+        ],
+      })
+        .sort({ createdAt: -1 })
+        .lean();
 
-  const bottomRef = useRef(null);
+      const unreadCount = await Message.countDocuments({
+        sender: contact._id,
+        recipient: req.user._id,
+        read: false,
+      });
 
-  const userId = localStorage.getItem('userId');
-
-  useEffect(() => {
-    bottomRef.current?.scrollIntoView({
-      behavior: 'smooth',
-    });
-  }, [messages]);
-
-  const selected = contacts.find(
-    (contact) => contact?.user?._id === selectedId
+      return {
+        user: contact,
+        lastMessage: lastMessage
+          ? {
+              content: lastMessage.content,
+              createdAt: lastMessage.createdAt,
+              fromMe: String(lastMessage.sender) === String(req.user._id),
+            }
+          : null,
+        unreadCount,
+      };
+    })
   );
 
-  const filteredContacts = contacts.filter((contact) => {
-    const name = contact?.user?.name || '';
-    const role = contact?.user?.role || '';
-
-    return (
-      name.toLowerCase().includes(search.toLowerCase()) ||
-      role.toLowerCase().includes(search.toLowerCase())
-    );
+  // Most recently active conversations first
+  enriched.sort((a, b) => {
+    const aTime = a.lastMessage ? new Date(a.lastMessage.createdAt).getTime() : 0;
+    const bTime = b.lastMessage ? new Date(b.lastMessage.createdAt).getTime() : 0;
+    return bTime - aTime;
   });
 
-  const handleSend = async () => {
-    const message = input.trim();
+  res.json({ contacts: enriched });
+});
 
-    if (!message || !selectedId) return;
+// @desc   Full conversation with one contact - also marks their messages
+//         to you as read
+// @route  GET /api/messages/:userId
+const getMessages = asyncHandler(async (req, res) => {
+  const { userId } = req.params;
 
-    try {
-      await sendMessage(message);
-      setInput('');
-    } catch (err) {
-      console.error('Failed to send message:', err);
-    }
-  };
+  if (!(await isAllowedContact(req.user, userId))) {
+    return res.status(403).json({ message: 'You are not able to message this user' });
+  }
 
-  const handleKeyDown = (e) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      handleSend();
-    }
-  };
+  const messages = await Message.find({
+    $or: [
+      { sender: req.user._id, recipient: userId },
+      { sender: userId, recipient: req.user._id },
+    ],
+  }).sort({ createdAt: 1 });
 
-  return (
-    <div className="flex flex-col md:flex-row min-h-screen">
-      <Sidebar role="student" />
+  await Message.updateMany({ sender: userId, recipient: req.user._id, read: false }, { read: true });
 
-      <div className="flex-1 bg-[#f4f6f8] pt-16 md:pt-0">
-        {/* Header */}
-        <div className="bg-white border-b border-gray-200 px-8 py-5">
-          <div className="flex justify-between items-center">
-            <div>
-              <h1 className="text-2xl font-semibold">Messages</h1>
+  res.json({ messages });
+});
 
-              <p className="text-gray-600">
-                Communicate with your supervisor
-              </p>
-            </div>
+// @desc   Send a message - recipient must be a real, allowed contact
+// @route  POST /api/messages
+const sendMessage = asyncHandler(async (req, res) => {
+  const { recipientId, content } = req.body;
+  if (!recipientId || !content?.trim()) {
+    return res.status(400).json({ message: 'recipientId and content are required' });
+  }
 
-            <ProfileAvatar role="student" />
-          </div>
-        </div>
+  if (!(await isAllowedContact(req.user, recipientId))) {
+    return res.status(403).json({ message: 'You are not able to message this user' });
+  }
 
-        {/* Error */}
-        {error && (
-          <div className="mx-8 mt-4 bg-red-50 border border-red-200 text-red-700 text-sm rounded-md px-4 py-3">
-            {error}
-          </div>
-        )}
+  const message = await Message.create({
+    sender: req.user._id,
+    recipient: recipientId,
+    content: content.trim(),
+  });
 
-        <div className="flex h-[calc(100vh-90px)]">
-          {/* Contact Sidebar */}
-          <div className="w-80 bg-white border-r border-gray-200 flex flex-col">
-            
-            {/* Search */}
-            <div className="p-4 border-b border-gray-200">
-              <input
-                type="text"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search contacts..."
-                className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:border-[#2563a8]"
-              />
-            </div>
+  await message.populate('sender', 'name email role');
 
-            {/* Contacts */}
-            <div className="flex-1 overflow-y-auto">
-              {loadingContacts ? (
-                <p className="p-5 text-gray-500 text-sm">
-                  Loading contacts...
-                </p>
-              ) : contacts.length === 0 ? (
-                <p className="p-5 text-gray-500 text-sm">
-                  No one to message yet. Once you have an approved project,
-                  your supervisor will appear here.
-                </p>
-              ) : filteredContacts.length === 0 ? (
-                <p className="p-5 text-gray-500 text-sm">
-                  No contacts found.
-                </p>
-              ) : (
-                filteredContacts.map((c) => {
-                  if (!c?.user?._id) return null;
+  realtime.pushToUser(recipientId, 'message', message);
 
-                  return (
-                    <button
-                      key={c.user._id}
-                      type="button"
-                      onClick={() => selectContact(c.user._id)}
-                      className={`w-full text-left px-5 py-4 border-b border-gray-100 hover:bg-gray-50 ${
-                        selectedId === c.user._id
-                          ? 'bg-blue-50'
-                          : ''
-                      }`}
-                    >
-                      <div className="flex items-center gap-3">
+  res.status(201).json({ message });
+});
 
-                        {/* Avatar */}
-                        <div className="w-10 h-10 bg-[#2563a8] rounded-full flex items-center justify-center text-white text-sm shrink-0">
-                          {initials(c.user.name)}
-                        </div>
+// @desc   Delete a message you sent
+// @route  DELETE /api/messages/:messageId
+const deleteMessage = asyncHandler(async (req, res) => {
+  const { messageId } = req.params;
 
-                        {/* Contact Details */}
-                        <div className="flex-1 min-w-0">
-                          <div className="flex justify-between items-center">
-                            <span className="font-medium truncate">
-                              {c.user.name || 'Unknown User'}
-                            </span>
+  const message = await Message.findById(messageId);
+  if (!message) {
+    return res.status(404).json({ message: 'Message not found' });
+  }
 
-                            {c.lastMessage?.createdAt && (
-                              <span className="text-xs text-gray-500 ml-2 shrink-0">
-                                {timeLabel(c.lastMessage.createdAt)}
-                              </span>
-                            )}
-                          </div>
+  if (String(message.sender) !== String(req.user._id)) {
+    return res.status(403).json({ message: 'You can only delete your own messages' });
+  }
 
-                          <p className="text-sm text-gray-500 truncate">
-                            {c.lastMessage
-                              ? `${
-                                  c.lastMessage.fromMe ? 'You: ' : ''
-                                }${c.lastMessage.content || ''}`
-                              : c.user.role || 'User'}
-                          </p>
-                        </div>
+  await message.deleteOne();
 
-                        {/* Unread Messages */}
-                        {Number(c.unreadCount) > 0 && (
-                          <span className="bg-[#2563a8] text-white text-xs min-w-5 h-5 px-1 rounded-full flex items-center justify-center shrink-0">
-                            {c.unreadCount}
-                          </span>
-                        )}
-                      </div>
-                    </button>
-                  );
-                })
-              )}
-            </div>
-          </div>
+  realtime.pushToUser(String(message.recipient), 'message-deleted', { _id: message._id });
 
-          {/* Chat Section */}
-          <div className="flex-1 flex flex-col min-w-0">
-            {!selected ? (
-              <div className="flex-1 flex items-center justify-center text-gray-400">
-                Select a contact to start messaging
-              </div>
-            ) : (
-              <>
-                {/* Selected User Header */}
-                <div className="bg-white border-b border-gray-200 px-6 py-4 flex items-center gap-3">
-                  <div className="w-10 h-10 bg-[#2563a8] rounded-full flex items-center justify-center text-white">
-                    {initials(selected?.user?.name)}
-                  </div>
+  res.json({ message: 'Message deleted' });
+});
 
-                  <div>
-                    <div className="font-medium">
-                      {selected?.user?.name || 'Unknown User'}
-                    </div>
-
-                    <div className="text-sm text-gray-500 capitalize">
-                      {selected?.user?.role || 'User'}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Messages */}
-                <div className="flex-1 p-6 space-y-4 overflow-y-auto">
-                  {loadingMessages ? (
-                    <p className="text-gray-400 text-sm">
-                      Loading conversation...
-                    </p>
-                  ) : messages.length === 0 ? (
-                    <p className="text-gray-400 text-sm">
-                      No messages yet. Say hello!
-                    </p>
-                  ) : (
-                    messages.map((m, index) => {
-                      const senderId =
-                        typeof m.sender === 'string'
-                          ? m.sender
-                          : m.sender?._id;
-
-                      const mine =
-                        senderId &&
-                        userId &&
-                        String(senderId) === String(userId);
-
-                      return (
-                        <div
-                          key={m._id || index}
-                          className={`flex ${
-                            mine
-                              ? 'justify-end'
-                              : 'justify-start'
-                          }`}
-                        >
-                          <div
-                            className={`max-w-sm break-words px-4 py-3 rounded-lg text-sm ${
-                              mine
-                                ? 'bg-[#2563a8] text-white'
-                                : 'bg-white border border-gray-200 text-gray-800'
-                            }`}
-                          >
-                            <div>{m.content}</div>
-
-                            <div
-                              className={`text-xs mt-1 ${
-                                mine
-                                  ? 'text-blue-200'
-                                  : 'text-gray-400'
-                              }`}
-                            >
-                              {timeLabel(m.createdAt)}
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })
-                  )}
-
-                  <div ref={bottomRef} />
-                </div>
-
-                {/* Message Input */}
-                <div className="bg-white border-t border-gray-200 p-4 flex gap-3">
-                  <input
-                    type="text"
-                    value={input}
-                    onChange={(e) => setInput(e.target.value)}
-                    onKeyDown={handleKeyDown}
-                    placeholder="Type a message..."
-                    className="flex-1 border border-gray-300 rounded-md px-4 py-2 focus:outline-none focus:border-[#2563a8]"
-                  />
-
-                  <SendButton
-                    onSend={handleSend}
-                    disabled={!input.trim()}
-                  />
-                </div>
-              </>
-            )}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
+module.exports = { getContacts, getMessages, sendMessage, deleteMessage };
