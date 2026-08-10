@@ -2,6 +2,8 @@ import { Link, useLocation } from 'react-router';
 import { useState } from 'react';
 import { Menu, X } from 'lucide-react';
 import Logo from './Logo';
+import SectionHint from './SectionHint';
+import { sectionHints } from '../lib/sectionHints';
 
 interface SidebarProps {
   role: 'student' | 'supervisor' | 'admin';
@@ -12,34 +14,33 @@ export default function Sidebar({ role }: SidebarProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
 
   const studentLinks = [
-    { to: '/student/dashboard', label: 'Dashboard' },
-    { to: '/student/projects', label: 'Browse Projects' },
-    { to: '/student/assessments', label: 'Assessments' },
-    { to: '/forum', label: 'Forum' },
-    { to: '/student/discussions', label: 'Discussions' },
-    { to: '/student/messages', label: 'Messages' },
+    { to: '/student/dashboard', label: 'Dashboard', hint: sectionHints.navDashboard },
+    { to: '/student/projects', label: 'Browse Projects', hint: sectionHints.navBrowseProjects },
+    { to: '/student/assessments', label: 'Assessments', hint: sectionHints.navAssessments },
+    { to: '/forum', label: 'Forum', hint: sectionHints.navForum },
+    { to: '/student/discussions', label: 'Discussions', hint: sectionHints.navDiscussions },
+    { to: '/student/messages', label: 'Messages', hint: sectionHints.navMessages },
   ];
 
   const supervisorLinks = [
-    { to: '/supervisor/dashboard', label: 'Dashboard' },
-    { to: '/supervisor/projects', label: 'Manage Projects' },
-    { to: '/supervisor/assessments', label: 'Assessments' },
-    { to: '/forum', label: 'Forum' },
-    { to: '/supervisor/discussions', label: 'Discussions' },
-    { to: '/supervisor/messages', label: 'Messages' },
-   
+    { to: '/supervisor/dashboard', label: 'Dashboard', hint: sectionHints.navDashboard },
+    { to: '/supervisor/projects', label: 'Manage Projects', hint: sectionHints.navManageProjectsSupervisor },
+    { to: '/supervisor/assessments', label: 'Assessments', hint: sectionHints.navAssessments },
+    { to: '/forum', label: 'Forum', hint: sectionHints.navForum },
+    { to: '/supervisor/discussions', label: 'Discussions', hint: sectionHints.navDiscussions },
+    { to: '/supervisor/messages', label: 'Messages', hint: sectionHints.navMessages },
   ];
 
   const adminLinks = [
-    { to: '/admin/dashboard', label: 'Dashboard' },
-    { to: '/admin/users', label: 'Manage Users' },
-    { to: '/admin/projects', label: 'Manage Projects' },
-    { to: '/admin/allocation', label: 'Manage Allocation' },
-    { to: '/admin/assessments', label: 'Assessments' },
-    { to: '/admin/reports', label: 'Reports' },
-    { to: '/forum', label: 'Forum' },
-    { to: '/admin/discussions', label: 'Discussions' },
-    { to: '/admin/messages', label: 'Messages' },
+    { to: '/admin/dashboard', label: 'Dashboard', hint: sectionHints.navDashboard },
+    { to: '/admin/users', label: 'Manage Users', hint: sectionHints.navManageUsers },
+    { to: '/admin/projects', label: 'Manage Projects', hint: sectionHints.navManageProjectsAdmin },
+    { to: '/admin/allocation', label: 'Manage Allocation', hint: sectionHints.navManageAllocation },
+    { to: '/admin/assessments', label: 'Assessments', hint: sectionHints.navAssessments },
+    { to: '/admin/reports', label: 'Reports', hint: sectionHints.navReports },
+    { to: '/forum', label: 'Forum', hint: sectionHints.navForum },
+    { to: '/admin/discussions', label: 'Discussions', hint: sectionHints.navDiscussions },
+    { to: '/admin/messages', label: 'Messages', hint: sectionHints.navMessages },
   ];
 
   const links = role === 'student' ? studentLinks : role === 'supervisor' ? supervisorLinks : adminLinks;
@@ -56,18 +57,23 @@ export default function Sidebar({ role }: SidebarProps) {
     <>
       <nav className="space-y-2">
         {links.map((link) => (
-          <Link
+          <div
             key={link.to}
-            to={link.to}
-            onClick={() => setMobileOpen(false)}
-            className={`px-4 py-3 rounded-md transition-colors block ${
+            className={`rounded-md transition-colors flex items-center justify-between pr-3 ${
               location.pathname === link.to
                 ? 'bg-[#2563a8]'
                 : 'hover:bg-[#2a4a70]'
             }`}
           >
-            {link.label}
-          </Link>
+            <Link
+              to={link.to}
+              onClick={() => setMobileOpen(false)}
+              className="px-4 py-3 flex-1 block"
+            >
+              {link.label}
+            </Link>
+            <SectionHint text={link.hint} className="section-hint__trigger--on-dark" />
+          </div>
         ))}
       </nav>
       <div className="mt-10 pt-6 border-t border-gray-600">

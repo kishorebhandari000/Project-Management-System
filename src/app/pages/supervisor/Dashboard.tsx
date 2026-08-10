@@ -4,6 +4,8 @@ import NotificationBell from '../../components/NotificationBell';
 import { Link } from 'react-router';
 import { useEffect, useState } from 'react';
 import { api } from '../../lib/api';
+import SectionHint from '../../components/SectionHint';
+import { sectionHints } from '../../lib/sectionHints';
 
 interface ApiProject {
   _id: string;
@@ -121,11 +123,17 @@ export default function SupervisorDashboard() {
               <div className="text-3xl">{loading ? '—' : activeStudentIds.size}</div>
             </div>
             <div className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm">
-              <div className="text-gray-600 mb-1">Pending Requests</div>
+              <div className="text-gray-600 mb-1 flex items-center">
+                Pending Requests
+                <SectionHint text={sectionHints.supervisorStatPendingRequests} />
+              </div>
               <div className="text-3xl text-orange-600">{loading ? '—' : pendingRequests.length}</div>
             </div>
             <div className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm">
-              <div className="text-gray-600 mb-1">To Review</div>
+              <div className="text-gray-600 mb-1 flex items-center">
+                To Review
+                <SectionHint text={sectionHints.supervisorStatToReview} />
+              </div>
               <div className="text-3xl text-orange-600">{loading ? '—' : pendingReviews.length}</div>
             </div>
           </div>
@@ -133,7 +141,10 @@ export default function SupervisorDashboard() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* My Students */}
             <div className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm">
-              <h2 className="text-xl mb-5">My Students</h2>
+              <h2 className="text-xl mb-5 flex items-center">
+                My Students
+                <SectionHint text={sectionHints.supervisorMyStudents} />
+              </h2>
               <div className="space-y-4">
                 {loading ? (
                   <p className="text-gray-400 text-sm">Loading...</p>

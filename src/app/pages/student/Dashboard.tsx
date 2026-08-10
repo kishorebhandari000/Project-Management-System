@@ -4,6 +4,8 @@ import { useState, useEffect } from 'react';
 import { api } from '../../lib/api';
 import NotificationBell from '../../components/NotificationBell';
 import ProfileAvatar from '../../components/ProfileAvatar';
+import SectionHint from '../../components/SectionHint';
+import { sectionHints } from '../../lib/sectionHints';
 
 interface ProjectFile {
   url: string;
@@ -92,7 +94,10 @@ export default function StudentDashboard() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Current Project */}
             <div className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm">
-              <h2 className="text-xl mb-5">Current Project</h2>
+              <h2 className="text-xl mb-5 flex items-center">
+                Current Project
+                <SectionHint text={sectionHints.studentCurrentProject} />
+              </h2>
 
               {loading && <p className="text-gray-500">Loading...</p>}
 
