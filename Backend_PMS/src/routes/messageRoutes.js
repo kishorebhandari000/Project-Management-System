@@ -1,13 +1,34 @@
 const express = require('express');
-const { getContacts, getConversation, sendMessage } = require('../controllers/messageController');
-const { protect } = require('../middleware/auth');
+const {
+  getContacts,
+  getMessages,
+  sendMessage,
+  deleteMessage,
+} = require('../controllers/messageController');
 
-const router = express.Router();
+// Change this path only if your middleware file has a different name
+const { protect } = require('../middleware/authMiddleware');
 
-router.use(protect);
+/*
+|--------------------------------------------------------------------------
+| Message Routes
+|--------------------------------------------------------------------------
+*/
 
-router.get('/contacts', getContacts);
-router.get('/:contactId', getConversation);
-router.post('/', sendMessage);
+// Get contacts available to the logged-in user
+// GET /api/messages/contacts
+router.get('/contacts', protect, getContacts);
+
+// Get conversation with a selected user
+// GET /api/messages/:userId
+router.get('/:userId', protect, getMessages);
+
+// Send a new message
+// POST /api/messages
+router.post('/', protect, sendMessage);
+
+// Delete a message
+// DELETE /api/messages/:messageId
+router.delete('/:messageId', protect, deleteMessage);
 
 module.exports = router;
