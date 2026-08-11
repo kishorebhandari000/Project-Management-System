@@ -17,6 +17,7 @@ function timeLabel(iso: string) {
 function ChatPanel() {
   const { contacts, loadingContacts, selectedId, selectContact, messages, loadingMessages, sendMessage, error } = useMessages();
   const [input, setInput] = useState('');
+  const [search, setSearch] = useState('');
   const bottomRef = useRef<HTMLDivElement>(null);
   const userId = localStorage.getItem('userId');
 
@@ -26,6 +27,16 @@ function ChatPanel() {
 
   const selected = contacts.find((c) => c.user._id === selectedId);
 
+  const filteredContacts = contacts.filter((c) => {
+    const term = search.trim().toLowerCase();
+    if (!term) return true;
+    return (
+      c.user.name.toLowerCase().includes(term) ||
+      c.user.role.toLowerCase().includes(term) ||
+      (c.lastMessage?.content.toLowerCase().includes(term) ?? false)
+    );
+  });
+
   const handleSend = async () => {
     if (!input.trim()) return;
     await sendMessage(input);
@@ -34,7 +45,17 @@ function ChatPanel() {
 
   return (
     <div className="flex h-[calc(100vh-160px)] bg-white border border-gray-200 rounded-lg overflow-hidden">
-      <div className="w-80 border-r border-gray-200 overflow-y-auto">
+      <div className="w-80 border-r border-gray-200 flex flex-col">
+        <div className="p-4 border-b border-gray-200">
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search..."
+            className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:border-[#2563a8]"
+          />
+        </div>
+        <div className="flex-1 overflow-y-auto">
         {error && (
           <div className="m-3 bg-red-50 border border-red-200 text-red-700 text-sm rounded-md px-3 py-2">
             {error}
@@ -46,8 +67,10 @@ function ChatPanel() {
           <p className="p-5 text-gray-500 text-sm">
             No one to message yet - students with an approved allocation on your projects will appear here.
           </p>
+        ) : filteredContacts.length === 0 ? (
+          <p className="p-5 text-gray-500 text-sm">No contacts found.</p>
         ) : (
-          contacts.map((c) => (
+          filteredContacts.map((c) => (
             <button
               key={c.user._id}
               onClick={() => selectContact(c.user._id)}
@@ -77,6 +100,7 @@ function ChatPanel() {
             </button>
           ))
         )}
+        </div>
       </div>
 
       <div className="flex-1 flex flex-col">
