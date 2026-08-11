@@ -4,6 +4,7 @@ import { api } from '../../lib/api';
 import { validatePasswordStrength, PASSWORD_REQUIREMENTS_HINT } from '../../lib/validatePassword';
 import ProfileAvatar from '../../components/ProfileAvatar';
 import NotificationBell from '../../components/NotificationBell';
+import { useConfirm } from '../../hooks/useConfirm';
 
 interface ApiUser {
   id: string;
@@ -27,6 +28,7 @@ export default function ManageUsers() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [search, setSearch] = useState('');
+  const confirm = useConfirm();
 
   const [showModal, setShowModal] = useState(false);
   const [formName, setFormName] = useState('');
@@ -145,7 +147,7 @@ export default function ManageUsers() {
   };
 
   const handleDeleteUser = async (user: ApiUser) => {
-    if (!window.confirm('Are you sure you want to delete this user?')) return;
+    if (!(await confirm({ message: 'Are you sure you want to delete this user?', confirmLabel: 'Delete', variant: 'danger' }))) return;
     setError('');
 
     try {

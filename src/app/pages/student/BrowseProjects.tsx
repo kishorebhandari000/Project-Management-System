@@ -3,10 +3,17 @@ import { useState, useEffect, useRef } from 'react';
 import { api } from '../../lib/api';
 import NotificationBell from '../../components/NotificationBell';
 import ProfileAvatar from '../../components/ProfileAvatar';
+import { useConfirm } from '../../hooks/useConfirm';
 
 interface ProjectFile {
   url: string;
   name: string;
+}
+
+interface OpenGroup {
+  id: string;
+  name: string;
+  memberCount: number;
 }
 
 interface ApiProject {
@@ -15,6 +22,11 @@ interface ApiProject {
   description: string;
   status: 'open' | 'allocated' | 'closed';
   maxStudents: number;
+  approvedCount: number;
+  appliedCount: number;
+  openGroups: OpenGroup[];
+  groupCount: number;
+  maxGroupsPerProject: number;
   supervisor?: { name: string };
   files?: ProjectFile[];
 }
@@ -23,12 +35,15 @@ interface ApiAllocation {
   _id: string;
   project: { _id: string } | string;
   status: 'pending' | 'approved' | 'rejected';
+  comment?: string;
 }
 
 interface ApiGroup {
   _id: string;
   project: { _id: string } | string;
   status: 'pending' | 'approved' | 'rejected';
+  leader: { _id: string };
+  comment?: string;
 }
 
 interface StudentResult {
@@ -46,6 +61,10 @@ export default function BrowseProjects() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [withdrawingId, setWithdrawingId] = useState<string | null>(null);
+  const [leavingId, setLeavingId] = useState<string | null>(null);
+  const [joiningId, setJoiningId] = useState<string | null>(null);
+  const currentUserId = localStorage.getItem('userId');
+  const confirm = useConfirm();
 
   // Group application modal state
   const [groupModalProjectId, setGroupModalProjectId] = useState<string | null>(null);
@@ -95,8 +114,18 @@ export default function BrowseProjects() {
     });
   };
 
+  // Rejected groups are excluded from getGroupForProject above so the
+  // project stays applyable/joinable again - but we still want to surface
+  // the supervisor's rejection reason. myGroups is sorted newest-first.
+  const getRejectedGroupForProject = (projectId: string) => {
+    return myGroups.find((g) => {
+      const pId = typeof g.project === 'string' ? g.project : g.project._id;
+      return pId === projectId && g.status === 'rejected' && g.comment;
+    });
+  };
+
   const handleWithdraw = async (groupId: string) => {
-    if (!confirm('Withdraw this request?')) return;
+    if (!(await confirm({ message: 'Withdraw this request?', variant: 'danger', confirmLabel: 'Withdraw' }))) return;
     setWithdrawingId(groupId);
     try {
       await api.delete(`/groups/${groupId}`);
@@ -105,6 +134,33 @@ export default function BrowseProjects() {
       setError(err instanceof Error ? err.message : 'Failed to withdraw request');
     } finally {
       setWithdrawingId(null);
+    }
+  };
+
+  const handleLeaveGroup = async (groupId: string) => {
+    if (!(await confirm({ message: 'Leave this group?', variant: 'danger', confirmLabel: 'Leave' }))) return;
+    setLeavingId(groupId);
+    setError('');
+    try {
+      await api.delete(`/groups/${groupId}/leave`);
+      await loadData();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to leave group');
+    } finally {
+      setLeavingId(null);
+    }
+  };
+
+  const handleJoinGroup = async (groupId: string) => {
+    setJoiningId(groupId);
+    setError('');
+    try {
+      await api.post(`/groups/${groupId}/join`);
+      await loadData();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to join group');
+    } finally {
+      setJoiningId(null);
     }
   };
 
@@ -215,39 +271,38 @@ export default function BrowseProjects() {
               {projects.map((project) => {
                 const allocation = getAllocationForProject(project._id);
                 const group = getGroupForProject(project._id);
+                const isLeader = !!group && group.leader._id === currentUserId;
 
-                let buttonLabel = 'Apply as a Group';
-                let buttonDisabled = false;
-                let showWithdraw = false;
-
-                if (allocation) {
-                  buttonLabel = allocation.status === 'approved' ? 'Approved' : 'Rejected';
-                  buttonDisabled = true;
-                } else if (group) {
-                  buttonLabel = group.status === 'pending' ? 'Group Request Pending' : 'Approved';
-                  buttonDisabled = true;
-                  showWithdraw = group.status === 'pending';
-                } else if (project.status !== 'open') {
-                  buttonLabel = 'Not Available';
-                  buttonDisabled = true;
-                }
+                const isFull = project.status === 'allocated' || project.approvedCount >= project.maxStudents;
+                const atGroupCap = project.groupCount >= project.maxGroupsPerProject;
+                const canApply = !allocation && !group && project.status === 'open' && !isFull && !atGroupCap;
+                const rejectedGroup = !group ? getRejectedGroupForProject(project._id) : undefined;
 
                 return (
                   <div key={project._id} className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm">
                     <div className="flex justify-between items-start mb-3">
                       <h3 className="text-lg pr-4">{project.title}</h3>
                       <span className={`text-sm px-3 py-1 rounded ${
-                        project.status === 'open' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'
+                        isFull || project.status !== 'open' ? 'bg-gray-100 text-gray-600' : 'bg-green-100 text-green-700'
                       }`}>
-                        {project.status}
+                        {project.status === 'closed' ? 'closed' : isFull ? 'full' : 'open'}
                       </span>
                     </div>
                     <div className="text-sm text-gray-600 mb-3">
                       <span>Supervisor: </span>
                       <span>{project.supervisor?.name || 'Unassigned'}</span>
-                      <span className="ml-3 text-gray-400">Max {project.maxStudents} student(s)</span>
+                      <span className="ml-3 text-gray-400">
+                        {project.appliedCount}/{project.maxStudents}
+                      </span>
                     </div>
                     <p className="text-gray-700 mb-4">{project.description}</p>
+
+                    {rejectedGroup && (
+                      <div className="bg-red-50 border border-red-200 rounded-md px-3 py-2 mb-4">
+                        <p className="text-xs text-red-700 mb-0.5">Your previous group request was rejected</p>
+                        <p className="text-sm text-red-900">{rejectedGroup.comment}</p>
+                      </div>
+                    )}
 
                     {project.files && project.files.length > 0 && (
                       <div className="mb-4">
@@ -264,26 +319,75 @@ export default function BrowseProjects() {
                       </div>
                     )}
 
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => openGroupModal(project._id)}
-                        disabled={buttonDisabled}
-                        className={`px-5 py-2 rounded-md ${
-                          buttonDisabled
-                            ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                            : 'bg-[#2563a8] text-white hover:bg-[#1e4a8a]'
-                        }`}
-                      >
-                        {buttonLabel}
-                      </button>
+                    {allocation?.status === 'rejected' && allocation.comment && (
+                      <div className="bg-red-50 border border-red-200 rounded-md px-3 py-2 mb-4">
+                        <p className="text-xs text-red-700 mb-0.5">Your request was rejected</p>
+                        <p className="text-sm text-red-900">{allocation.comment}</p>
+                      </div>
+                    )}
 
-                      {showWithdraw && group && (
+                    <div className="flex flex-wrap gap-2">
+                      {allocation && (
+                        <button disabled className="px-5 py-2 rounded-md bg-gray-300 text-gray-500 cursor-not-allowed">
+                          {allocation.status === 'approved' ? 'Approved' : 'Rejected'}
+                        </button>
+                      )}
+
+                      {!allocation && group && (
+                        <>
+                          <button disabled className="px-5 py-2 rounded-md bg-gray-300 text-gray-500 cursor-not-allowed">
+                            {group.status === 'pending' ? 'Group Request Pending' : 'Approved'}
+                          </button>
+                          {group.status === 'pending' && isLeader && (
+                            <button
+                              onClick={() => handleWithdraw(group._id)}
+                              disabled={withdrawingId === group._id}
+                              className="px-5 py-2 rounded-md bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 disabled:opacity-60"
+                            >
+                              {withdrawingId === group._id ? 'Withdrawing...' : 'Withdraw'}
+                            </button>
+                          )}
+                          {group.status === 'pending' && !isLeader && (
+                            <button
+                              onClick={() => handleLeaveGroup(group._id)}
+                              disabled={leavingId === group._id}
+                              className="px-5 py-2 rounded-md bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 disabled:opacity-60"
+                            >
+                              {leavingId === group._id ? 'Leaving...' : 'Leave Group'}
+                            </button>
+                          )}
+                        </>
+                      )}
+
+                      {!allocation && !group && project.status === 'closed' && (
+                        <button disabled className="px-5 py-2 rounded-md bg-gray-300 text-gray-500 cursor-not-allowed">
+                          Closed
+                        </button>
+                      )}
+
+                      {!allocation && !group && project.status !== 'closed' && isFull && (
+                        <button disabled className="px-5 py-2 rounded-md bg-gray-300 text-gray-500 cursor-not-allowed">
+                          Project Full
+                        </button>
+                      )}
+
+                      {!allocation && !group && project.status === 'open' && !isFull && project.openGroups.map((og) => (
                         <button
-                          onClick={() => handleWithdraw(group._id)}
-                          disabled={withdrawingId === group._id}
-                          className="px-5 py-2 rounded-md bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 disabled:opacity-60"
+                          key={og.id}
+                          onClick={() => handleJoinGroup(og.id)}
+                          disabled={joiningId === og.id}
+                          className="px-5 py-2 rounded-md bg-[#2563a8] text-white hover:bg-[#1e4a8a] disabled:opacity-60"
                         >
-                          {withdrawingId === group._id ? 'Withdrawing...' : 'Withdraw'}
+                          {joiningId === og.id ? 'Joining...' : `Join "${og.name || 'Group'}" (${og.memberCount}/${project.maxStudents})`}
+                        </button>
+                      ))}
+
+                      {canApply && (
+                        <button
+                          onClick={() => openGroupModal(project._id)}
+                          className="px-5 py-2 rounded-md bg-[#2563a8] text-white hover:bg-[#1e4a8a]"
+                        >
+                          {project.openGroups.length > 0 ? 'Start a New Group' : 'Apply as a Group'}
                         </button>
                       )}
                     </div>

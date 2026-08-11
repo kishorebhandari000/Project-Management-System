@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { api } from '../../lib/api';
 import NotificationBell from '../../components/NotificationBell';
 import ProfileAvatar from '../../components/ProfileAvatar';
+import { useConfirm } from '../../hooks/useConfirm';
 
 interface Person {
   _id: string;
@@ -42,6 +43,7 @@ export default function AdminDiscussionThread() {
 
   const userId = localStorage.getItem('userId');
   const userRole = localStorage.getItem('userRole');
+  const confirm = useConfirm();
 
   const load = async () => {
     setLoading(true);
@@ -84,7 +86,7 @@ export default function AdminDiscussionThread() {
   };
 
   const handleDeleteThread = async () => {
-    if (!confirm('Delete this discussion? This will also delete all its replies.')) return;
+    if (!(await confirm({ message: 'Delete this discussion? This will also delete all its replies.', confirmLabel: 'Delete', variant: 'danger' }))) return;
     try {
       await api.delete(`/discussions/${id}`);
       navigate('/admin/discussions');
@@ -94,7 +96,7 @@ export default function AdminDiscussionThread() {
   };
 
   const handleDeletePost = async (postId: string) => {
-    if (!confirm('Delete this reply?')) return;
+    if (!(await confirm({ message: 'Delete this reply?', confirmLabel: 'Delete', variant: 'danger' }))) return;
     try {
       await api.delete(`/discussions/${id}/posts/${postId}`);
       setPosts((prev) => prev.filter((p) => p._id !== postId));

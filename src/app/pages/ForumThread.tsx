@@ -6,6 +6,7 @@ import { Link, useParams, useNavigate } from 'react-router';
 import { useEffect, useState } from 'react';
 import { api } from '../lib/api';
 import NotificationBell from '../components/NotificationBell';
+import { useConfirm } from '../hooks/useConfirm';
 
 type Role = 'admin' | 'supervisor' | 'student';
 
@@ -40,6 +41,7 @@ export default function ForumThread() {
   const userName = localStorage.getItem('userName') ?? '';
   const userId = localStorage.getItem('userId');
   const userRole = localStorage.getItem('userRole') as Role | null;
+  const confirm = useConfirm();
 
   const loadThread = async () => {
     setLoading(true);
@@ -86,7 +88,7 @@ export default function ForumThread() {
   const canDeletePost = post ? userRole === 'admin' || post.createdBy?._id === userId : false;
 
   const handleDeleteComment = async (commentId: string) => {
-    if (!confirm('Delete this reply?')) return;
+    if (!(await confirm({ message: 'Delete this reply?', confirmLabel: 'Delete', variant: 'danger' }))) return;
     try {
       await api.delete(`/forum/${id}/comments/${commentId}`);
       setComments((prev) => prev.filter((c) => c._id !== commentId));
@@ -96,7 +98,7 @@ export default function ForumThread() {
   };
 
   const handleDeletePost = async () => {
-    if (!confirm('Delete this thread? This will also delete its replies.')) return;
+    if (!(await confirm({ message: 'Delete this thread? This will also delete its replies.', confirmLabel: 'Delete', variant: 'danger' }))) return;
     try {
       await api.delete(`/forum/${id}`);
       navigate('/forum');

@@ -2,6 +2,8 @@ const asyncHandler = require('../utils/asyncHandler');
 const Project = require('../models/Project');
 const Allocation = require('../models/Allocation');
 const Assessment = require('../models/Assessment');
+const Group = require('../models/Group');
+const { MAX_GROUPS_PER_PROJECT } = require('./groupController');
 const { resolveFileUrl } = require('../config/cloudinary');
 
 // @desc   Create a project - admin only, admin picks the supervisor
@@ -45,7 +47,64 @@ const getProjects = asyncHandler(async (req, res) => {
     .populate('supervisor', 'name email')
     .sort({ createdAt: -1 });
 
-  res.json({ count: projects.length, projects });
+  // approvedCount drives whether a project is actually full (locks out new
+  // applications) - only seats an admin has finalized count toward it.
+  const seatCounts = await Allocation.aggregate([
+    { $match: { project: { $in: projects.map((p) => p._id) }, status: 'approved' } },
+    { $group: { _id: '$project', count: { $sum: 1 } } },
+  ]);
+  const seatCountByProject = new Map(seatCounts.map((s) => [s._id.toString(), s.count]));
+
+  // For students, surface every pending group that still has open seats, so
+  // the frontend can offer "join this group" alongside starting a new one -
+  // several groups can be in flight for the same project at once. appliedCount
+  // is the total distinct students across any non-rejected group, purely for
+  // an at-a-glance "how much interest" display (0/maxStudents if none yet).
+  let openGroupsByProject = new Map();
+  let appliedByProject = new Map();
+  let groupCountByProject = new Map();
+  if (req.user.role === 'student') {
+    const activeGroups = await Group.find({
+      project: { $in: projects.map((p) => p._id) },
+      status: { $in: ['pending', 'supervisor_approved', 'approved'] },
+    })
+      .select('project name status members')
+      .lean();
+
+    const maxStudentsByProject = new Map(projects.map((p) => [p._id.toString(), p.maxStudents]));
+    for (const g of activeGroups) {
+      const key = g.project.toString();
+
+      const appliedSet = appliedByProject.get(key) || new Set();
+      g.members.forEach((m) => appliedSet.add(m.toString()));
+      appliedByProject.set(key, appliedSet);
+
+      groupCountByProject.set(key, (groupCountByProject.get(key) || 0) + 1);
+
+      // Joinable while pending OR supervisor-recommended but not yet finally
+      // decided by the admin - see OPEN_GROUP_STATUSES in groupController.js.
+      if (g.status !== 'pending' && g.status !== 'supervisor_approved') continue;
+      const maxStudents = maxStudentsByProject.get(key);
+      if (g.members.length >= maxStudents) continue;
+      const list = openGroupsByProject.get(key) || [];
+      list.push({ id: g._id, name: g.name, memberCount: g.members.length });
+      openGroupsByProject.set(key, list);
+    }
+  }
+
+  const projectsWithSeats = projects.map((p) => {
+    const key = p._id.toString();
+    return {
+      ...p.toObject(),
+      approvedCount: seatCountByProject.get(key) || 0,
+      appliedCount: appliedByProject.get(key)?.size || 0,
+      openGroups: openGroupsByProject.get(key) || [],
+      groupCount: groupCountByProject.get(key) || 0,
+      maxGroupsPerProject: MAX_GROUPS_PER_PROJECT,
+    };
+  });
+
+  res.json({ count: projectsWithSeats.length, projects: projectsWithSeats });
 });
 
 const getProjectById = asyncHandler(async (req, res) => {

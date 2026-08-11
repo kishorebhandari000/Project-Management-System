@@ -6,6 +6,66 @@ const User = require('../models/User');
 const sendNotification = require('../utils/notify');
 const { createNotification } = require('./notificationController');
 const { getCommittedStudentIds } = require('../utils/studentCommitment');
+const { appendGroupSubmission } = require('../utils/googleSheets');
+const { refreshProjectStatus } = require('./allocationController');
+
+// A project can have at most this many groups in flight (or approved) at
+// once - beyond that, students must join one of the existing groups instead
+// of starting a new one. Rejected groups don't count against the cap.
+const MAX_GROUPS_PER_PROJECT = 2;
+
+// Logs one row to the GroupForm Google Sheet tab per event - a full-roster
+// row when the group is first created, and a single-student delta row for
+// every later join/leave - so the sheet reads as an event log instead of
+// something that gets rewritten (and needs a row number tracked) on every
+// membership change. Best-effort: a Sheets outage never blocks the
+// underlying group action, since these are always called fire-and-forget.
+async function logGroupSheetRow(groupId, { memberNames, memberStudentIds, status }) {
+  try {
+    const group = await Group.findById(groupId)
+      .populate('project', 'title')
+      .populate('supervisor', 'name')
+      .populate('leader', 'name');
+    if (!group) return;
+
+    await appendGroupSubmission({
+      groupName: group.name,
+      projectTitle: group.project?.title || '',
+      supervisorName: group.supervisor?.name,
+      leaderName: group.leader?.name || '',
+      memberNames,
+      memberStudentIds,
+      status: status ?? group.status,
+    });
+  } catch {
+    // best-effort, see comment above
+  }
+}
+
+// Logs the group's full current roster as one row - used for events that
+// affect the whole group at once (creation, an admin undoing the final
+// allocation) rather than a single student joining or leaving.
+async function logGroupSnapshot(groupId) {
+  try {
+    const group = await Group.findById(groupId);
+    if (!group) return;
+    const members = await User.find({ _id: { $in: group.members } }).select('name studentId');
+    await logGroupSheetRow(groupId, {
+      memberNames: members.map((u) => u.name),
+      memberStudentIds: members.map((u) => u.studentId || ''),
+    });
+  } catch {
+    // best-effort, see comment on logGroupSheetRow above
+  }
+}
+
+async function logGroupMembershipChange(groupId, student, action) {
+  const marker = action === 'joined' ? '+' : '-';
+  await logGroupSheetRow(groupId, {
+    memberNames: [`${marker} ${student.name}`],
+    memberStudentIds: [student.studentId || ''],
+  });
+}
 
 // @desc   Student proposes a group and applies to a project together
 // @route  POST /api/groups
@@ -21,6 +81,13 @@ const createGroup = asyncHandler(async (req, res) => {
   if (!project) return res.status(404).json({ message: 'Project not found' });
   if (project.status !== 'open') {
     return res.status(409).json({ message: 'This project is not open for applications' });
+  }
+
+  const existingGroupCount = await Group.countDocuments({ project: projectId, status: { $ne: 'rejected' } });
+  if (existingGroupCount >= MAX_GROUPS_PER_PROJECT) {
+    return res.status(409).json({
+      message: `This project already has ${MAX_GROUPS_PER_PROJECT} groups - join one of them instead of starting a new one`,
+    });
   }
 
   const memberSet = new Set([req.user._id.toString(), ...memberIds.map(String)]);
@@ -67,6 +134,8 @@ const createGroup = asyncHandler(async (req, res) => {
       message: `${req.user.name} submitted a group of ${members.length} for "${project.title}"`,
     }).catch(() => {});
   }
+
+  logGroupSnapshot(group._id);
 
   res.status(201).json({ group });
 });
@@ -147,14 +216,15 @@ async function finalizeGroupAllocation(group) {
   return { ok: true };
 }
 
-async function notifyMembers(group, decision) {
+async function notifyMembers(group, decision, comment) {
   const memberUsers = await User.find({ _id: { $in: group.members } });
+  const reasonSuffix = comment ? ` Reason: ${comment}` : '';
   for (const memberUser of memberUsers) {
     await sendNotification(null, {
       userId: memberUser._id,
       email: memberUser.email,
       title: `Group request ${decision}`,
-      message: `Your group request for "${group.project.title}" was ${decision}.`,
+      message: `Your group request for "${group.project.title}" was ${decision}.${reasonSuffix}`,
     }).catch(() => {});
   }
 }
@@ -168,7 +238,7 @@ async function notifyMembers(group, decision) {
 // @route  PUT /api/groups/:id/decision
 // @access Private/Supervisor,Admin
 const decideGroup = asyncHandler(async (req, res) => {
-  const { decision } = req.body; // 'approved' | 'rejected'
+  const { decision, comment } = req.body; // 'approved' | 'rejected'; comment: reason shown to the admin (recommend) or the students (reject)
   if (!['approved', 'rejected'].includes(decision)) {
     return res.status(400).json({ message: "decision must be 'approved' or 'rejected'" });
   }
@@ -185,11 +255,13 @@ const decideGroup = asyncHandler(async (req, res) => {
   }
 
   if (group.status === 'pending') {
+    group.comment = comment || '';
+
     if (decision === 'rejected') {
       group.status = 'rejected';
       group.decidedAt = new Date();
       await group.save();
-      await notifyMembers(group, 'rejected');
+      await notifyMembers(group, 'rejected', group.comment);
       return res.json({ group });
     }
 
@@ -197,7 +269,7 @@ const decideGroup = asyncHandler(async (req, res) => {
       // Admin fallback: no need to wait on the supervisor, finalize now.
       const result = await finalizeGroupAllocation(group);
       if (!result.ok) return res.status(409).json({ message: result.message });
-      await notifyMembers(group, 'approved');
+      await notifyMembers(group, 'approved', group.comment);
       return res.json({ group });
     }
 
@@ -213,7 +285,7 @@ const decideGroup = asyncHandler(async (req, res) => {
           user: admin._id,
           type: 'group_forwarded',
           title: 'Group recommended for allocation',
-          message: `A supervisor recommended a group of ${group.members.length} for "${group.project.title}" - final allocation needed`,
+          message: `A supervisor recommended a group of ${group.members.length} for "${group.project.title}" - final allocation needed${group.comment ? ` (Note: ${group.comment})` : ''}`,
           link: '/admin/allocation',
         })
       )
@@ -242,6 +314,44 @@ const decideGroup = asyncHandler(async (req, res) => {
   }
 
   return res.status(400).json({ message: 'This group has already been decided on' });
+});
+
+// @desc   Admin undoes a finalized ('approved') group allocation - releases
+//         the seats it locked in (deletes the Allocation record it created
+//         for each member) and sends the group back to 'supervisor_approved'
+//         so it reappears in the final-allocation queue for a fresh decision.
+// @route  PUT /api/groups/:id/undo
+// @access Private/Admin
+const undoGroupAllocation = asyncHandler(async (req, res) => {
+  const group = await Group.findById(req.params.id).populate('project', 'title maxStudents');
+  if (!group) return res.status(404).json({ message: 'Group not found' });
+  if (!group.project) {
+    return res.status(409).json({ message: 'This group\'s project no longer exists' });
+  }
+  if (group.status !== 'approved') {
+    return res.status(400).json({ message: 'Only a finalized group allocation can be undone' });
+  }
+
+  await Allocation.deleteMany({ project: group.project._id, student: { $in: group.members } });
+
+  group.status = 'supervisor_approved';
+  group.decidedAt = undefined;
+  await group.save();
+
+  await refreshProjectStatus(group.project._id);
+  logGroupSnapshot(group._id);
+
+  const memberUsers = await User.find({ _id: { $in: group.members } });
+  for (const memberUser of memberUsers) {
+    await sendNotification(req.app, {
+      userId: memberUser._id,
+      email: memberUser.email,
+      title: 'Group allocation undone',
+      message: `An admin undid your group's allocation for "${group.project.title}" - it's awaiting a new decision.`,
+    }).catch(() => {});
+  }
+
+  res.json({ group });
 });
 
 // @desc   Admin/Supervisor edits the membership of an existing group (add/remove students)
@@ -316,11 +426,129 @@ const withdrawGroup = asyncHandler(async (req, res) => {
   res.json({ message: 'Group request withdrawn' });
 });
 
+// Statuses a student can still join/leave without an admin/supervisor
+// decision getting overwritten - once a group is finally 'approved' its
+// roster is locked (supervisor/admin must use updateGroupMembers instead).
+const OPEN_GROUP_STATUSES = ['pending', 'supervisor_approved'];
+
+// @desc   A non-leader member leaves a group they joined, without cancelling
+//         the whole request - only the leader can do that (via withdrawGroup
+//         above), since removing the leader would leave the group ownerless.
+//         Leaving a 'supervisor_approved' group resets it to 'pending', since
+//         the roster the supervisor signed off on no longer matches reality.
+// @route  DELETE /api/groups/:id/leave
+// @access Private/Student
+const leaveGroup = asyncHandler(async (req, res) => {
+  const group = await Group.findById(req.params.id).populate('project', 'title');
+  if (!group) return res.status(404).json({ message: 'Group not found' });
+
+  if (group.leader.toString() === req.user._id.toString()) {
+    return res.status(400).json({ message: 'As the group leader, withdraw the request instead of leaving it' });
+  }
+  if (!group.members.some((m) => m.toString() === req.user._id.toString())) {
+    return res.status(400).json({ message: 'You are not a member of this group' });
+  }
+  if (!OPEN_GROUP_STATUSES.includes(group.status)) {
+    return res.status(400).json({ message: 'This group has already been decided on and can no longer be left' });
+  }
+
+  const wasSupervisorApproved = group.status === 'supervisor_approved';
+  group.members = group.members.filter((m) => m.toString() !== req.user._id.toString());
+  if (wasSupervisorApproved) {
+    group.status = 'pending';
+    group.decidedAt = undefined;
+  }
+  await group.save();
+  logGroupMembershipChange(group._id, req.user, 'left');
+
+  if (wasSupervisorApproved) {
+    const supervisorUser = await User.findById(group.supervisor);
+    if (supervisorUser && group.project) {
+      await sendNotification(req.app, {
+        userId: supervisorUser._id,
+        email: supervisorUser.email,
+        title: 'Group membership changed',
+        message: `${req.user.name} left a group for "${group.project.title}" after your recommendation - it needs another look`,
+      }).catch(() => {});
+    }
+  }
+
+  res.json({ message: 'You left the group' });
+});
+
+// @desc   Student joins an existing group that still has open seats, instead
+//         of starting a new competing group for the same project. Joining a
+//         'supervisor_approved' group resets it to 'pending', since the
+//         roster the supervisor signed off on no longer matches reality.
+// @route  POST /api/groups/:id/join
+// @access Private/Student
+const joinGroup = asyncHandler(async (req, res) => {
+  const group = await Group.findById(req.params.id).populate('project', 'title maxStudents status');
+  if (!group) return res.status(404).json({ message: 'Group not found' });
+  if (!group.project) {
+    return res.status(409).json({ message: 'This group\'s project no longer exists' });
+  }
+  if (!OPEN_GROUP_STATUSES.includes(group.status)) {
+    return res.status(409).json({ message: 'This group is no longer accepting new members' });
+  }
+  if (group.project.status !== 'open') {
+    return res.status(409).json({ message: 'This project is not open for applications' });
+  }
+  if (group.members.some((m) => m.toString() === req.user._id.toString())) {
+    return res.status(409).json({ message: 'You are already a member of this group' });
+  }
+  if (group.members.length >= group.project.maxStudents) {
+    return res.status(409).json({ message: 'This group is already full' });
+  }
+
+  const committedIds = await getCommittedStudentIds([req.user._id.toString()]);
+  if (committedIds.size > 0) {
+    return res.status(409).json({ message: 'You are already committed to another project and can\'t join this group' });
+  }
+
+  const wasSupervisorApproved = group.status === 'supervisor_approved';
+  group.members.push(req.user._id);
+  if (wasSupervisorApproved) {
+    group.status = 'pending';
+    group.decidedAt = undefined;
+  }
+  await group.save();
+  logGroupMembershipChange(group._id, req.user, 'joined');
+
+  const leader = await User.findById(group.leader);
+  if (leader) {
+    await sendNotification(req.app, {
+      userId: leader._id,
+      email: leader.email,
+      title: 'Someone joined your group',
+      message: `${req.user.name} joined your group for "${group.project.title}"`,
+    }).catch(() => {});
+  }
+
+  if (wasSupervisorApproved) {
+    const supervisorUser = await User.findById(group.supervisor);
+    if (supervisorUser) {
+      await sendNotification(req.app, {
+        userId: supervisorUser._id,
+        email: supervisorUser.email,
+        title: 'Group membership changed',
+        message: `${req.user.name} joined a group for "${group.project.title}" after your recommendation - it needs another look`,
+      }).catch(() => {});
+    }
+  }
+
+  res.json({ group });
+});
+
 module.exports = {
   createGroup,
   getMyGroups,
   getGroups,
   decideGroup,
+  undoGroupAllocation,
   updateGroupMembers,
   withdrawGroup,
+  leaveGroup,
+  joinGroup,
+  MAX_GROUPS_PER_PROJECT,
 };

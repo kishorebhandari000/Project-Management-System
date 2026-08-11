@@ -21,4 +21,29 @@ async function appendContactSubmission({ name, email, message }) {
   });
 }
 
-module.exports = { appendContactSubmission };
+// Appends one row to the GroupForm tab - used both for a brand-new group
+// request and for later single-student membership deltas (join/leave), so
+// the sheet reads as an event log rather than something that gets rewritten
+// in place on every membership change.
+async function appendGroupSubmission({ groupName, projectTitle, supervisorName, leaderName, memberNames, memberStudentIds, status }) {
+  await sheets.spreadsheets.values.append({
+    spreadsheetId: process.env.GOOGLE_SHEET_ID,
+    range: 'GroupForm!A:H', // tab must already exist in the same spreadsheet
+    valueInputOption: 'USER_ENTERED',
+    insertDataOption: 'INSERT_ROWS',
+    requestBody: {
+      values: [[
+        groupName || '(unnamed)',
+        projectTitle,
+        supervisorName || '',
+        leaderName,
+        memberNames.join(', '),
+        memberStudentIds.join(', '),
+        status,
+        new Date().toLocaleString(),
+      ]],
+    },
+  });
+}
+
+module.exports = { appendContactSubmission, appendGroupSubmission };

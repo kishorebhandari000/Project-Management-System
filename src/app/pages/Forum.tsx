@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { api } from '../lib/api';
 import ProfileAvatar from '../components/ProfileAvatar';
 import NotificationBell from '../components/NotificationBell';
+import { useConfirm } from '../hooks/useConfirm';
 
 type Role = 'admin' | 'supervisor' | 'student';
 
@@ -22,6 +23,7 @@ export default function Forum() {
   const [posts, setPosts] = useState<ForumPost[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const confirm = useConfirm();
 
   const loadPosts = async () => {
     setLoading(true);
@@ -43,7 +45,7 @@ export default function Forum() {
   const canDelete = (post: ForumPost) => role === 'admin' || post.createdBy?._id === userId;
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Delete this forum thread? This will also delete its comments.')) return;
+    if (!(await confirm({ message: 'Delete this forum thread? This will also delete its comments.', confirmLabel: 'Delete', variant: 'danger' }))) return;
     try {
       await api.delete(`/forum/${id}`);
       await loadPosts();

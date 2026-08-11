@@ -3,6 +3,8 @@ import { useState, useEffect } from 'react';
 import { api } from '../../lib/api';
 import ProfileAvatar from '../../components/ProfileAvatar';
 import NotificationBell from '../../components/NotificationBell';
+import { useConfirm } from '../../hooks/useConfirm';
+import { useCommentPrompt } from '../../hooks/useCommentPrompt';
 
 interface ApiAllocation {
   _id: string;
@@ -40,6 +42,7 @@ interface ApiGroup {
   supervisor: { name: string };
   leader: { _id: string; name: string };
   members: Member[];
+  comment?: string;
 }
 
 export default function ManageAllocation() {
@@ -50,6 +53,9 @@ export default function ManageAllocation() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [decidingGroupId, setDecidingGroupId] = useState<string | null>(null);
+  const [undoingGroupId, setUndoingGroupId] = useState<string | null>(null);
+  const confirm = useConfirm();
+  const promptComment = useCommentPrompt();
 
   const [assignProjectId, setAssignProjectId] = useState('');
   const [assignStudentId, setAssignStudentId] = useState('');
@@ -83,8 +89,21 @@ export default function ManageAllocation() {
   }, []);
 
   const handleDecision = async (id: string, decision: 'approved' | 'rejected' | 'pending') => {
+    let comment: string | undefined;
+    if (decision === 'rejected') {
+      const result = await promptComment({
+        title: 'Reject allocation',
+        message: 'Let the student know why this request is being rejected.',
+        confirmLabel: 'Reject',
+        variant: 'danger',
+        required: true,
+      });
+      if (result === null) return;
+      comment = result;
+    }
+
     try {
-      await api.put(`/allocations/${id}/decision`, { decision });
+      await api.put(`/allocations/${id}/decision`, { decision, comment });
       await loadAll();
     } catch (err) {
       alert(err instanceof Error ? err.message : 'Failed to update allocation');
@@ -100,6 +119,24 @@ export default function ManageAllocation() {
       alert(err instanceof Error ? err.message : 'Failed to finalize group');
     } finally {
       setDecidingGroupId(null);
+    }
+  };
+
+  const handleUndoGroupAllocation = async (id: string) => {
+    if (!(await confirm({
+      title: 'Undo allocation',
+      message: 'This releases the seats it locked in and sends the group back for a new decision.',
+      confirmLabel: 'Undo',
+      variant: 'danger',
+    }))) return;
+    setUndoingGroupId(id);
+    try {
+      await api.put(`/groups/${id}/undo`, {});
+      await loadAll();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Failed to undo allocation');
+    } finally {
+      setUndoingGroupId(null);
     }
   };
 
@@ -124,6 +161,7 @@ export default function ManageAllocation() {
   };
 
   const awaitingFinalAllocation = groups.filter((g) => g.status === 'supervisor_approved');
+  const approvedGroups = groups.filter((g) => g.status === 'approved');
 
   return (
     <div className="flex flex-col md:flex-row">
@@ -188,6 +226,13 @@ export default function ManageAllocation() {
                       ))}
                     </ul>
 
+                    {group.comment && (
+                      <div className="bg-blue-50 border border-blue-100 rounded-md px-3 py-2 mb-4">
+                        <p className="text-xs text-blue-700 mb-0.5">Supervisor's comment</p>
+                        <p className="text-sm text-blue-900">{group.comment}</p>
+                      </div>
+                    )}
+
                     <div className="flex gap-2">
                       <button
                         onClick={() => handleGroupDecision(group._id, 'approved')}
@@ -204,6 +249,53 @@ export default function ManageAllocation() {
                         Reject
                       </button>
                     </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {!loading && (
+            <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden mb-6">
+              <div className="px-6 py-4 border-b border-gray-200 bg-gray-50">
+                <h2 className="text-xl">Approved Groups ({approvedGroups.length})</h2>
+                <p className="text-sm text-gray-500">Finalized allocations — undo to release the seats and send back for a new decision.</p>
+              </div>
+
+              <div className="p-6 space-y-4">
+                {approvedGroups.length === 0 && (
+                  <p className="text-gray-400 text-sm">No finalized group allocations right now.</p>
+                )}
+                {approvedGroups.map((group) => (
+                  <div key={group._id} className="border border-gray-200 rounded-lg p-5">
+                    <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2 mb-3">
+                      <div>
+                        <h3 className="text-lg">{group.name || 'Untitled Group'}</h3>
+                        <p className="text-sm text-gray-600">
+                          {group.project.title} · Supervisor: {group.supervisor?.name}
+                        </p>
+                      </div>
+                      <span className="text-xs px-3 py-1 rounded bg-green-100 text-green-700">
+                        {group.members.length}/{group.project.maxStudents} seats
+                      </span>
+                    </div>
+
+                    <ul className="space-y-1 mb-4">
+                      {group.members.map((m) => (
+                        <li key={m._id} className="text-sm text-gray-700">
+                          👤 {m.name} {m._id === group.leader._id && <span className="text-xs text-gray-400">(leader)</span>}
+                          <span className="text-gray-400"> — {m.studentId || m.email}</span>
+                        </li>
+                      ))}
+                    </ul>
+
+                    <button
+                      onClick={() => handleUndoGroupAllocation(group._id)}
+                      disabled={undoingGroupId === group._id}
+                      className="bg-gray-200 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-300 text-sm disabled:opacity-60"
+                    >
+                      {undoingGroupId === group._id ? 'Undoing...' : 'Undo Allocation'}
+                    </button>
                   </div>
                 ))}
               </div>

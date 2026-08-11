@@ -3,6 +3,22 @@ const Allocation = require('../models/Allocation');
 const Project = require('../models/Project');
 const { createNotification } = require('./notificationController');
 
+// Recomputes a project's status from its actual approved-seat count, instead
+// of blindly marking it 'allocated' on any single approval - a project with
+// maxStudents > 1 must stay 'open' until every seat is filled. Never touches
+// a project an admin has manually 'closed'.
+async function refreshProjectStatus(projectId) {
+  const project = await Project.findById(projectId);
+  if (!project || project.status === 'closed') return;
+
+  const approvedCount = await Allocation.countDocuments({ project: projectId, status: 'approved' });
+  const newStatus = approvedCount >= project.maxStudents ? 'allocated' : 'open';
+  if (project.status !== newStatus) {
+    project.status = newStatus;
+    await project.save();
+  }
+}
+
 // @desc   Student requests to join a project
 // @route  POST /api/allocations
 const requestAllocation = asyncHandler(async (req, res) => {
@@ -74,7 +90,7 @@ const getAllocations = asyncHandler(async (req, res) => {
 //         admin (fallback)
 // @route  PUT /api/allocations/:id/decision
 const decideAllocation = asyncHandler(async (req, res) => {
-  const { decision } = req.body; // 'approved' | 'rejected' | 'pending'
+  const { decision, comment } = req.body; // decision: 'approved' | 'rejected' | 'pending'; comment: reason shown to the student when rejecting
   if (!['approved', 'rejected', 'pending'].includes(decision)) {
     return res.status(400).json({ message: "decision must be 'approved', 'rejected', or 'pending'" });
   }
@@ -93,28 +109,25 @@ const decideAllocation = asyncHandler(async (req, res) => {
     return res.status(403).json({ message: 'Only the project supervisor or an admin can decide on this allocation' });
   }
 
-  const wasApproved = allocation.status === 'approved';
-
   allocation.status = decision;
   allocation.decidedAt = decision === 'pending' ? undefined : new Date();
+  // A rejection reason only makes sense attached to an actual rejection -
+  // clear it out on any other decision so a stale reason can't linger.
+  allocation.comment = decision === 'rejected' ? comment || '' : '';
   // Keep the stored snapshot in sync with reality whenever we touch this record.
   allocation.supervisor = allocation.project.supervisor;
   await allocation.save();
 
-  if (decision === 'approved') {
-    await Project.findByIdAndUpdate(allocation.project._id, { status: 'allocated' });
-  } else if (wasApproved && decision !== 'approved') {
-    // Reverting a previously-approved allocation reopens the project
-    await Project.findByIdAndUpdate(allocation.project._id, { status: 'open' });
-  }
+  await refreshProjectStatus(allocation.project._id);
 
   // Only notify the student on a real decision, not on undo
   if (decision !== 'pending') {
+    const reasonSuffix = allocation.comment ? ` Reason: ${allocation.comment}` : '';
     await createNotification({
       user: allocation.student,
       type: 'allocation_decision',
       title: `Allocation ${decision}`,
-      message: `Your request for "${allocation.project.title}" was ${decision}.`,
+      message: `Your request for "${allocation.project.title}" was ${decision}.${reasonSuffix}`,
       link: '/student/projects',
     });
   }
@@ -151,7 +164,7 @@ const forceAssignAllocation = asyncHandler(async (req, res) => {
     prev.status = 'rejected';
     prev.decidedAt = new Date();
     await prev.save();
-    await Project.findByIdAndUpdate(prev.project, { status: 'open' });
+    await refreshProjectStatus(prev.project);
   }
 
   let allocation = await Allocation.findOne({ project: projectId, student: studentId });
@@ -170,7 +183,7 @@ const forceAssignAllocation = asyncHandler(async (req, res) => {
     });
   }
 
-  await Project.findByIdAndUpdate(project._id, { status: 'allocated' });
+  await refreshProjectStatus(project._id);
 
   await createNotification({
     user: student._id,
@@ -189,4 +202,4 @@ const forceAssignAllocation = asyncHandler(async (req, res) => {
   res.status(201).json({ allocation });
 });
 
-module.exports = { requestAllocation, getAllocations, decideAllocation, forceAssignAllocation };
+module.exports = { requestAllocation, getAllocations, decideAllocation, forceAssignAllocation, refreshProjectStatus };

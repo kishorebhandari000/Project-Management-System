@@ -4,6 +4,7 @@ import NotificationBell from '../../components/NotificationBell';
 import { Link } from 'react-router';
 import { useState, useEffect } from 'react';
 import { api } from '../../lib/api';
+import { useCommentPrompt } from '../../hooks/useCommentPrompt';
 
 interface ProjectFile {
   url: string;
@@ -39,6 +40,7 @@ interface ApiGroup {
   project: { _id: string; title: string; maxStudents: number };
   leader: { _id: string; name: string };
   members: Member[];
+  comment?: string;
 }
 
 export default function ManageProjects() {
@@ -48,6 +50,7 @@ export default function ManageProjects() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [decidingGroupId, setDecidingGroupId] = useState<string | null>(null);
+  const promptComment = useCommentPrompt();
 
   const loadData = async () => {
     setLoading(true);
@@ -73,9 +76,21 @@ export default function ManageProjects() {
   }, []);
 
   const handleGroupDecision = async (id: string, decision: 'approved' | 'rejected') => {
+    const comment = await promptComment({
+      title: decision === 'approved' ? 'Recommend to admin' : 'Reject group request',
+      message:
+        decision === 'approved'
+          ? 'Add a note for the admin on why you\'re recommending this group.'
+          : 'Let the students know why this group is being rejected.',
+      confirmLabel: decision === 'approved' ? 'Recommend' : 'Reject',
+      variant: decision === 'rejected' ? 'danger' : 'default',
+      required: true,
+    });
+    if (comment === null) return;
+
     setDecidingGroupId(id);
     try {
-      await api.put(`/groups/${id}/decision`, { decision });
+      await api.put(`/groups/${id}/decision`, { decision, comment });
       await loadData();
     } catch (err) {
       alert(err instanceof Error ? err.message : 'Failed to update group request');
@@ -130,6 +145,13 @@ export default function ManageProjects() {
           </li>
         ))}
       </ul>
+
+      {!showActions && group.comment && (
+        <div className="bg-gray-50 border border-gray-200 rounded-md px-3 py-2 mb-4">
+          <p className="text-xs text-gray-500 mb-0.5">Your comment</p>
+          <p className="text-sm text-gray-700">{group.comment}</p>
+        </div>
+      )}
 
       {showActions && (
         <div className="flex gap-2">

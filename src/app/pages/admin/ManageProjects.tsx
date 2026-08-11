@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo, useRef } from 'react';
 import { api } from '../../lib/api';
 import ProfileAvatar from '../../components/ProfileAvatar';
 import NotificationBell from '../../components/NotificationBell';
+import { useConfirm } from '../../hooks/useConfirm';
 
 interface ProjectFile {
   url: string;
@@ -26,6 +27,7 @@ export default function ManageProjects() {
   const [error, setError] = useState('');
   const [uploadingId, setUploadingId] = useState<string | null>(null);
   const fileInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
+  const confirm = useConfirm();
 
   const [query, setQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
@@ -83,7 +85,7 @@ export default function ManageProjects() {
   }, []);
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Delete this project?')) return;
+    if (!(await confirm({ message: 'Delete this project?', confirmLabel: 'Delete', variant: 'danger' }))) return;
     try {
       await api.delete(`/projects/${id}`);
       await loadProjects();
