@@ -1,51 +1,38 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router';
 import Sidebar from '../../components/Sidebar';
 import { api } from '../../lib/api';
 import ProfileAvatar from '../../components/ProfileAvatar';
 import NotificationBell from '../../components/NotificationBell';
 
+interface AssessmentFile {
+  url: string;
+  name: string;
+}
+
 interface Assessment {
   _id: string;
   title: string;
-  student: { name: string; email: string };
-  supervisor: { name: string; email: string };
-  project: { title: string };
-}
-
-interface Submission {
-  _id: string;
-  assessment: { _id: string };
-  fileUrl: string;
-  fileName: string;
-  status: 'submitted' | 'graded';
-  marks: number | null;
-  feedback: string;
-  submittedAt: string;
+  description: string;
+  dueDate?: string;
+  files: AssessmentFile[];
+  visibleProjectCount: number;
 }
 
 export default function AdminAssessments() {
   const [assessments, setAssessments] = useState<Assessment[]>([]);
-  const [submissions, setSubmissions] = useState<Submission[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [expandedId, setExpandedId] = useState<string | null>(null);
 
   useEffect(() => {
-    Promise.all([api.get('/assessments/all'), api.get('/submissions')])
-      .then(([a, s]) => {
-        setAssessments(a.assessments);
-        setSubmissions(s.submissions);
-      })
+    api
+      .get('/assessments/all')
+      .then((data) => setAssessments(data.assessments))
       .catch((e) => setError(e instanceof Error ? e.message : 'Failed to load'))
       .finally(() => setLoading(false));
   }, []);
 
-  const submissionFor = (assessmentId: string) =>
-    submissions.find((s) => s.assessment._id === assessmentId);
-
-  const pending = submissions.filter((s) => s.status === 'submitted');
-  const graded = submissions.filter((s) => s.status === 'graded');
+  const released = assessments.filter((a) => a.visibleProjectCount > 0).length;
 
   return (
     <div className="flex flex-col md:flex-row">
@@ -54,8 +41,8 @@ export default function AdminAssessments() {
         <div className="bg-white border-b border-gray-200 px-8 py-5">
           <div className="flex justify-between items-center">
             <div>
-              <h1 className="text-2xl">Assessments Overview</h1>
-              <p className="text-gray-600">Monitor all assessment submissions across the system</p>
+              <h1 className="text-2xl">Assessments</h1>
+              <p className="text-gray-600">Manage the shared assessment templates for this trimester</p>
             </div>
             <div className="flex items-center gap-4">
               <Link to="/admin/assessments/create" className="bg-[#2563a8] text-white px-5 py-2 rounded-md hover:bg-[#1e4a8a]">
@@ -69,18 +56,14 @@ export default function AdminAssessments() {
         </div>
 
         <div className="p-8">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-8">
             <div className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm">
-              <div className="text-gray-600 mb-1">Total</div>
+              <div className="text-gray-600 mb-1">Total Templates</div>
               <div className="text-3xl">{assessments.length}</div>
             </div>
             <div className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm">
-              <div className="text-gray-600 mb-1">Pending Review</div>
-              <div className="text-3xl text-orange-600">{pending.length}</div>
-            </div>
-            <div className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm">
-              <div className="text-gray-600 mb-1">Graded</div>
-              <div className="text-3xl text-green-600">{graded.length}</div>
+              <div className="text-gray-600 mb-1">Released to at Least One Project</div>
+              <div className="text-3xl text-green-600">{released}</div>
             </div>
           </div>
 
@@ -89,98 +72,47 @@ export default function AdminAssessments() {
 
           {!loading && !error && assessments.length === 0 && (
             <div className="bg-white rounded-lg p-16 border border-gray-200 text-center text-gray-500">
-              No assessments in the system yet.
+              No assessment templates in the system yet.
             </div>
           )}
 
           {assessments.length > 0 && (
-            <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
-              <div className="overflow-x-auto"><table className="w-full">
-                <thead className="bg-gray-100">
-                  <tr>
-                    <th className="text-left px-6 py-4 text-sm text-gray-600">Student</th>
-                    <th className="text-left px-6 py-4 text-sm text-gray-600">Supervisor</th>
-                    <th className="text-left px-6 py-4 text-sm text-gray-600">Assessment</th>
-                    <th className="text-left px-6 py-4 text-sm text-gray-600">Project</th>
-                    <th className="text-left px-6 py-4 text-sm text-gray-600">Submitted</th>
-                    <th className="text-left px-6 py-4 text-sm text-gray-600">Status</th>
-                    <th className="text-left px-6 py-4 text-sm text-gray-600">Mark</th>
-                    <th className="text-left px-6 py-4 text-sm text-gray-600">Feedback</th>
-                    <th className="text-left px-6 py-4 text-sm text-gray-600">File</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {assessments.map((a) => {
-                    const submission = submissionFor(a._id);
-                    const status = submission?.status ?? 'not_submitted';
-                    const isExpanded = expandedId === submission?._id;
-                    return (
-                      <React.Fragment key={a._id}>
-                        <tr className="border-t border-gray-200 hover:bg-gray-50">
-                          <td className="px-6 py-4">{a.student?.name}</td>
-                          <td className="px-6 py-4 text-gray-600">{a.supervisor?.name}</td>
-                          <td className="px-6 py-4">{a.title}</td>
-                          <td className="px-6 py-4 text-gray-500">{a.project?.title}</td>
-                          <td className="px-6 py-4 text-gray-500 text-sm">
-                            {submission?.submittedAt ? new Date(submission.submittedAt).toLocaleDateString() : '—'}
-                          </td>
-                          <td className="px-6 py-4">
-                            <span className={
-                              status === 'graded' ? 'text-green-600' :
-                              status === 'submitted' ? 'text-orange-600' : 'text-gray-400'
-                            }>
-                              {status === 'not_submitted' ? 'Not submitted' :
-                               status === 'submitted' ? 'Pending review' : 'Graded'}
-                            </span>
-                          </td>
-                          <td className="px-6 py-4">
-                            {submission?.marks !== null && submission?.marks !== undefined ? (
-                              <span className="text-green-600">{submission.marks}/100</span>
-                            ) : '—'}
-                          </td>
-                          <td className="px-6 py-4 max-w-xs">
-                            {submission?.feedback ? (
-                              <button
-                                onClick={() => setExpandedId(isExpanded ? null : submission._id)}
-                                className="text-[#2563a8] hover:underline text-sm text-left"
-                              >
-                                {isExpanded ? 'Hide feedback' : 'View feedback'}
-                              </button>
-                            ) : (
-                              <span className="text-gray-400 text-sm italic">—</span>
-                            )}
-                          </td>
-                          <td className="px-6 py-4">
-                            {submission?.fileUrl ? (
-                              <a
-                                href={submission.fileUrl}
-                                target="_blank"
-                                rel="noreferrer"
-                                className="text-[#2563a8] hover:underline text-sm"
-                              >
-                                📎 {submission.fileName}
-                              </a>
-                            ) : '—'}
-                          </td>
-                        </tr>
-
-                        {isExpanded && submission?.feedback && (
-                          <tr className="border-t border-gray-200 bg-gray-50">
-                            <td colSpan={9} className="px-6 py-5">
-                              <div className="max-w-2xl">
-                                <div className="text-gray-600 mb-2 text-sm">Supervisor Feedback</div>
-                                <div className="bg-white border border-gray-200 rounded-lg p-4">
-                                  <p className="text-gray-700">{submission.feedback}</p>
-                                </div>
-                              </div>
-                            </td>
-                          </tr>
-                        )}
-                      </React.Fragment>
-                    );
-                  })}
-                </tbody>
-              </table></div>
+            <div className="space-y-4">
+              {assessments.map((a) => (
+                <div key={a._id} className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
+                  <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-3">
+                    <div>
+                      <h3 className="text-lg mb-1">{a.title}</h3>
+                      {a.description && <p className="text-sm text-gray-600">{a.description}</p>}
+                      {a.dueDate && (
+                        <p className="text-xs text-gray-400 mt-1">Due: {new Date(a.dueDate).toLocaleDateString()}</p>
+                      )}
+                      {a.files?.length > 0 && (
+                        <div className="mt-2 flex flex-wrap gap-3">
+                          {a.files.map((f, idx) => (
+                            <a
+                              key={idx}
+                              href={f.url}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="text-[#2563a8] hover:underline text-sm"
+                            >
+                              📎 {f.name}
+                            </a>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                    <span
+                      className={`text-sm shrink-0 ${a.visibleProjectCount > 0 ? 'text-green-600' : 'text-gray-400'}`}
+                    >
+                      {a.visibleProjectCount > 0
+                        ? `Visible to ${a.visibleProjectCount} project${a.visibleProjectCount === 1 ? '' : 's'}`
+                        : 'Not released yet'}
+                    </span>
+                  </div>
+                </div>
+              ))}
             </div>
           )}
         </div>

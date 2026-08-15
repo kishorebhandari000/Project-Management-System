@@ -6,8 +6,9 @@ import NotificationBell from '../../components/NotificationBell';
 
 interface AssessmentStat {
   title: string;
+  released: number;
   submitted: number;
-  total: number;
+  graded: number;
   percentage: number;
 }
 
@@ -126,7 +127,8 @@ export default function Reports() {
                         <div className="flex justify-between mb-2">
                           <span>{stat.title}</span>
                           <span className="text-gray-600">
-                            {stat.submitted}/{stat.total} ({stat.percentage}%)
+                            {stat.submitted}/{stat.released} submitted ({stat.percentage}%)
+                            {stat.released > 0 && <span className="text-gray-400"> &bull; {stat.graded} graded</span>}
                           </span>
                         </div>
                         <div className="bg-gray-200 h-4 rounded-full">
@@ -135,6 +137,9 @@ export default function Reports() {
                             style={{ width: `${stat.percentage}%` }}
                           ></div>
                         </div>
+                        {stat.released === 0 && (
+                          <p className="text-xs text-gray-400 mt-1">Not released to any project yet.</p>
+                        )}
                       </div>
                     ))}
                   </div>

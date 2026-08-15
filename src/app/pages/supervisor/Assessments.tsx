@@ -1,20 +1,33 @@
 import React, { useEffect, useState } from 'react';
-import { Link } from 'react-router';
 import Sidebar from '../../components/Sidebar';
 import { api } from '../../lib/api';
 import ProfileAvatar from '../../components/ProfileAvatar';
 import NotificationBell from '../../components/NotificationBell';
 
-interface Assessment {
+interface AssessmentFile {
+  url: string;
+  name: string;
+}
+
+interface ProjectVisibility {
   _id: string;
   title: string;
-  student: { name: string; email: string };
-  project: { title: string };
+  visible: boolean;
+}
+
+interface AssessmentTemplate {
+  _id: string;
+  title: string;
+  description: string;
+  dueDate?: string;
+  files: AssessmentFile[];
+  projects: ProjectVisibility[];
 }
 
 interface Submission {
   _id: string;
-  assessment: { _id: string };
+  assessment: { _id: string; title: string };
+  student: { name: string; email: string };
   status: 'submitted' | 'graded';
   marks: number | null;
   feedback: string;
@@ -24,7 +37,7 @@ interface Submission {
 }
 
 export default function SupervisorAssessments() {
-  const [assessments, setAssessments] = useState<Assessment[]>([]);
+  const [templates, setTemplates] = useState<AssessmentTemplate[]>([]);
   const [submissions, setSubmissions] = useState<Submission[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -35,13 +48,14 @@ export default function SupervisorAssessments() {
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState('');
   const [toast, setToast] = useState('');
+  const [togglingKey, setTogglingKey] = useState<string | null>(null);
 
   const loadData = () => {
     setLoading(true);
     setError('');
     Promise.all([api.get('/assessments/supervisor'), api.get('/submissions')])
       .then(([a, s]) => {
-        setAssessments(a.assessments);
+        setTemplates(a.assessments);
         setSubmissions(s.submissions);
       })
       .catch((e) => setError(e instanceof Error ? e.message : 'Failed to load'))
@@ -51,9 +65,6 @@ export default function SupervisorAssessments() {
   useEffect(() => {
     loadData();
   }, []);
-
-  const submissionFor = (assessmentId: string) =>
-    submissions.find((s) => s.assessment._id === assessmentId);
 
   const pending = submissions.filter((s) => s.status === 'submitted');
   const graded = submissions.filter((s) => s.status === 'graded');
@@ -87,6 +98,25 @@ export default function SupervisorAssessments() {
     }
   };
 
+  const handleToggleVisibility = async (assessmentId: string, projectId: string, nextVisible: boolean) => {
+    const key = `${assessmentId}:${projectId}`;
+    setTogglingKey(key);
+    try {
+      await api.put(`/assessments/${assessmentId}/visibility`, { projectId, visible: nextVisible });
+      setTemplates((prev) =>
+        prev.map((t) =>
+          t._id !== assessmentId
+            ? t
+            : { ...t, projects: t.projects.map((p) => (p._id !== projectId ? p : { ...p, visible: nextVisible })) }
+        )
+      );
+    } catch (e) {
+      alert(e instanceof Error ? e.message : 'Failed to update visibility');
+    } finally {
+      setTogglingKey(null);
+    }
+  };
+
   return (
     <div className="flex flex-col md:flex-row">
       <Sidebar role="supervisor" />
@@ -95,7 +125,7 @@ export default function SupervisorAssessments() {
           <div className="flex justify-between items-center">
             <div>
               <h1 className="text-2xl">Assessments</h1>
-              <p className="text-gray-600">Review, grade, and give feedback on student submissions</p>
+              <p className="text-gray-600">Release assessments to your students, then review and grade their work</p>
             </div>
             <div className="flex items-center gap-4">
               <NotificationBell role="supervisor" />
@@ -113,8 +143,8 @@ export default function SupervisorAssessments() {
         <div className="p-8">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
             <div className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm">
-              <div className="text-gray-600 mb-1">Total</div>
-              <div className="text-3xl">{assessments.length}</div>
+              <div className="text-gray-600 mb-1">Templates</div>
+              <div className="text-3xl">{templates.length}</div>
             </div>
             <div className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm">
               <div className="text-gray-600 mb-1">Pending Review</div>
@@ -130,16 +160,88 @@ export default function SupervisorAssessments() {
             </div>
           </div>
 
-          {loading && <div className="text-center py-20 text-gray-500">Loading...</div>}
-          {error && <div className="bg-red-50 border border-red-200 text-red-700 p-4 rounded-lg">{error}</div>}
+          {error && <div className="bg-red-50 border border-red-200 text-red-700 p-4 rounded-lg mb-6">{error}</div>}
 
-          {!loading && !error && assessments.length === 0 && (
+          {/* Assessment templates + per-project visibility */}
+          <div className="bg-white rounded-lg border border-gray-200 shadow-sm mb-8">
+            <div className="px-6 py-4 border-b border-gray-200">
+              <h2 className="text-xl">Assessment Templates</h2>
+              <p className="text-sm text-gray-500">Turn an assessment on for your project(s) to release it to your students.</p>
+            </div>
+
+            {loading && <div className="text-center py-10 text-gray-500">Loading...</div>}
+
+            {!loading && templates.length === 0 && (
+              <div className="text-center py-10 text-gray-500">No assessment templates have been created yet.</div>
+            )}
+
+            {!loading && templates.length > 0 && (
+              <div className="divide-y divide-gray-200">
+                {templates.map((t) => (
+                  <div key={t._id} className="px-6 py-5">
+                    <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-4">
+                      <div>
+                        <h3 className="text-lg">{t.title}</h3>
+                        {t.description && <p className="text-sm text-gray-600 mt-1">{t.description}</p>}
+                        {t.dueDate && (
+                          <p className="text-xs text-gray-400 mt-1">Due: {new Date(t.dueDate).toLocaleDateString()}</p>
+                        )}
+                        {t.files?.length > 0 && (
+                          <div className="mt-2 flex flex-wrap gap-3">
+                            {t.files.map((f, idx) => (
+                              <a
+                                key={idx}
+                                href={f.url}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="text-[#2563a8] hover:underline text-sm"
+                              >
+                                📎 {f.name}
+                              </a>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="shrink-0 space-y-2 min-w-[200px]">
+                        {t.projects.length === 0 && (
+                          <p className="text-sm text-gray-400">You don't supervise any projects yet.</p>
+                        )}
+                        {t.projects.map((p) => {
+                          const key = `${t._id}:${p._id}`;
+                          return (
+                            <div key={p._id} className="flex items-center justify-between gap-4 text-sm">
+                              <span className="text-gray-700">{p.title}</span>
+                              <button
+                                type="button"
+                                onClick={() => handleToggleVisibility(t._id, p._id, !p.visible)}
+                                disabled={togglingKey === key}
+                                className={`px-3 py-1 rounded-full text-xs transition-colors disabled:opacity-50 ${
+                                  p.visible ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'
+                                }`}
+                              >
+                                {togglingKey === key ? '...' : p.visible ? 'Visible' : 'Hidden'}
+                              </button>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Submissions / grading - one row per submission, since a single
+              template can now be released to many students at once. */}
+          {!loading && !error && submissions.length === 0 && (
             <div className="bg-white rounded-lg p-16 border border-gray-200 text-center text-gray-500">
-              No assessments assigned to you yet.
+              No submissions from your students yet.
             </div>
           )}
 
-          {assessments.length > 0 && (
+          {submissions.length > 0 && (
             <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
               <div className="overflow-x-auto">
                 <table className="w-full">
@@ -147,7 +249,6 @@ export default function SupervisorAssessments() {
                     <tr>
                       <th className="text-left px-6 py-4 text-sm text-gray-600">Student</th>
                       <th className="text-left px-6 py-4 text-sm text-gray-600">Assessment</th>
-                      <th className="text-left px-6 py-4 text-sm text-gray-600">Project</th>
                       <th className="text-left px-6 py-4 text-sm text-gray-600">Submitted</th>
                       <th className="text-left px-6 py-4 text-sm text-gray-600">Status</th>
                       <th className="text-left px-6 py-4 text-sm text-gray-600">Mark</th>
@@ -156,70 +257,60 @@ export default function SupervisorAssessments() {
                     </tr>
                   </thead>
                   <tbody>
-                    {assessments.map((a) => {
-                      const submission = submissionFor(a._id);
-                      const status = submission?.status ?? 'not_submitted';
-                      const isExpanded = expandedId === submission?._id;
-
+                    {submissions.map((s) => {
+                      const isExpanded = expandedId === s._id;
                       return (
-                        <React.Fragment key={a._id}>
+                        <React.Fragment key={s._id}>
                           <tr className="border-t border-gray-200 hover:bg-gray-50">
-                            <td className="px-6 py-4">{a.student?.name}</td>
-                            <td className="px-6 py-4">{a.title}</td>
-                            <td className="px-6 py-4 text-gray-500">{a.project?.title}</td>
+                            <td className="px-6 py-4">{s.student?.name}</td>
+                            <td className="px-6 py-4">{s.assessment?.title}</td>
                             <td className="px-6 py-4 text-gray-500 text-sm">
-                              {submission?.submittedAt ? new Date(submission.submittedAt).toLocaleDateString() : '—'}
+                              {s.submittedAt ? new Date(s.submittedAt).toLocaleDateString() : '—'}
                             </td>
                             <td className="px-6 py-4">
-                              <span className={
-                                status === 'graded' ? 'text-green-600' :
-                                status === 'submitted' ? 'text-orange-600' : 'text-gray-400'
-                              }>
-                                {status === 'not_submitted' ? 'Not submitted' :
-                                 status === 'submitted' ? 'Pending review' : 'Graded'}
+                              <span className={s.status === 'graded' ? 'text-green-600' : 'text-orange-600'}>
+                                {s.status === 'graded' ? 'Graded' : 'Pending review'}
                               </span>
                             </td>
                             <td className="px-6 py-4">
-                              {submission?.marks !== null && submission?.marks !== undefined ? (
-                                <span className="text-green-600">{submission.marks}/100</span>
-                              ) : '—'}
+                              {s.marks !== null && s.marks !== undefined ? (
+                                <span className="text-green-600">{s.marks}/100</span>
+                              ) : (
+                                '—'
+                              )}
                             </td>
                             <td className="px-6 py-4 max-w-xs">
-                              {submission?.feedback ? (
-                                <span className="text-gray-600 text-sm line-clamp-2">{submission.feedback}</span>
+                              {s.feedback ? (
+                                <span className="text-gray-600 text-sm line-clamp-2">{s.feedback}</span>
                               ) : (
                                 <span className="text-gray-400 text-sm italic">—</span>
                               )}
                             </td>
                             <td className="px-6 py-4">
-                              {submission ? (
-                                <button
-                                  onClick={() => openEditor(submission)}
-                                  className={`px-4 py-2 rounded-md text-sm ${
-                                    status === 'submitted'
-                                      ? 'bg-[#2563a8] text-white hover:bg-[#1e4a8a]'
-                                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                                  }`}
-                                >
-                                  {isExpanded ? 'Close' : status === 'submitted' ? 'Grade' : 'Edit'}
-                                </button>
-                              ) : (
-                                <span className="text-gray-400 text-sm">Awaiting submission</span>
-                              )}
+                              <button
+                                onClick={() => openEditor(s)}
+                                className={`px-4 py-2 rounded-md text-sm ${
+                                  s.status === 'submitted'
+                                    ? 'bg-[#2563a8] text-white hover:bg-[#1e4a8a]'
+                                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                }`}
+                              >
+                                {isExpanded ? 'Close' : s.status === 'submitted' ? 'Grade' : 'Edit'}
+                              </button>
                             </td>
                           </tr>
 
-                          {isExpanded && submission && (
+                          {isExpanded && (
                             <tr className="border-t border-gray-200 bg-gray-50">
-                              <td colSpan={8} className="px-6 py-6">
+                              <td colSpan={7} className="px-6 py-6">
                                 <div className="max-w-2xl space-y-4">
                                   <a
-                                    href={submission.fileUrl}
+                                    href={s.fileUrl}
                                     target="_blank"
                                     rel="noopener noreferrer"
                                     className="inline-flex items-center gap-2 text-[#2563a8] hover:underline bg-white border border-gray-200 rounded-lg px-4 py-2 text-sm"
                                   >
-                                    📎 {submission.fileName}
+                                    📎 {s.fileName}
                                   </a>
 
                                   {saveError && (
@@ -253,11 +344,11 @@ export default function SupervisorAssessments() {
                                   </div>
                                   <div className="flex gap-3">
                                     <button
-                                      onClick={() => handleSave(submission._id)}
+                                      onClick={() => handleSave(s._id)}
                                       disabled={saving || !markDraft}
                                       className="bg-[#2563a8] text-white px-6 py-2 rounded-md hover:bg-[#1e4a8a] disabled:opacity-50 text-sm"
                                     >
-                                      {saving ? 'Saving...' : status === 'graded' ? 'Update Grade' : 'Submit Grade'}
+                                      {saving ? 'Saving...' : s.status === 'graded' ? 'Update Grade' : 'Submit Grade'}
                                     </button>
                                     <button
                                       onClick={() => setExpandedId(null)}

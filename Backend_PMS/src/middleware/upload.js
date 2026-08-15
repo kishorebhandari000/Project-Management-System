@@ -1,5 +1,5 @@
 const multer = require('multer');
-const { projectFileStorage, submissionFileStorage } = require('../config/cloudinary');
+const { projectFileStorage, submissionFileStorage, assessmentFileStorage } = require('../config/cloudinary');
 
 const uploadProjectFile = multer({
   storage: projectFileStorage,
@@ -11,4 +11,9 @@ const uploadSubmissionFile = multer({
   limits: { fileSize: 25 * 1024 * 1024 }, // 25MB
 });
 
-module.exports = { uploadProjectFile, uploadSubmissionFile };
+const uploadAssessmentFile = multer({
+  storage: assessmentFileStorage,
+  limits: { fileSize: 25 * 1024 * 1024 }, // 25MB
+});
+
+module.exports = { uploadProjectFile, uploadSubmissionFile, uploadAssessmentFile };

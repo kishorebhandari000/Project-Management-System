@@ -4,13 +4,17 @@ import { api } from '../../lib/api';
 import ProfileAvatar from '../../components/ProfileAvatar';
 import NotificationBell from '../../components/NotificationBell';
 
+interface AssessmentFile {
+  url: string;
+  name: string;
+}
+
 interface Assessment {
   _id: string;
   title: string;
   description: string;
   dueDate?: string;
-  supervisor: { name: string; email: string };
-  project: { title: string };
+  files: AssessmentFile[];
 }
 
 interface Submission {
@@ -33,6 +37,7 @@ export default function Assessments() {
   const [file, setFile] = useState<File | null>(null);
   const [submitting, setSubmitting] = useState<string | null>(null);
   const [toast, setToast] = useState('');
+  const [hasApprovedProject, setHasApprovedProject] = useState(true);
 
   const loadData = async () => {
     setLoading(true);
@@ -43,6 +48,7 @@ export default function Assessments() {
         api.get('/submissions'),
       ]);
       setAssessments(assessmentsRes.assessments);
+      setHasApprovedProject(assessmentsRes.hasApprovedProject ?? true);
       setSubmissions(submissionsRes.submissions);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to load assessments');
@@ -139,7 +145,9 @@ export default function Assessments() {
 
           {!loading && !error && assessments.length === 0 && (
             <div className="bg-white rounded-lg p-16 border border-gray-200 text-center text-gray-500">
-              No assessments assigned yet.
+              {!hasApprovedProject
+                ? "You don't have an approved project yet — assessments will appear here once you do."
+                : "Your supervisor hasn't released any assessments yet. Check back soon."}
             </div>
           )}
 
@@ -152,10 +160,22 @@ export default function Assessments() {
                     <div className="flex justify-between items-start mb-3">
                       <div>
                         <h3 className="text-lg mb-1">{a.title}</h3>
-                        <p className="text-sm text-gray-500">
-                          {a.project?.title} &bull; Supervisor: {a.supervisor?.name}
-                        </p>
                         {a.description && <p className="text-sm text-gray-600 mt-1">{a.description}</p>}
+                        {a.files?.length > 0 && (
+                          <div className="mt-2 flex flex-wrap gap-3">
+                            {a.files.map((f, idx) => (
+                              <a
+                                key={idx}
+                                href={f.url}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="text-[#2563a8] hover:underline text-sm"
+                              >
+                                📎 {f.name}
+                              </a>
+                            ))}
+                          </div>
+                        )}
                       </div>
                       <div className="text-right shrink-0 ml-4">
                         {submission?.status === 'graded' ? (

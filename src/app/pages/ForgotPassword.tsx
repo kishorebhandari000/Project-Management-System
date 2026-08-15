@@ -3,7 +3,7 @@ import { useState, type FormEvent } from 'react';
 import { api } from '../lib/api';
 
 export default function ForgotPassword() {
-  const [email, setEmail] = useState('');
+  const [email, setEmail] = useState(() => localStorage.getItem('userEmail') || '');
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);

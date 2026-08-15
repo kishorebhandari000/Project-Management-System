@@ -1,63 +1,40 @@
 import Sidebar from '../../components/Sidebar';
 import { useNavigate } from 'react-router';
-import { useState, useEffect, type FormEvent } from 'react';
+import { useState, type FormEvent } from 'react';
 import { api } from '../../lib/api';
 import ProfileAvatar from '../../components/ProfileAvatar';
 import NotificationBell from '../../components/NotificationBell';
 
-interface Student {
-  _id: string;
-  name: string;
-  email: string;
-}
-
-interface ProjectOption {
-  _id: string;
-  title: string;
-  supervisor?: { _id: string; name: string };
-}
-
 export default function CreateAssessment() {
   const navigate = useNavigate();
-  const [students, setStudents] = useState<Student[]>([]);
-  const [projects, setProjects] = useState<ProjectOption[]>([]);
 
-  const [studentId, setStudentId] = useState('');
-  const [projectId, setProjectId] = useState('');
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [dueDate, setDueDate] = useState('');
+  const [files, setFiles] = useState<File[]>([]);
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
-
-  useEffect(() => {
-    api.get('/users?role=student').then((data) => setStudents(data.users));
-    api.get('/projects').then((data) => setProjects(data.projects));
-  }, []);
-
-  const selectedProject = projects.find((p) => p._id === projectId);
-  const selectedStudent = students.find((s) => s._id === studentId);
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError('');
-
-    if (!selectedProject?.supervisor) {
-      setError('Selected project has no supervisor assigned');
-      return;
-    }
-
     setSubmitting(true);
+
     try {
-      await api.post('/assessments', {
+      const { assessment } = await api.post('/assessments', {
         title,
         description,
-        project: projectId,
-        student: studentId,
-        supervisor: selectedProject.supervisor._id,
         dueDate: dueDate || undefined,
-        studentEmail: selectedStudent?.email,
       });
+
+      // Uploaded one at a time - concurrent pushes to the same files array
+      // could otherwise clobber each other.
+      for (const file of files) {
+        const formData = new FormData();
+        formData.append('file', file);
+        await api.upload(`/assessments/${assessment._id}/files`, formData);
+      }
+
       navigate('/admin/assessments');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create assessment');
@@ -74,11 +51,10 @@ export default function CreateAssessment() {
           <div className="flex justify-between items-center">
             <div>
               <h1 className="text-2xl">Create New Assessment</h1>
-              <p className="text-gray-600">Assign an assessment to a student</p>
+              <p className="text-gray-600">Create a shared assessment template for this trimester</p>
             </div>
             <div className="flex items-center gap-4">
               <NotificationBell role="admin" />
-
               <ProfileAvatar role="admin" />
             </div>
           </div>
@@ -95,51 +71,6 @@ export default function CreateAssessment() {
 
               <form onSubmit={handleSubmit} className="space-y-6">
                 <div>
-                  <h2 className="text-xl mb-4">Assign To</h2>
-                  <div className="space-y-4">
-                    <div>
-                      <label className="block text-gray-700 mb-2">Student</label>
-                      <select
-                        value={studentId}
-                        onChange={(e) => setStudentId(e.target.value)}
-                        className="w-full border border-gray-300 rounded-md px-4 py-3 focus:outline-none focus:border-[#2563a8]"
-                        required
-                      >
-                        <option value="">Select a student</option>
-                        {students.map((s) => (
-                          <option key={s._id} value={s._id}>{s.name} ({s.email})</option>
-                        ))}
-                      </select>
-                    </div>
-
-                    <div>
-                      <label className="block text-gray-700 mb-2">Project</label>
-                      <select
-                        value={projectId}
-                        onChange={(e) => setProjectId(e.target.value)}
-                        className="w-full border border-gray-300 rounded-md px-4 py-3 focus:outline-none focus:border-[#2563a8]"
-                        required
-                      >
-                        <option value="">Select a project</option>
-                        {projects.map((p) => (
-                          <option key={p._id} value={p._id}>{p.title}</option>
-                        ))}
-                      </select>
-                    </div>
-
-                    <div>
-                      <label className="block text-gray-700 mb-2">Supervisor</label>
-                      <input
-                        type="text"
-                        value={selectedProject?.supervisor?.name || 'Select a project first'}
-                        readOnly
-                        className="w-full border border-gray-300 rounded-md px-4 py-3 bg-gray-50 text-gray-600"
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                <div className="pt-4 border-t border-gray-200">
                   <h2 className="text-xl mb-4">Assessment Details</h2>
                   <div className="space-y-4">
                     <div>
@@ -160,7 +91,7 @@ export default function CreateAssessment() {
                         value={description}
                         onChange={(e) => setDescription(e.target.value)}
                         className="w-full border border-gray-300 rounded-md px-4 py-3 h-28 focus:outline-none focus:border-[#2563a8]"
-                        placeholder="What the student needs to submit"
+                        placeholder="What students need to submit"
                       ></textarea>
                     </div>
 
@@ -173,8 +104,33 @@ export default function CreateAssessment() {
                         className="w-full border border-gray-300 rounded-md px-4 py-3 focus:outline-none focus:border-[#2563a8]"
                       />
                     </div>
+
+                    <div>
+                      <label className="block text-gray-700 mb-2">Attachments</label>
+                      <input
+                        type="file"
+                        multiple
+                        onChange={(e) => setFiles(Array.from(e.target.files || []))}
+                        className="w-full border border-gray-300 rounded-md px-4 py-2 text-sm"
+                      />
+                      <p className="text-xs text-gray-400 mt-1">
+                        e.g. an assignment brief. Supervisors and students will be able to view/download these.
+                      </p>
+                      {files.length > 0 && (
+                        <ul className="mt-2 text-sm text-gray-600 list-disc list-inside">
+                          {files.map((f, idx) => (
+                            <li key={idx}>{f.name}</li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
                   </div>
                 </div>
+
+                <p className="text-sm text-gray-500">
+                  This assessment starts hidden from every student. Each supervisor turns it on for their own
+                  project from their Assessments page.
+                </p>
 
                 <div className="flex justify-end gap-3 pt-4">
                   <button

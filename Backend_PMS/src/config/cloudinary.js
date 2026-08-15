@@ -70,11 +70,13 @@ function cleanupUploadedFile(file) {
 
 const projectFileStorage = makeStorage('project-files');
 const submissionFileStorage = makeStorage('submissions');
+const assessmentFileStorage = makeStorage('assessment-files');
 
 module.exports = {
   cloudinary,
   projectFileStorage,
   submissionFileStorage,
+  assessmentFileStorage,
   resolveFileUrl,
   cleanupUploadedFile,
   usingLocalStorageFallback: !hasCloudinaryCredentials,

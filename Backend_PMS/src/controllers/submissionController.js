@@ -1,11 +1,14 @@
 const asyncHandler = require('../utils/asyncHandler');
 const Submission = require('../models/Submission');
 const Assessment = require('../models/Assessment');
+const AssessmentVisibility = require('../models/AssessmentVisibility');
+const Allocation = require('../models/Allocation');
+const Project = require('../models/Project');
 const sendNotification = require('../utils/notify');
 const { resolveFileUrl, cleanupUploadedFile } = require('../config/cloudinary');
 
-// @desc   Student uploads a file for an assessment assigned to them.
-//         Resubmitting before grading replaces the existing file.
+// @desc   Student uploads a file for an assessment currently visible on their
+//         project. Resubmitting before grading replaces the existing file.
 // @route  POST /api/submissions
 // @access Private/Student
 const createSubmission = asyncHandler(async (req, res) => {
@@ -23,9 +26,17 @@ const createSubmission = asyncHandler(async (req, res) => {
     return res.status(404).json({ message: 'Assessment not found' });
   }
 
-  if (String(assessment.student) !== String(req.user._id)) {
+  // Replaces the old "assessment.student === me" check now that Assessment is
+  // a shared template - a student may submit only while it's actually visible
+  // on their current approved project.
+  const allocation = await Allocation.findOne({ student: req.user._id, status: 'approved' });
+  const visibility = allocation
+    ? await AssessmentVisibility.findOne({ assessment: assessmentId, project: allocation.project, visible: true })
+    : null;
+
+  if (!visibility) {
     cleanupUploadedFile(req.file);
-    return res.status(403).json({ message: 'This assessment is not assigned to you' });
+    return res.status(403).json({ message: 'This assessment is not currently visible to you' });
   }
 
   let submission = await Submission.findOne({ assessment: assessmentId, student: req.user._id });
@@ -52,31 +63,28 @@ const createSubmission = asyncHandler(async (req, res) => {
     });
   }
 
-  // Keep the assessment record's own status in sync so admin reports and
-  // supervisor pending-review counts (which read Assessment.status) reflect
-  // submissions made through this file-upload flow.
-  assessment.submittedAt = submission.submittedAt;
-  assessment.status = 'submitted';
-  await assessment.save();
-
-  const assessmentWithSupervisor = await assessment.populate('supervisor', 'name email');
-  await sendNotification(req.app, {
-    userId: assessmentWithSupervisor.supervisor._id,
-    email: assessmentWithSupervisor.supervisor.email,
-    title: 'New Submission',
-    message: `${req.user.name} submitted a file for "${assessment.title}"`,
-  }).catch(() => {});
+  // Notify the project's CURRENT supervisor (live lookup) - Assessment no
+  // longer carries its own supervisor field now that it's a shared template.
+  const project = await Project.findById(allocation.project).populate('supervisor', 'name email');
+  if (project?.supervisor) {
+    await sendNotification(req.app, {
+      userId: project.supervisor._id,
+      email: project.supervisor.email,
+      title: 'New Submission',
+      message: `${req.user.name} submitted a file for "${assessment.title}"`,
+    }).catch(() => {});
+  }
 
   await submission.populate([
-    { path: 'assessment', select: 'title dueDate project', populate: { path: 'project', select: 'title' } },
+    { path: 'assessment', select: 'title dueDate files' },
     { path: 'student', select: 'name email' },
   ]);
 
   res.status(201).json({ submission });
 });
 
-// @desc   List submissions - role-scoped (student: own, supervisor: for their
-//         assigned assessments, admin: all)
+// @desc   List submissions - role-scoped (student: own, supervisor: from
+//         students currently approved on one of their projects, admin: all)
 // @route  GET /api/submissions
 // @access Private
 const getSubmissions = asyncHandler(async (req, res) => {
@@ -85,36 +93,44 @@ const getSubmissions = asyncHandler(async (req, res) => {
   if (req.user.role === 'student') {
     filter.student = req.user._id;
   } else if (req.user.role === 'supervisor') {
-    const assessmentIds = await Assessment.find({ supervisor: req.user._id }).distinct('_id');
-    filter.assessment = { $in: assessmentIds };
+    // Scope by the project's CURRENT supervisor, not any stored snapshot -
+    // Assessment no longer has its own supervisor field to filter on.
+    const myProjectIds = await Project.find({ supervisor: req.user._id }).distinct('_id');
+    const myStudentIds = await Allocation.find({
+      project: { $in: myProjectIds },
+      status: 'approved',
+    }).distinct('student');
+    filter.student = { $in: myStudentIds };
   }
   // admin: no filter, sees all
 
   const submissions = await Submission.find(filter)
-    .populate({
-      path: 'assessment',
-      select: 'title dueDate project student supervisor',
-      populate: [
-        { path: 'project', select: 'title' },
-        { path: 'supervisor', select: 'name email' },
-      ],
-    })
+    .populate({ path: 'assessment', select: 'title dueDate files' })
     .populate('student', 'name email')
     .sort({ createdAt: -1 });
 
   res.json({ count: submissions.length, submissions });
 });
 
-// @desc   Supervisor grades a submission for one of their own assessments
+// @desc   Supervisor grades a submission - authorized via the submitting
+//         student's CURRENT approved project's supervisor (live lookup),
+//         with admin as a fallback.
 // @route  PUT /api/submissions/:id/grade
-// @access Private/Supervisor
+// @access Private/Supervisor,Admin
 const gradeSubmission = asyncHandler(async (req, res) => {
   const submission = await Submission.findById(req.params.id).populate('assessment');
   if (!submission) {
     return res.status(404).json({ message: 'Submission not found' });
   }
 
-  if (String(submission.assessment.supervisor) !== String(req.user._id)) {
+  const allocation = await Allocation.findOne({ student: submission.student, status: 'approved' }).populate(
+    'project',
+    'supervisor'
+  );
+  const isOwner =
+    allocation?.project?.supervisor && allocation.project.supervisor.toString() === req.user._id.toString();
+
+  if (req.user.role !== 'admin' && !isOwner) {
     return res.status(403).json({ message: 'Not authorized to grade this submission' });
   }
 
@@ -132,11 +148,6 @@ const gradeSubmission = asyncHandler(async (req, res) => {
   submission.gradedAt = new Date();
   await submission.save();
 
-  submission.assessment.mark = marks;
-  submission.assessment.feedback = feedback || '';
-  submission.assessment.status = 'graded';
-  await submission.assessment.save();
-
   const studentUser = await submission.populate('student', 'name email');
   await sendNotification(req.app, {
     userId: studentUser.student._id,
@@ -146,7 +157,7 @@ const gradeSubmission = asyncHandler(async (req, res) => {
   }).catch(() => {});
 
   await submission.populate([
-    { path: 'assessment', select: 'title dueDate project', populate: { path: 'project', select: 'title' } },
+    { path: 'assessment', select: 'title dueDate files' },
     { path: 'student', select: 'name email' },
   ]);
 
