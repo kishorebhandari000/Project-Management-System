@@ -28,9 +28,24 @@ interface ApiAllocation {
   };
 }
 
+interface Assessment {
+  _id: string;
+  title: string;
+  dueDate?: string;
+}
+
+interface Submission {
+  _id: string;
+  assessment: { _id: string };
+  status: 'submitted' | 'graded';
+  marks: number | null;
+}
+
 export default function StudentDashboard() {
   const [userName, setUserName] = useState('');
   const [currentAllocation, setCurrentAllocation] = useState<ApiAllocation | null>(null);
+  const [assessments, setAssessments] = useState<Assessment[]>([]);
+  const [submissions, setSubmissions] = useState<Submission[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -42,12 +57,41 @@ export default function StudentDashboard() {
         setCurrentAllocation(data.allocations[0] || null);
       } catch {
         setCurrentAllocation(null);
-      } finally {
-        setLoading(false);
       }
+
+      // Same fetch/combine approach as student/Assessments.tsx.
+      try {
+        const [assessmentsRes, submissionsRes] = await Promise.all([
+          api.get('/assessments/my'),
+          api.get('/submissions'),
+        ]);
+        setAssessments(assessmentsRes.assessments);
+        setSubmissions(submissionsRes.submissions);
+      } catch {
+        setAssessments([]);
+        setSubmissions([]);
+      }
+
+      setLoading(false);
     };
     load();
   }, []);
+
+  const submissionFor = (assessmentId: string) => submissions.find((s) => s.assessment._id === assessmentId);
+
+  const pendingAssessments = assessments
+    .filter((a) => !submissionFor(a._id))
+    .sort((a, b) => {
+      const aTime = a.dueDate ? new Date(a.dueDate).getTime() : Infinity;
+      const bTime = b.dueDate ? new Date(b.dueDate).getTime() : Infinity;
+      return aTime - bTime;
+    });
+  const upcomingPreview = pendingAssessments.slice(0, 5);
+
+  const gradedSubmissions = submissions.filter((s) => s.status === 'graded');
+  const avgMark = gradedSubmissions.length
+    ? Math.round(gradedSubmissions.reduce((sum, s) => sum + (s.marks ?? 0), 0) / gradedSubmissions.length)
+    : null;
 
   return (
     <div className="flex flex-col md:flex-row">
@@ -76,20 +120,17 @@ export default function StudentDashboard() {
             </div>
             <div className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm">
               <div className="text-gray-600 mb-1">Pending Assessments</div>
-              <div className="text-3xl">-</div>
+              <div className="text-3xl">{pendingAssessments.length}</div>
             </div>
             <div className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm">
               <div className="text-gray-600 mb-1">Submitted</div>
-              <div className="text-3xl">-</div>
+              <div className="text-3xl">{submissions.length}</div>
             </div>
             <div className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm">
               <div className="text-gray-600 mb-1">Average Mark</div>
-              <div className="text-3xl">-</div>
+              <div className="text-3xl">{avgMark !== null ? `${avgMark}%` : '-'}</div>
             </div>
           </div>
-          <p className="text-sm text-gray-400 -mt-6 mb-6">
-            Pending Assessments / Submitted / Average Mark need the Assessments module, not built yet.
-          </p>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Current Project */}
@@ -163,7 +204,34 @@ export default function StudentDashboard() {
             {/* Upcoming Deadlines */}
             <div className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm">
               <h2 className="text-xl mb-5">Upcoming Deadlines</h2>
-              <p className="text-sm text-gray-400">Needs the Assessments module - not built yet.</p>
+
+              {loading && <p className="text-gray-500">Loading...</p>}
+
+              {!loading && upcomingPreview.length === 0 && (
+                <p className="text-gray-500 text-sm">No pending assessments right now — you're all caught up.</p>
+              )}
+
+              {!loading && upcomingPreview.length > 0 && (
+                <div className="space-y-3">
+                  {upcomingPreview.map((a) => (
+                    <div
+                      key={a._id}
+                      className="flex justify-between items-center pb-3 border-b border-gray-200 last:border-b-0"
+                    >
+                      <span className="text-sm">{a.title}</span>
+                      <span className="text-xs text-gray-500 shrink-0 ml-4">
+                        {a.dueDate ? `Due ${new Date(a.dueDate).toLocaleDateString()}` : 'No due date'}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {!loading && pendingAssessments.length > 5 && (
+                <Link to="/student/assessments" className="inline-block mt-4 text-sm text-[#2563a8] hover:underline">
+                  View all
+                </Link>
+              )}
             </div>
           </div>
         </div>

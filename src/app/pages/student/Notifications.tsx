@@ -3,6 +3,12 @@ import { useState, useEffect } from 'react';
 import { api } from '../../lib/api';
 import NotificationBell from '../../components/NotificationBell';
 import ProfileAvatar from '../../components/ProfileAvatar';
+import NotificationCategoryTabs from '../../components/NotificationCategoryTabs';
+import {
+  categoryForType,
+  notificationTypeColor,
+  type NotificationCategoryFilter,
+} from '../../lib/notificationCategories';
 
 interface ApiNotification {
   _id: string;
@@ -24,12 +30,6 @@ function timeAgo(dateString: string) {
   return `${days} day${days > 1 ? 's' : ''} ago`;
 }
 
-function typeColor(type: string) {
-  if (type.startsWith('allocation')) return 'bg-blue-100 text-blue-700';
-  if (type.startsWith('assessment')) return 'bg-green-100 text-green-700';
-  return 'bg-gray-100 text-gray-700';
-}
-
 export default function Notifications() {
   const [notifications, setNotifications] = useState<ApiNotification[]>([]);
   // Snapshot of which notifications were unread when this page was opened - used purely
@@ -37,7 +37,7 @@ export default function Notifications() {
   const [unreadIdsThisVisit, setUnreadIdsThisVisit] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [filter, setFilter] = useState<'all' | 'unread'>('all');
+  const [categoryFilter, setCategoryFilter] = useState<NotificationCategoryFilter>('all');
 
   useEffect(() => {
     const loadAndMarkRead = async () => {
@@ -70,7 +70,7 @@ export default function Notifications() {
 
   const unreadCount = unreadIdsThisVisit.size;
   const visibleNotifications =
-    filter === 'unread' ? notifications.filter((n) => unreadIdsThisVisit.has(n._id)) : notifications;
+    categoryFilter === 'all' ? notifications : notifications.filter((n) => categoryForType(n.type) === categoryFilter);
 
   return (
     <div className="flex flex-col md:flex-row">
@@ -100,23 +100,7 @@ export default function Notifications() {
 
             {!loading && (
               <>
-                <div className="mb-6 flex gap-3">
-                  <button
-                    onClick={() => setFilter('all')}
-                    className={filter === 'all' ? 'bg-[#2563a8] text-white px-5 py-2 rounded-md' : 'bg-gray-200 text-gray-700 px-5 py-2 rounded-md hover:bg-gray-300'}
-                  >
-                    All
-                  </button>
-                  <button
-                    onClick={() => setFilter('unread')}
-                    className={filter === 'unread' ? 'bg-[#2563a8] text-white px-5 py-2 rounded-md' : 'bg-gray-200 text-gray-700 px-5 py-2 rounded-md hover:bg-gray-300'}
-                  >
-                    Unread ({unreadCount})
-                  </button>
-                </div>
-                <p className="text-xs text-gray-400 -mt-3 mb-6">
-                  Category filters (Projects/Assessments/Deadlines) from the original design are left out for now - can be re-added once notification types settle across all modules.
-                </p>
+                <NotificationCategoryTabs value={categoryFilter} onChange={setCategoryFilter} />
 
                 <div className="space-y-3">
                   {visibleNotifications.length === 0 && (
@@ -131,7 +115,7 @@ export default function Notifications() {
                     >
                       <div className="flex justify-between items-start mb-2">
                         <div className="flex items-center gap-3">
-                          <span className={`px-3 py-1 rounded-md text-sm ${typeColor(notification.type)}`}>
+                          <span className={`px-3 py-1 rounded-md text-sm ${notificationTypeColor(notification.type)}`}>
                             {notification.type.replace(/_/g, ' ')}
                           </span>
                           <h3 className={`text-lg ${unreadIdsThisVisit.has(notification._id) ? 'font-bold' : ''}`}>

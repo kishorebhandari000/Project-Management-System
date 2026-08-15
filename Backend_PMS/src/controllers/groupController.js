@@ -3,7 +3,6 @@ const Group = require('../models/Group');
 const Project = require('../models/Project');
 const Allocation = require('../models/Allocation');
 const User = require('../models/User');
-const sendNotification = require('../utils/notify');
 const { createNotification } = require('./notificationController');
 const { getCommittedStudentIds } = require('../utils/studentCommitment');
 const { appendGroupSubmission } = require('../utils/googleSheets');
@@ -127,11 +126,12 @@ const createGroup = asyncHandler(async (req, res) => {
 
   const supervisorUser = await User.findById(project.supervisor);
   if (supervisorUser) {
-    await sendNotification(req.app, {
-      userId: supervisorUser._id,
-      email: supervisorUser.email,
+    await createNotification({
+      user: supervisorUser._id,
+      type: 'group_created',
       title: 'New group request',
       message: `${req.user.name} submitted a group of ${members.length} for "${project.title}"`,
+      link: '/supervisor/projects',
     }).catch(() => {});
   }
 
@@ -220,11 +220,12 @@ async function notifyMembers(group, decision, comment) {
   const memberUsers = await User.find({ _id: { $in: group.members } });
   const reasonSuffix = comment ? ` Reason: ${comment}` : '';
   for (const memberUser of memberUsers) {
-    await sendNotification(null, {
-      userId: memberUser._id,
-      email: memberUser.email,
+    await createNotification({
+      user: memberUser._id,
+      type: 'group_decision',
       title: `Group request ${decision}`,
       message: `Your group request for "${group.project.title}" was ${decision}.${reasonSuffix}`,
+      link: '/student/projects',
     }).catch(() => {});
   }
 }
@@ -343,11 +344,12 @@ const undoGroupAllocation = asyncHandler(async (req, res) => {
 
   const memberUsers = await User.find({ _id: { $in: group.members } });
   for (const memberUser of memberUsers) {
-    await sendNotification(req.app, {
-      userId: memberUser._id,
-      email: memberUser.email,
+    await createNotification({
+      user: memberUser._id,
+      type: 'group_decision',
       title: 'Group allocation undone',
       message: `An admin undid your group's allocation for "${group.project.title}" - it's awaiting a new decision.`,
+      link: '/student/projects',
     }).catch(() => {});
   }
 
@@ -464,11 +466,12 @@ const leaveGroup = asyncHandler(async (req, res) => {
   if (wasSupervisorApproved) {
     const supervisorUser = await User.findById(group.supervisor);
     if (supervisorUser && group.project) {
-      await sendNotification(req.app, {
-        userId: supervisorUser._id,
-        email: supervisorUser.email,
+      await createNotification({
+        user: supervisorUser._id,
+        type: 'group_membership_changed',
         title: 'Group membership changed',
         message: `${req.user.name} left a group for "${group.project.title}" after your recommendation - it needs another look`,
+        link: '/supervisor/projects',
       }).catch(() => {});
     }
   }
@@ -517,22 +520,24 @@ const joinGroup = asyncHandler(async (req, res) => {
 
   const leader = await User.findById(group.leader);
   if (leader) {
-    await sendNotification(req.app, {
-      userId: leader._id,
-      email: leader.email,
+    await createNotification({
+      user: leader._id,
+      type: 'group_membership_changed',
       title: 'Someone joined your group',
       message: `${req.user.name} joined your group for "${group.project.title}"`,
+      link: '/student/projects',
     }).catch(() => {});
   }
 
   if (wasSupervisorApproved) {
     const supervisorUser = await User.findById(group.supervisor);
     if (supervisorUser) {
-      await sendNotification(req.app, {
-        userId: supervisorUser._id,
-        email: supervisorUser.email,
+      await createNotification({
+        user: supervisorUser._id,
+        type: 'group_membership_changed',
         title: 'Group membership changed',
         message: `${req.user.name} joined a group for "${group.project.title}" after your recommendation - it needs another look`,
+        link: '/supervisor/projects',
       }).catch(() => {});
     }
   }

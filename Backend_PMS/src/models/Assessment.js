@@ -7,6 +7,7 @@ const assessmentSchema = new mongoose.Schema(
   {
     title: { type: String, required: true, trim: true },
     description: { type: String, trim: true, default: '' },
+    category: { type: String, enum: ['tutorial', 'report', 'presentation'], required: true },
     dueDate: { type: Date },
     files: [
       {

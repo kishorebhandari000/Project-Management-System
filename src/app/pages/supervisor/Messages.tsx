@@ -2,7 +2,7 @@ import Sidebar from '../../components/Sidebar';
 import ProfileAvatar from '../../components/ProfileAvatar';
 import NotificationBell from '../../components/NotificationBell';
 import { useState, useRef, useEffect } from 'react';
-import { sendDirectMessage } from '../../utils/emailService';
+import { api } from '../../lib/api';
 import { useMessages } from '../../hooks/useMessages';
 import SendButton from '../../components/SendButton';
 
@@ -172,28 +172,14 @@ function EmailPanel() {
     setErrorMessage('');
 
     try {
-      await sendDirectMessage({
-        recipientEmail,
-        recipientName: 'Student',
-        senderName: localStorage.getItem('userName') || 'Supervisor',
-        senderRole: 'Supervisor',
-        subject,
-        message,
-        replyUrl: window.location.origin + '/student/messages',
-      });
+      await api.post('/emails', { recipientEmail, subject, message });
 
       setSuccessMessage('Email sent successfully to student!');
       setRecipientEmail('');
       setSubject('');
       setMessage('');
     } catch (error) {
-      const errorMsg = error instanceof Error ? error.message : 'Failed to send email';
-
-      if (errorMsg.includes('only send testing emails to your own email')) {
-        setErrorMessage('⚠️ Resend free tier: You can only send emails to 20032573@students.koi.edu.au (your verified email). To send to others, verify a domain at resend.com/domains');
-      } else {
-        setErrorMessage('Failed to send email. Please try again.');
-      }
+      setErrorMessage(error instanceof Error ? error.message : 'Failed to send email. Please try again.');
       console.error('Email send error:', error);
     } finally {
       setSending(false);
@@ -228,7 +214,6 @@ function EmailPanel() {
               placeholder="student@university.edu"
               required
             />
-            <p className="text-sm text-orange-600 mt-1">⚠️ Testing mode: Use 20032573@students.koi.edu.au to receive the email yourself</p>
           </div>
 
           <div>

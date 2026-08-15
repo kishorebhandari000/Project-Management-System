@@ -4,6 +4,11 @@ import Sidebar from '../../components/Sidebar';
 import { api } from '../../lib/api';
 import ProfileAvatar from '../../components/ProfileAvatar';
 import NotificationBell from '../../components/NotificationBell';
+import AssessmentCategoryTabs, {
+  ASSESSMENT_CATEGORY_LABELS,
+  type AssessmentCategory,
+  type AssessmentCategoryFilter,
+} from '../../components/AssessmentCategoryTabs';
 
 interface AssessmentFile {
   url: string;
@@ -14,6 +19,7 @@ interface Assessment {
   _id: string;
   title: string;
   description: string;
+  category: AssessmentCategory;
   dueDate?: string;
   files: AssessmentFile[];
   visibleProjectCount: number;
@@ -23,6 +29,7 @@ export default function AdminAssessments() {
   const [assessments, setAssessments] = useState<Assessment[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState<AssessmentCategoryFilter>('all');
 
   useEffect(() => {
     api
@@ -32,7 +39,9 @@ export default function AdminAssessments() {
       .finally(() => setLoading(false));
   }, []);
 
-  const released = assessments.filter((a) => a.visibleProjectCount > 0).length;
+  const filteredAssessments =
+    categoryFilter === 'all' ? assessments : assessments.filter((a) => a.category === categoryFilter);
+  const released = filteredAssessments.filter((a) => a.visibleProjectCount > 0).length;
 
   return (
     <div className="flex flex-col md:flex-row">
@@ -59,7 +68,7 @@ export default function AdminAssessments() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-8">
             <div className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm">
               <div className="text-gray-600 mb-1">Total Templates</div>
-              <div className="text-3xl">{assessments.length}</div>
+              <div className="text-3xl">{filteredAssessments.length}</div>
             </div>
             <div className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm">
               <div className="text-gray-600 mb-1">Released to at Least One Project</div>
@@ -76,13 +85,30 @@ export default function AdminAssessments() {
             </div>
           )}
 
-          {assessments.length > 0 && (
+          {!loading && !error && assessments.length > 0 && (
+            <AssessmentCategoryTabs value={categoryFilter} onChange={setCategoryFilter} />
+          )}
+
+          {!loading && !error && assessments.length > 0 && filteredAssessments.length === 0 && (
+            <div className="bg-white rounded-lg p-16 border border-gray-200 text-center text-gray-500">
+              No {categoryFilter !== 'all' ? ASSESSMENT_CATEGORY_LABELS[categoryFilter] : ''} assessment templates yet.
+            </div>
+          )}
+
+          {filteredAssessments.length > 0 && (
             <div className="space-y-4">
-              {assessments.map((a) => (
+              {filteredAssessments.map((a) => (
                 <div key={a._id} className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
                   <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-3">
                     <div>
-                      <h3 className="text-lg mb-1">{a.title}</h3>
+                      <div className="flex items-center gap-2 mb-1">
+                        <h3 className="text-lg">{a.title}</h3>
+                        {a.category && (
+                          <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">
+                            {ASSESSMENT_CATEGORY_LABELS[a.category]}
+                          </span>
+                        )}
+                      </div>
                       {a.description && <p className="text-sm text-gray-600">{a.description}</p>}
                       {a.dueDate && (
                         <p className="text-xs text-gray-400 mt-1">Due: {new Date(a.dueDate).toLocaleDateString()}</p>

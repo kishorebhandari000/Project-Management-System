@@ -4,7 +4,7 @@ const Assessment = require('../models/Assessment');
 const AssessmentVisibility = require('../models/AssessmentVisibility');
 const Allocation = require('../models/Allocation');
 const Project = require('../models/Project');
-const sendNotification = require('../utils/notify');
+const { createNotification } = require('./notificationController');
 const { resolveFileUrl, cleanupUploadedFile } = require('../config/cloudinary');
 
 // @desc   Student uploads a file for an assessment currently visible on their
@@ -65,18 +65,19 @@ const createSubmission = asyncHandler(async (req, res) => {
 
   // Notify the project's CURRENT supervisor (live lookup) - Assessment no
   // longer carries its own supervisor field now that it's a shared template.
-  const project = await Project.findById(allocation.project).populate('supervisor', 'name email');
+  const project = await Project.findById(allocation.project).select('supervisor');
   if (project?.supervisor) {
-    await sendNotification(req.app, {
-      userId: project.supervisor._id,
-      email: project.supervisor.email,
+    await createNotification({
+      user: project.supervisor,
+      type: 'submission_created',
       title: 'New Submission',
       message: `${req.user.name} submitted a file for "${assessment.title}"`,
+      link: '/supervisor/assessments',
     }).catch(() => {});
   }
 
   await submission.populate([
-    { path: 'assessment', select: 'title dueDate files' },
+    { path: 'assessment', select: 'title dueDate files category' },
     { path: 'student', select: 'name email' },
   ]);
 
@@ -105,7 +106,7 @@ const getSubmissions = asyncHandler(async (req, res) => {
   // admin: no filter, sees all
 
   const submissions = await Submission.find(filter)
-    .populate({ path: 'assessment', select: 'title dueDate files' })
+    .populate({ path: 'assessment', select: 'title dueDate files category' })
     .populate('student', 'name email')
     .sort({ createdAt: -1 });
 
@@ -148,16 +149,16 @@ const gradeSubmission = asyncHandler(async (req, res) => {
   submission.gradedAt = new Date();
   await submission.save();
 
-  const studentUser = await submission.populate('student', 'name email');
-  await sendNotification(req.app, {
-    userId: studentUser.student._id,
-    email: studentUser.student.email,
+  await createNotification({
+    user: submission.student,
+    type: 'assessment_graded',
     title: 'Assessment Graded',
     message: `Your submission for "${submission.assessment.title}" has been graded: ${marks}/100`,
+    link: '/student/assessments',
   }).catch(() => {});
 
   await submission.populate([
-    { path: 'assessment', select: 'title dueDate files' },
+    { path: 'assessment', select: 'title dueDate files category' },
     { path: 'student', select: 'name email' },
   ]);
 

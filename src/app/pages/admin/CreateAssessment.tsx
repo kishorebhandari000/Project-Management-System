@@ -10,6 +10,7 @@ export default function CreateAssessment() {
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
+  const [category, setCategory] = useState('');
   const [dueDate, setDueDate] = useState('');
   const [files, setFiles] = useState<File[]>([]);
   const [error, setError] = useState('');
@@ -24,6 +25,7 @@ export default function CreateAssessment() {
       const { assessment } = await api.post('/assessments', {
         title,
         description,
+        category,
         dueDate: dueDate || undefined,
       });
 
@@ -93,6 +95,21 @@ export default function CreateAssessment() {
                         className="w-full border border-gray-300 rounded-md px-4 py-3 h-28 focus:outline-none focus:border-[#2563a8]"
                         placeholder="What students need to submit"
                       ></textarea>
+                    </div>
+
+                    <div>
+                      <label className="block text-gray-700 mb-2">Category</label>
+                      <select
+                        value={category}
+                        onChange={(e) => setCategory(e.target.value)}
+                        className="w-full border border-gray-300 rounded-md px-4 py-3 focus:outline-none focus:border-[#2563a8]"
+                        required
+                      >
+                        <option value="">Select a category</option>
+                        <option value="tutorial">Tutorial</option>
+                        <option value="report">Project Report</option>
+                        <option value="presentation">Project Presentation</option>
+                      </select>
                     </div>
 
                     <div>

@@ -2,7 +2,7 @@ const Task = require('../models/Task');
 const Project = require('../models/Project');
 const Allocation = require('../models/Allocation');
 const asyncHandler = require('../utils/asyncHandler');
-const sendNotification = require('../utils/notify');
+const { createNotification } = require('./notificationController');
    const User = require('../models/User');
 
 async function assertProjectAccess(projectId, user) {
@@ -105,9 +105,10 @@ const updateTask = asyncHandler(async (req, res) => {
   if (assignee !== undefined && String(assignee) !== previousAssignee) {
     const assignedUser = await User.findById(assignee);
     if (assignedUser) {
-      await sendNotification(req.app, {
-        userId: assignedUser._id,
-        email: assignedUser.email,
+      // No `link` - there's no dedicated tasks page in the frontend to point to.
+      await createNotification({
+        user: assignedUser._id,
+        type: 'task_assigned',
         title: 'New task assigned',
         message: `You've been assigned "${task.title}"`,
       });

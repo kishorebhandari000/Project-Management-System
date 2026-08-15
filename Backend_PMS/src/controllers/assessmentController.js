@@ -3,7 +3,7 @@ const Assessment = require('../models/Assessment');
 const AssessmentVisibility = require('../models/AssessmentVisibility');
 const Allocation = require('../models/Allocation');
 const Project = require('../models/Project');
-const sendNotification = require('../utils/notify');
+const { createNotification } = require('./notificationController');
 const { resolveFileUrl } = require('../config/cloudinary');
 
 // ─── ADMIN ───────────────────────────────────────────────────────────────────
@@ -13,14 +13,19 @@ const { resolveFileUrl } = require('../config/cloudinary');
 //         record exists yet for any project until a supervisor turns one on.
 // @route  POST /api/assessments
 // @access Private/Admin
+const ASSESSMENT_CATEGORIES = ['tutorial', 'report', 'presentation'];
+
 const createAssessment = asyncHandler(async (req, res) => {
-  const { title, description, dueDate } = req.body;
+  const { title, description, dueDate, category } = req.body;
 
   if (!title) {
     return res.status(400).json({ message: 'title is required' });
   }
+  if (!category || !ASSESSMENT_CATEGORIES.includes(category)) {
+    return res.status(400).json({ message: `category is required and must be one of: ${ASSESSMENT_CATEGORIES.join(', ')}` });
+  }
 
-  const assessment = await Assessment.create({ title, description, dueDate });
+  const assessment = await Assessment.create({ title, description, dueDate, category });
 
   res.status(201).json({ assessment });
 });
@@ -161,11 +166,12 @@ const setAssessmentVisibility = asyncHandler(async (req, res) => {
       approvedAllocations
         .filter((alloc) => alloc.student)
         .map((alloc) =>
-          sendNotification(req.app, {
-            userId: alloc.student._id,
-            email: alloc.student.email,
+          createNotification({
+            user: alloc.student._id,
+            type: 'assessment_visible',
             title: 'New Assessment Available',
             message: `New assessment available: "${assessment.title}"`,
+            link: '/student/assessments',
           }).catch(() => {})
         )
     );

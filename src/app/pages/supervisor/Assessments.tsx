@@ -3,6 +3,11 @@ import Sidebar from '../../components/Sidebar';
 import { api } from '../../lib/api';
 import ProfileAvatar from '../../components/ProfileAvatar';
 import NotificationBell from '../../components/NotificationBell';
+import AssessmentCategoryTabs, {
+  ASSESSMENT_CATEGORY_LABELS,
+  type AssessmentCategory,
+  type AssessmentCategoryFilter,
+} from '../../components/AssessmentCategoryTabs';
 
 interface AssessmentFile {
   url: string;
@@ -19,6 +24,7 @@ interface AssessmentTemplate {
   _id: string;
   title: string;
   description: string;
+  category: AssessmentCategory;
   dueDate?: string;
   files: AssessmentFile[];
   projects: ProjectVisibility[];
@@ -26,7 +32,7 @@ interface AssessmentTemplate {
 
 interface Submission {
   _id: string;
-  assessment: { _id: string; title: string };
+  assessment: { _id: string; title: string; category: AssessmentCategory };
   student: { name: string; email: string };
   status: 'submitted' | 'graded';
   marks: number | null;
@@ -49,6 +55,7 @@ export default function SupervisorAssessments() {
   const [saveError, setSaveError] = useState('');
   const [toast, setToast] = useState('');
   const [togglingKey, setTogglingKey] = useState<string | null>(null);
+  const [categoryFilter, setCategoryFilter] = useState<AssessmentCategoryFilter>('all');
 
   const loadData = () => {
     setLoading(true);
@@ -66,9 +73,18 @@ export default function SupervisorAssessments() {
     loadData();
   }, []);
 
-  const pending = submissions.filter((s) => s.status === 'submitted');
-  const graded = submissions.filter((s) => s.status === 'graded');
-  const feedbackGiven = submissions.filter((s) => s.feedback && s.feedback.trim());
+  // Category tabs filter both sections consistently: templates by their own
+  // category, submissions by their (populated) assessment's category. The
+  // stat cards below are then derived from these same filtered arrays, so
+  // "All" naturally reproduces the old unfiltered totals.
+  const filteredTemplates =
+    categoryFilter === 'all' ? templates : templates.filter((t) => t.category === categoryFilter);
+  const filteredSubmissions =
+    categoryFilter === 'all' ? submissions : submissions.filter((s) => s.assessment?.category === categoryFilter);
+
+  const pending = filteredSubmissions.filter((s) => s.status === 'submitted');
+  const graded = filteredSubmissions.filter((s) => s.status === 'graded');
+  const feedbackGiven = filteredSubmissions.filter((s) => s.feedback && s.feedback.trim());
 
   const openEditor = (submission: Submission) => {
     setExpandedId((prev) => (prev === submission._id ? null : submission._id));
@@ -144,7 +160,7 @@ export default function SupervisorAssessments() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
             <div className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm">
               <div className="text-gray-600 mb-1">Templates</div>
-              <div className="text-3xl">{templates.length}</div>
+              <div className="text-3xl">{filteredTemplates.length}</div>
             </div>
             <div className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm">
               <div className="text-gray-600 mb-1">Pending Review</div>
@@ -162,6 +178,10 @@ export default function SupervisorAssessments() {
 
           {error && <div className="bg-red-50 border border-red-200 text-red-700 p-4 rounded-lg mb-6">{error}</div>}
 
+          {!loading && !error && (templates.length > 0 || submissions.length > 0) && (
+            <AssessmentCategoryTabs value={categoryFilter} onChange={setCategoryFilter} />
+          )}
+
           {/* Assessment templates + per-project visibility */}
           <div className="bg-white rounded-lg border border-gray-200 shadow-sm mb-8">
             <div className="px-6 py-4 border-b border-gray-200">
@@ -175,13 +195,26 @@ export default function SupervisorAssessments() {
               <div className="text-center py-10 text-gray-500">No assessment templates have been created yet.</div>
             )}
 
-            {!loading && templates.length > 0 && (
+            {!loading && templates.length > 0 && filteredTemplates.length === 0 && (
+              <div className="text-center py-10 text-gray-500">
+                No {categoryFilter !== 'all' ? ASSESSMENT_CATEGORY_LABELS[categoryFilter] : ''} templates.
+              </div>
+            )}
+
+            {filteredTemplates.length > 0 && (
               <div className="divide-y divide-gray-200">
-                {templates.map((t) => (
+                {filteredTemplates.map((t) => (
                   <div key={t._id} className="px-6 py-5">
                     <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-4">
                       <div>
-                        <h3 className="text-lg">{t.title}</h3>
+                        <div className="flex items-center gap-2">
+                          <h3 className="text-lg">{t.title}</h3>
+                          {t.category && (
+                            <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">
+                              {ASSESSMENT_CATEGORY_LABELS[t.category]}
+                            </span>
+                          )}
+                        </div>
                         {t.description && <p className="text-sm text-gray-600 mt-1">{t.description}</p>}
                         {t.dueDate && (
                           <p className="text-xs text-gray-400 mt-1">Due: {new Date(t.dueDate).toLocaleDateString()}</p>
@@ -241,7 +274,13 @@ export default function SupervisorAssessments() {
             </div>
           )}
 
-          {submissions.length > 0 && (
+          {!loading && !error && submissions.length > 0 && filteredSubmissions.length === 0 && (
+            <div className="bg-white rounded-lg p-16 border border-gray-200 text-center text-gray-500">
+              No {categoryFilter !== 'all' ? ASSESSMENT_CATEGORY_LABELS[categoryFilter] : ''} submissions.
+            </div>
+          )}
+
+          {filteredSubmissions.length > 0 && (
             <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
               <div className="overflow-x-auto">
                 <table className="w-full">
@@ -257,7 +296,7 @@ export default function SupervisorAssessments() {
                     </tr>
                   </thead>
                   <tbody>
-                    {submissions.map((s) => {
+                    {filteredSubmissions.map((s) => {
                       const isExpanded = expandedId === s._id;
                       return (
                         <React.Fragment key={s._id}>

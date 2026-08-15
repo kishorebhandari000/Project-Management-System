@@ -3,6 +3,11 @@ import Sidebar from '../../components/Sidebar';
 import { api } from '../../lib/api';
 import ProfileAvatar from '../../components/ProfileAvatar';
 import NotificationBell from '../../components/NotificationBell';
+import AssessmentCategoryTabs, {
+  ASSESSMENT_CATEGORY_LABELS,
+  type AssessmentCategory,
+  type AssessmentCategoryFilter,
+} from '../../components/AssessmentCategoryTabs';
 
 interface AssessmentFile {
   url: string;
@@ -13,13 +18,14 @@ interface Assessment {
   _id: string;
   title: string;
   description: string;
+  category: AssessmentCategory;
   dueDate?: string;
   files: AssessmentFile[];
 }
 
 interface Submission {
   _id: string;
-  assessment: { _id: string };
+  assessment: { _id: string; category?: AssessmentCategory };
   fileUrl: string;
   fileName: string;
   status: 'submitted' | 'graded';
@@ -38,6 +44,7 @@ export default function Assessments() {
   const [submitting, setSubmitting] = useState<string | null>(null);
   const [toast, setToast] = useState('');
   const [hasApprovedProject, setHasApprovedProject] = useState(true);
+  const [categoryFilter, setCategoryFilter] = useState<AssessmentCategoryFilter>('all');
 
   const loadData = async () => {
     setLoading(true);
@@ -88,9 +95,16 @@ export default function Assessments() {
     }
   };
 
-  const total = assessments.length;
-  const submittedCount = submissions.length;
-  const gradedSubmissions = submissions.filter((s) => s.status === 'graded');
+  // Category tabs filter both the assessment list and its stat cards from the
+  // same source, so "All" naturally reproduces the old unfiltered totals.
+  const filteredAssessments =
+    categoryFilter === 'all' ? assessments : assessments.filter((a) => a.category === categoryFilter);
+  const filteredSubmissions =
+    categoryFilter === 'all' ? submissions : submissions.filter((s) => s.assessment?.category === categoryFilter);
+
+  const total = filteredAssessments.length;
+  const submittedCount = filteredSubmissions.length;
+  const gradedSubmissions = filteredSubmissions.filter((s) => s.status === 'graded');
   const gradedCount = gradedSubmissions.length;
   const avgMark = gradedCount
     ? Math.round(gradedSubmissions.reduce((sum, s) => sum + (s.marks ?? 0), 0) / gradedCount)
@@ -151,15 +165,32 @@ export default function Assessments() {
             </div>
           )}
 
+          {!loading && !error && assessments.length > 0 && (
+            <AssessmentCategoryTabs value={categoryFilter} onChange={setCategoryFilter} />
+          )}
+
+          {!loading && !error && assessments.length > 0 && filteredAssessments.length === 0 && (
+            <div className="bg-white rounded-lg p-16 border border-gray-200 text-center text-gray-500">
+              No {categoryFilter !== 'all' ? ASSESSMENT_CATEGORY_LABELS[categoryFilter] : ''} assessments right now.
+            </div>
+          )}
+
           <div className="space-y-4">
-            {assessments.map((a) => {
+            {filteredAssessments.map((a) => {
               const submission = submissionFor(a._id);
               return (
                 <div key={a._id} className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
                   <div className="p-6">
                     <div className="flex justify-between items-start mb-3">
                       <div>
-                        <h3 className="text-lg mb-1">{a.title}</h3>
+                        <div className="flex items-center gap-2 mb-1">
+                          <h3 className="text-lg">{a.title}</h3>
+                          {a.category && (
+                            <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">
+                              {ASSESSMENT_CATEGORY_LABELS[a.category]}
+                            </span>
+                          )}
+                        </div>
                         {a.description && <p className="text-sm text-gray-600 mt-1">{a.description}</p>}
                         {a.files?.length > 0 && (
                           <div className="mt-2 flex flex-wrap gap-3">
