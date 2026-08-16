@@ -166,7 +166,7 @@ export default function ManageProjects() {
                     onChange={(e) => setStatusFilter(e.target.value)}
                     className="w-full sm:w-auto border border-gray-300 rounded-md px-4 py-2 focus:outline-none focus:border-[#2563a8]"
                   >
-                    <option value="">All statuses</option>
+                    <option value="">Status</option>
                     <option value="open">Open</option>
                     <option value="allocated">Allocated</option>
                     <option value="closed">Closed</option>
@@ -181,7 +181,7 @@ export default function ManageProjects() {
                     onChange={(e) => setSupervisorFilter(e.target.value)}
                     className="w-full sm:w-auto border border-gray-300 rounded-md px-4 py-2 focus:outline-none focus:border-[#2563a8]"
                   >
-                    <option value="">All supervisors</option>
+                    <option value="">Supervisor</option>
                     {supervisorOptions.map((name) => (
                       <option key={name} value={name}>{name}</option>
                     ))}
