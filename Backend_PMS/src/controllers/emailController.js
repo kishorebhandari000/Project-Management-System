@@ -4,16 +4,26 @@ const transporter = require('../utils/mailer');
 const User = require('../models/User');
 const { createNotification } = require('./notificationController');
 
-// @desc   Supervisor/Admin sends a free-text email to any address via the
-//         real SMTP transporter - not restricted to known accounts, matching
-//         the old (dead, Supabase-based) feature's behavior.
+// @desc   Supervisor/Admin/Student sends a free-text email via the real SMTP
+//         transporter. Admin and supervisor can email any address, matching
+//         the old (dead, Supabase-based) feature's behavior. A student may
+//         only email an address that belongs to an existing supervisor
+//         account - enforced below, not just suggested by the UI.
 // @route  POST /api/emails
-// @access Private/Supervisor,Admin
+// @access Private/Admin,Supervisor,Student
 const sendDirectEmail = asyncHandler(async (req, res) => {
   const { recipientEmail, subject, message } = req.body;
 
   if (!recipientEmail || !subject || !message) {
     return res.status(400).json({ message: 'recipientEmail, subject and message are required' });
+  }
+
+  // Looked up once, up front - doubles as the student-role precondition
+  // check below and as the courtesy in-app notification target further down.
+  const recipientUser = await User.findOne({ email: recipientEmail.trim().toLowerCase() });
+
+  if (req.user.role === 'student' && (!recipientUser || recipientUser.role !== 'supervisor')) {
+    return res.status(403).json({ message: 'You can only email a supervisor' });
   }
 
   const html = `
@@ -53,7 +63,6 @@ const sendDirectEmail = asyncHandler(async (req, res) => {
 
   // Courtesy in-app trace, only when the typed address happens to belong to
   // a known account - the email itself already went out either way.
-  const recipientUser = await User.findOne({ email: recipientEmail.trim().toLowerCase() });
   if (recipientUser) {
     await createNotification({
       user: recipientUser._id,

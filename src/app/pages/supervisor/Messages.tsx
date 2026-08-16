@@ -174,7 +174,7 @@ function EmailPanel() {
     try {
       await api.post('/emails', { recipientEmail, subject, message });
 
-      setSuccessMessage('Email sent successfully to student!');
+      setSuccessMessage('Email sent successfully!');
       setRecipientEmail('');
       setSubject('');
       setMessage('');
@@ -189,7 +189,7 @@ function EmailPanel() {
   return (
     <div className="max-w-3xl mx-auto">
       <div className="bg-white rounded-lg p-8 border border-gray-200 shadow-sm">
-        <h2 className="text-xl mb-6">Send Email to Student</h2>
+        <h2 className="text-xl mb-6">Send Email</h2>
 
         {successMessage && (
           <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-6">
@@ -205,13 +205,13 @@ function EmailPanel() {
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>
-            <label className="block text-gray-700 mb-2">Student Email *</label>
+            <label className="block text-gray-700 mb-2">Recipient Email *</label>
             <input
               type="email"
               value={recipientEmail}
               onChange={(e) => setRecipientEmail(e.target.value)}
               className="w-full border border-gray-300 rounded-md px-4 py-3 focus:outline-none focus:border-[#2563a8]"
-              placeholder="student@university.edu"
+              placeholder="recipient@university.edu"
               required
             />
           </div>
@@ -244,7 +244,7 @@ function EmailPanel() {
             <ul className="text-sm text-blue-700 space-y-1 list-disc list-inside">
               <li>Provide clear guidance and constructive feedback</li>
               <li>Include all relevant details and resources</li>
-              <li>Your student will receive this email directly</li>
+              <li>The recipient will receive this email directly</li>
               <li>They can reply to your university email address</li>
             </ul>
           </div>

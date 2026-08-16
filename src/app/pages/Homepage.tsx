@@ -95,26 +95,26 @@ export default function Homepage() {
       <section id="features" className="py-20 px-6 bg-white scroll-mt-[88px]">
         <div className="max-w-6xl mx-auto">
           <h2 className="text-4xl text-center mb-16">Our Features</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-10">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-10">
             <div className="bg-white border border-gray-200 rounded-lg p-8 shadow-sm">
               <h3 className="text-xl mb-3">Project Selection</h3>
               <p className="text-gray-600">
-                Browse available projects and submit requests to supervisors.
-                Track your application status in real-time.
+                Browse available projects and apply as a group with your teammates.
+                Applications go through supervisor review, then final admin approval, with your status tracked the whole way.
               </p>
             </div>
             <div className="bg-white border border-gray-200 rounded-lg p-8 shadow-sm">
               <h3 className="text-xl mb-3">Assessment Submission</h3>
               <p className="text-gray-600">
-                Submit your assessments and deliverables easily.
-                Keep track of deadlines and submission status.
+                Submit tutorials, reports, and presentations as your supervisor releases them throughout the trimester.
+                Keep track of due dates and submission status for every assessment.
               </p>
             </div>
             <div className="bg-white border border-gray-200 rounded-lg p-8 shadow-sm">
               <h3 className="text-xl mb-3">Feedback & Marks</h3>
               <p className="text-gray-600">
-                Receive detailed feedback from your supervisor.
-                View your marks and progress throughout the project.
+                Receive detailed written feedback from your supervisor as soon as each submission is graded.
+                View your marks and track your progress across every assessment.
               </p>
             </div>
           </div>
