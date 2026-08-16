@@ -8,11 +8,12 @@ import NotificationBell from '../../components/NotificationBell';
 interface ProjectFile {
   url: string;
   name: string;
+  uploadedAt?: string;
 }
 
 interface ApiProject {
   _id: string;
-  title: string;
+  title?: string;
   category?: string;
   status: 'open' | 'allocated' | 'closed';
   supervisor?: { name: string };
@@ -32,6 +33,7 @@ export default function ManageProjects() {
   const [query, setQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [supervisorFilter, setSupervisorFilter] = useState('');
+  const [sortBy, setSortBy] = useState('newest');
 
   const supervisorOptions = useMemo(() => {
     const names = new Set<string>();
@@ -43,9 +45,9 @@ export default function ManageProjects() {
 
   const filteredProjects = useMemo(() => {
     const terms = query.trim().toLowerCase().split(/\s+/).filter(Boolean);
-    return projects.filter((project) => {
+    const filtered = projects.filter((project) => {
       const haystack = [
-        project.title,
+        project.title ?? '',
         project.category ?? '',
         project.supervisor?.name ?? '',
         project.description ?? '',
@@ -57,7 +59,39 @@ export default function ManageProjects() {
       if (supervisorFilter && (project.supervisor?.name ?? '') !== supervisorFilter) return false;
       return true;
     });
-  }, [projects, query, statusFilter, supervisorFilter]);
+
+    const createdTime = (project: ApiProject) =>
+      project.createdAt ? new Date(project.createdAt).getTime() : -Infinity;
+
+    const mostRecentUpload = (project: ApiProject) => {
+      const files = project.files ?? [];
+      let max = -Infinity;
+      for (const file of files) {
+        const t = file.uploadedAt ? new Date(file.uploadedAt).getTime() : -Infinity;
+        if (t > max) max = t;
+      }
+      return max;
+    };
+
+    const sorted = [...filtered];
+    if (sortBy === 'newest') {
+      sorted.sort((a, b) => createdTime(b) - createdTime(a));
+    } else if (sortBy === 'oldest') {
+      sorted.sort((a, b) => createdTime(a) - createdTime(b));
+    } else if (sortBy === 'recent-uploads') {
+      sorted.sort((a, b) => {
+        const aHasFiles = (a.files ?? []).length > 0;
+        const bHasFiles = (b.files ?? []).length > 0;
+        if (aHasFiles !== bHasFiles) return aHasFiles ? -1 : 1;
+        if (!aHasFiles && !bHasFiles) return createdTime(b) - createdTime(a);
+        return mostRecentUpload(b) - mostRecentUpload(a);
+      });
+    } else if (sortBy === 'title') {
+      sorted.sort((a, b) => (a.title ?? '').localeCompare(b.title ?? '', undefined, { sensitivity: 'base' }));
+    }
+
+    return sorted;
+  }, [projects, query, statusFilter, supervisorFilter, sortBy]);
 
   const hasActiveFilter = query.trim() !== '' || statusFilter !== '' || supervisorFilter !== '';
 
@@ -65,6 +99,7 @@ export default function ManageProjects() {
     setQuery('');
     setStatusFilter('');
     setSupervisorFilter('');
+    setSortBy('newest');
   };
 
   const loadProjects = async () => {
@@ -147,7 +182,7 @@ export default function ManageProjects() {
 
           {!loading && (
             <>
-              <div className="flex flex-col sm:flex-row gap-3 mb-6">
+              <div className="flex flex-col sm:flex-row sm:flex-wrap gap-3 mb-6">
                 <div className="flex-1">
                   <label htmlFor="project-search" className="sr-only">Search projects</label>
                   <input
@@ -190,6 +225,21 @@ export default function ManageProjects() {
                   </select>
                 </div>
 
+                <div>
+                  <label htmlFor="project-sort" className="sr-only">Sort projects</label>
+                  <select
+                    id="project-sort"
+                    value={sortBy}
+                    onChange={(e) => setSortBy(e.target.value)}
+                    className="w-full sm:w-auto border border-gray-300 rounded-md px-4 py-2 focus:outline-none focus:border-[#2563a8]"
+                  >
+                    <option value="newest">Newest first</option>
+                    <option value="oldest">Oldest first</option>
+                    <option value="recent-uploads">Recent uploads</option>
+                    <option value="title">Title A-Z</option>
+                  </select>
+                </div>
+
                 {hasActiveFilter && (
                   <button
                     type="button"
@@ -229,7 +279,7 @@ export default function ManageProjects() {
                 <div key={project._id} className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
                   <div className="flex justify-between items-start mb-3">
                     <div>
-                      <h3 className="text-lg">{project.title}</h3>
+                      <h3 className="text-lg">{project.title || 'Untitled project'}</h3>
                       <div className="text-sm text-gray-600 mt-1">
                         {project.supervisor?.name || '-'} · {project.category || '-'} ·{' '}
                         <span className={project.status === 'open' ? 'text-green-600' : 'text-gray-500'}>
@@ -237,7 +287,7 @@ export default function ManageProjects() {
                         </span>
                       </div>
                       <div className="text-xs text-gray-500 mt-1">
-                        Created {project.createdAt ? new Date(project.createdAt).toLocaleDateString() : '—'}
+                        Created: {project.createdAt ? new Date(project.createdAt).toLocaleDateString() : '—'}
                         {' · '}
                         Group size: {project.maxStudents ?? 1} {(project.maxStudents ?? 1) === 1 ? 'student' : 'students'}
                       </div>
@@ -281,11 +331,22 @@ export default function ManageProjects() {
                     )}
                     {project.files && project.files.length > 0 && (
                       <ul className="space-y-1">
-                       {project.files.map((f, idx) => (
-                          <li key={idx}>
+                       {[...(project.files ?? [])]
+                         .sort((a, b) => {
+                           const aTime = a.uploadedAt ? new Date(a.uploadedAt).getTime() : -Infinity;
+                           const bTime = b.uploadedAt ? new Date(b.uploadedAt).getTime() : -Infinity;
+                           return bTime - aTime;
+                         })
+                         .map((f) => (
+                          <li key={f.url}>
                             <a href={f.url} target="_blank" rel="noopener noreferrer" className="text-[#2563a8] hover:underline text-sm">
                               📎 {f.name}
                             </a>
+                            {f.uploadedAt && (
+                              <span className="text-xs text-gray-400 ml-2">
+                                {new Date(f.uploadedAt).toLocaleDateString()}
+                              </span>
+                            )}
                           </li>
                         ))}
                       </ul>
