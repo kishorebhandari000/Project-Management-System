@@ -18,6 +18,8 @@ interface ApiProject {
   supervisor?: { name: string };
   files?: ProjectFile[];
   description?: string;
+  createdAt?: string;
+  maxStudents?: number;
 }
 
 export default function ManageProjects() {
@@ -233,6 +235,11 @@ export default function ManageProjects() {
                         <span className={project.status === 'open' ? 'text-green-600' : 'text-gray-500'}>
                           {project.status}
                         </span>
+                      </div>
+                      <div className="text-xs text-gray-500 mt-1">
+                        Created {project.createdAt ? new Date(project.createdAt).toLocaleDateString() : '—'}
+                        {' · '}
+                        Group size: {project.maxStudents ?? 1} {(project.maxStudents ?? 1) === 1 ? 'student' : 'students'}
                       </div>
                     </div>
                     <div className="flex gap-2">
