@@ -23,11 +23,10 @@ interface ApiAllocation {
 
 interface ApiAssessment {
   _id: string;
-  title: string;
-  status: 'not_submitted' | 'submitted' | 'graded';
+  status: 'submitted' | 'graded';
   submittedAt?: string;
   student: { _id: string; name: string } | null;
-  project: { title: string } | null;
+  assessment: { _id: string; title: string } | null;
 }
 
 export default function SupervisorDashboard() {
@@ -47,12 +46,12 @@ export default function SupervisorDashboard() {
       const [projectsRes, allocationsRes, assessmentsRes] = await Promise.all([
         api.get('/projects'),
         api.get('/allocations'),
-        api.get('/assessments/supervisor'),
+        api.get('/submissions'),
       ]);
       setProjects(projectsRes.projects);
       // Skip any allocation whose linked project or student no longer exists (deleted record)
       setAllocations(allocationsRes.allocations.filter((a: ApiAllocation) => a.project && a.student));
-      setAssessments(assessmentsRes.assessments);
+      setAssessments(assessmentsRes.submissions);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load dashboard');
     } finally {
@@ -222,13 +221,13 @@ export default function SupervisorDashboard() {
                 pendingReviews.map((a) => (
                   <div key={a._id} className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 pb-3 border-b border-gray-200 last:border-b-0">
                     <div>
-                      <div>{a.student?.name || 'Unknown student'} - {a.title}</div>
+                      <div>{a.student?.name || 'Unknown student'} - {a.assessment?.title || 'Unknown assessment'}</div>
                       <div className="text-sm text-gray-600">
                         Submitted: {a.submittedAt ? new Date(a.submittedAt).toLocaleDateString() : '—'}
                       </div>
                     </div>
                     <Link
-                      to={`/supervisor/assessments/grade/${a._id}`}
+                      to="/supervisor/assessments"
                       className="bg-[#2563a8] text-white px-4 py-2 rounded-md hover:bg-[#1e4a8a] text-center"
                     >
                       Review
