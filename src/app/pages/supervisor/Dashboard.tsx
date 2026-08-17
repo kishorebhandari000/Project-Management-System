@@ -6,6 +6,7 @@ import { useEffect, useState } from 'react';
 import { api } from '../../lib/api';
 import SectionHint from '../../components/SectionHint';
 import { sectionHints } from '../../lib/sectionHints';
+import { useCommentPrompt } from '../../hooks/useCommentPrompt';
 
 interface ApiProject {
   _id: string;
@@ -36,6 +37,7 @@ export default function SupervisorDashboard() {
   const [assessments, setAssessments] = useState<ApiAssessment[]>([]);
   const [decidingId, setDecidingId] = useState<string | null>(null);
   const [error, setError] = useState('');
+  const promptComment = useCommentPrompt();
 
   const userName = localStorage.getItem('userName') || 'Supervisor';
 
@@ -76,9 +78,21 @@ export default function SupervisorDashboard() {
   };
 
   const handleDecision = async (id: string, decision: 'approved' | 'rejected') => {
+    const comment = await promptComment({
+      title: decision === 'approved' ? 'Approve request' : 'Reject request',
+      message:
+        decision === 'approved'
+          ? 'Add an optional note for the student before approving.'
+          : 'Let the student know why this request is being rejected.',
+      confirmLabel: decision === 'approved' ? 'Approve' : 'Reject',
+      variant: decision === 'rejected' ? 'danger' : 'default',
+      required: decision === 'rejected',
+    });
+    if (comment === null) return;
+
     setDecidingId(id);
     try {
-      await api.put(`/allocations/${id}/decision`, { decision });
+      await api.put(`/allocations/${id}/decision`, { decision, comment });
       await loadData();
     } catch (err) {
       alert(err instanceof Error ? err.message : 'Failed to update request');
