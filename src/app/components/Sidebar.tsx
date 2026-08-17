@@ -1,8 +1,9 @@
 import { Link, useLocation } from 'react-router';
 import { useState } from 'react';
 import { Menu, X } from 'lucide-react';
+import * as TooltipPrimitive from '@radix-ui/react-tooltip';
 import Logo from './Logo';
-import SectionHint from './SectionHint';
+import { TooltipProvider, TooltipTrigger, TooltipContent } from './ui/tooltip';
 import { sectionHints } from '../lib/sectionHints';
 
 interface SidebarProps {
@@ -55,27 +56,35 @@ export default function Sidebar({ role }: SidebarProps) {
 
   const navContent = (
     <>
-      <nav className="space-y-2">
-        {links.map((link) => (
-          <div
-            key={link.to}
-            className={`rounded-md transition-colors flex items-center justify-between pr-3 ${
-              location.pathname === link.to
-                ? 'bg-[#2563a8]'
-                : 'hover:bg-[#2a4a70]'
-            }`}
-          >
-            <Link
-              to={link.to}
-              onClick={() => setMobileOpen(false)}
-              className="px-4 py-3 flex-1 block"
+      <TooltipProvider delayDuration={300} skipDelayDuration={0}>
+        <nav className="space-y-2">
+          {links.map((link) => (
+            <div
+              key={link.to}
+              className={`rounded-md transition-colors ${
+                location.pathname === link.to
+                  ? 'bg-[#2563a8]'
+                  : 'hover:bg-[#2a4a70]'
+              }`}
             >
-              {link.label}
-            </Link>
-            <SectionHint text={link.hint} className="section-hint__trigger--on-dark" />
-          </div>
-        ))}
-      </nav>
+              <TooltipPrimitive.Root>
+                <TooltipTrigger asChild>
+                  <Link
+                    to={link.to}
+                    onClick={() => setMobileOpen(false)}
+                    className="px-4 py-3 block"
+                  >
+                    {link.label}
+                  </Link>
+                </TooltipTrigger>
+                <TooltipContent side="right" sideOffset={8}>
+                  {link.hint}
+                </TooltipContent>
+              </TooltipPrimitive.Root>
+            </div>
+          ))}
+        </nav>
+      </TooltipProvider>
       <div className="mt-10 pt-6 border-t border-gray-600">
         <Link
           to="/login"
