@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const reactionSchema = require('./reactionSchema');
 
 const discussionThreadSchema = new mongoose.Schema(
   {
@@ -7,6 +8,7 @@ const discussionThreadSchema = new mongoose.Schema(
     status: { type: String, enum: ['open', 'closed'], default: 'open' },
     project: { type: mongoose.Schema.Types.ObjectId, ref: 'Project', required: true },
     createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+    reactions: [reactionSchema],
   },
   { timestamps: true }
 );

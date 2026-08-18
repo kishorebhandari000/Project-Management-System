@@ -7,6 +7,8 @@ const {
   createComment,
   deletePost,
   deleteComment,
+  reactToPost,
+  reactToComment,
 } = require('../controllers/forumController');
 const { protect } = require('../middleware/auth');
 
@@ -17,8 +19,10 @@ const router = express.Router();
 router.route('/').get(getPosts).post(protect, createPost);
 // Post deletion is admin-or-own-author, enforced in the controller.
 router.route('/:id').get(getPost).delete(protect, deletePost);
+router.route('/:id/react').post(protect, reactToPost);
 router.route('/:id/comments').get(getComments).post(protect, createComment);
 // Comment deletion is admin-or-own-author, enforced in the controller (not roleGuard'd here).
 router.route('/:id/comments/:commentId').delete(protect, deleteComment);
+router.route('/:id/comments/:commentId/react').post(protect, reactToComment);
 
 module.exports = router;

@@ -1,5 +1,6 @@
 import Sidebar from '../../components/Sidebar';
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router';
 import { api } from '../../lib/api';
 import ProfileAvatar from '../../components/ProfileAvatar';
 import NotificationBell from '../../components/NotificationBell';
@@ -31,6 +32,7 @@ interface Summary {
 const LIVE_REFRESH_MS = 10000;
 
 export default function Reports() {
+  const navigate = useNavigate();
   const [summary, setSummary] = useState<Summary | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -91,19 +93,30 @@ export default function Reports() {
             <>
               {/* Summary Cards */}
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-                <div className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm">
+                <div
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => navigate('/admin/projects')}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      navigate('/admin/projects');
+                    }
+                  }}
+                  className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm cursor-pointer transition-shadow hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-[#2563a8]"
+                >
                   <div className="text-gray-600 mb-2">Total Projects</div>
                   <div className="text-4xl text-[#2563a8]">{summary.totalProjects}</div>
                 </div>
-                <div className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm">
+                <div className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm transition-shadow hover:shadow-lg">
                   <div className="text-gray-600 mb-2">Allocation Completion</div>
                   <div className="text-4xl text-green-600">{summary.completionRate}%</div>
                 </div>
-                <div className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm">
+                <div className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm transition-shadow hover:shadow-lg">
                   <div className="text-gray-600 mb-2">Avg Grade</div>
                   <div className="text-4xl text-[#2563a8]">{summary.avgGrade || '—'}</div>
                 </div>
-                <div className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm">
+                <div className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm transition-shadow hover:shadow-lg">
                   <div className="text-gray-600 mb-2">Pending Reviews</div>
                   <div className="text-4xl text-orange-600">{summary.pendingReviews}</div>
                 </div>

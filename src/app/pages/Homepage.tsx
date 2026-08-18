@@ -215,7 +215,7 @@ export default function Homepage() {
           </div>
 
           <div className="text-center mt-8">
-            <Link to="/login" className="inline-block text-[#2563a8] hover:underline">
+            <Link to="/forum" className="inline-block text-[#2563a8] hover:underline">
               View All Discussions →
             </Link>
           </div>

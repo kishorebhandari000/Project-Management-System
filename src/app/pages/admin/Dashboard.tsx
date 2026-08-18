@@ -110,25 +110,25 @@ export default function AdminDashboard() {
 
         <div className="p-8">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-            <div className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm">
+            <Link to="/admin/users" className="block bg-white rounded-lg p-6 border border-gray-200 shadow-sm transition-shadow hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-[#2563a8]">
               <div className="text-gray-600 mb-1">Total Students</div>
               <div className="text-3xl">{loading ? '—' : stats.totalStudents}</div>
-            </div>
-            <div className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm">
+            </Link>
+            <Link to="/admin/users" className="block bg-white rounded-lg p-6 border border-gray-200 shadow-sm transition-shadow hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-[#2563a8]">
               <div className="text-gray-600 mb-1">Supervisors</div>
               <div className="text-3xl">{loading ? '—' : stats.supervisors}</div>
-            </div>
-            <div className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm">
+            </Link>
+            <Link to="/admin/projects" className="block bg-white rounded-lg p-6 border border-gray-200 shadow-sm transition-shadow hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-[#2563a8]">
               <div className="text-gray-600 mb-1">Active Projects</div>
               <div className="text-3xl">{loading ? '—' : stats.activeProjects}</div>
-            </div>
-            <div className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm">
+            </Link>
+            <Link to="/admin/allocation" className="block bg-white rounded-lg p-6 border border-gray-200 shadow-sm transition-shadow hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-[#2563a8]">
               <div className="text-gray-600 mb-1 flex items-center">
                 Pending Allocations
                 <SectionHint text={sectionHints.adminStatPendingAllocations} />
               </div>
               <div className="text-3xl text-orange-600">{loading ? '—' : stats.pendingAllocations}</div>
-            </div>
+            </Link>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

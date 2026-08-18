@@ -2,6 +2,7 @@ const mongoose = require('mongoose');
 const ForumPost = require('../models/ForumPost');
 const ForumComment = require('../models/ForumComment');
 const asyncHandler = require('../utils/asyncHandler');
+const { toggleReaction } = require('../utils/reactions');
 
 const createPost = asyncHandler(async (req, res) => {
   const { title, body } = req.body;
@@ -121,4 +122,46 @@ const deleteComment = asyncHandler(async (req, res) => {
   res.json({ message: 'Comment deleted' });
 });
 
-module.exports = { createPost, getPosts, getPost, getComments, createComment, deletePost, deleteComment };
+const reactToPost = asyncHandler(async (req, res) => {
+  if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+    return res.status(400).json({ message: 'Invalid post id' });
+  }
+
+  const post = await ForumPost.findById(req.params.id);
+  if (!post) {
+    return res.status(404).json({ message: 'Forum post not found' });
+  }
+
+  toggleReaction(post, req.user._id, req.body.emoji);
+  await post.save();
+
+  res.json({ reactions: post.reactions });
+});
+
+const reactToComment = asyncHandler(async (req, res) => {
+  if (!mongoose.Types.ObjectId.isValid(req.params.id) || !mongoose.Types.ObjectId.isValid(req.params.commentId)) {
+    return res.status(400).json({ message: 'Invalid id' });
+  }
+
+  const comment = await ForumComment.findOne({ _id: req.params.commentId, post: req.params.id });
+  if (!comment) {
+    return res.status(404).json({ message: 'Comment not found' });
+  }
+
+  toggleReaction(comment, req.user._id, req.body.emoji);
+  await comment.save();
+
+  res.json({ reactions: comment.reactions });
+});
+
+module.exports = {
+  createPost,
+  getPosts,
+  getPost,
+  getComments,
+  createComment,
+  deletePost,
+  deleteComment,
+  reactToPost,
+  reactToComment,
+};

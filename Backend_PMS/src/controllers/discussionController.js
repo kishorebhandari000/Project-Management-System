@@ -3,6 +3,7 @@ const DiscussionPost = require('../models/DiscussionPost');
 const Project = require('../models/Project');
 const Allocation = require('../models/Allocation');
 const asyncHandler = require('../utils/asyncHandler');
+const { toggleReaction } = require('../utils/reactions');
 
 // Admin, the project's supervisor, or a student with an approved Allocation on it.
 async function assertProjectAccess(projectId, user) {
@@ -191,6 +192,29 @@ const deletePost = asyncHandler(async (req, res) => {
   res.json({ message: 'Post deleted' });
 });
 
+const reactToThread = asyncHandler(async (req, res) => {
+  const { thread } = await loadThreadWithProjectAccess(req.params.id, req.user);
+
+  toggleReaction(thread, req.user._id, req.body.emoji);
+  await thread.save();
+
+  res.json({ reactions: thread.reactions });
+});
+
+const reactToPost = asyncHandler(async (req, res) => {
+  await loadThreadWithProjectAccess(req.params.id, req.user);
+
+  const post = await DiscussionPost.findOne({ _id: req.params.postId, thread: req.params.id });
+  if (!post) {
+    return res.status(404).json({ message: 'Post not found' });
+  }
+
+  toggleReaction(post, req.user._id, req.body.emoji);
+  await post.save();
+
+  res.json({ reactions: post.reactions });
+});
+
 module.exports = {
   createThread,
   getThreads,
@@ -201,4 +225,6 @@ module.exports = {
   getPosts,
   updatePost,
   deletePost,
+  reactToThread,
+  reactToPost,
 };

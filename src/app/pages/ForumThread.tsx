@@ -7,8 +7,14 @@ import { useEffect, useState } from 'react';
 import { api } from '../lib/api';
 import NotificationBell from '../components/NotificationBell';
 import { useConfirm } from '../hooks/useConfirm';
+import ReactionBar from '../components/ReactionBar';
 
 type Role = 'admin' | 'supervisor' | 'student';
+
+interface Reaction {
+  emoji: string;
+  user: string;
+}
 
 interface ForumPost {
   _id: string;
@@ -16,6 +22,7 @@ interface ForumPost {
   body: string;
   createdBy: { _id: string; name: string; email: string };
   createdAt: string;
+  reactions: Reaction[];
 }
 
 interface ForumComment {
@@ -23,6 +30,7 @@ interface ForumComment {
   body: string;
   author: { _id: string; name: string; email: string };
   createdAt: string;
+  reactions: Reaction[];
 }
 
 export default function ForumThread() {
@@ -97,6 +105,32 @@ export default function ForumThread() {
     }
   };
 
+  const handleTogglePostReaction = async (emoji: string) => {
+    if (!isLoggedIn) {
+      navigate('/login');
+      return;
+    }
+    try {
+      const { reactions } = await api.post(`/forum/${id}/react`, { emoji });
+      setPost((prev) => (prev ? { ...prev, reactions } : prev));
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Failed to react');
+    }
+  };
+
+  const handleToggleCommentReaction = async (commentId: string, emoji: string) => {
+    if (!isLoggedIn) {
+      navigate('/login');
+      return;
+    }
+    try {
+      const { reactions } = await api.post(`/forum/${id}/comments/${commentId}/react`, { emoji });
+      setComments((prev) => prev.map((c) => (c._id === commentId ? { ...c, reactions } : c)));
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Failed to react');
+    }
+  };
+
   const handleDeletePost = async () => {
     if (!(await confirm({ message: 'Delete this thread? This will also delete its replies.', confirmLabel: 'Delete', variant: 'danger' }))) return;
     try {
@@ -147,8 +181,15 @@ export default function ForumThread() {
                   {post.body}
                 </div>
 
-                <div className="mt-6 pt-6 border-t border-gray-200 flex items-center gap-6 text-sm text-gray-600">
-                  <span>{comments.length} replies</span>
+                <div className="mt-6 pt-6 border-t border-gray-200">
+                  <div className="flex items-center gap-6 text-sm text-gray-600 mb-1">
+                    <span>{comments.length} replies</span>
+                  </div>
+                  <ReactionBar
+                    reactions={post.reactions}
+                    currentUserId={userId}
+                    onToggle={handleTogglePostReaction}
+                  />
                 </div>
               </div>
 
@@ -184,6 +225,11 @@ export default function ForumThread() {
                               )}
                             </div>
                             <p className="text-gray-700">{comment.body}</p>
+                            <ReactionBar
+                              reactions={comment.reactions}
+                              currentUserId={userId}
+                              onToggle={(emoji) => handleToggleCommentReaction(comment._id, emoji)}
+                            />
                           </div>
                         </div>
                       </div>

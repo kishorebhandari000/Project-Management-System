@@ -114,22 +114,22 @@ export default function StudentDashboard() {
         <div className="p-8">
           {/* Stats Cards */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-            <div className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm">
+            <Link to="/student/projects" className="block bg-white rounded-lg p-6 border border-gray-200 shadow-sm transition-shadow hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-[#2563a8]">
               <div className="text-gray-600 mb-1">Current Project</div>
               <div className="text-3xl">{currentAllocation ? 1 : 0}</div>
-            </div>
-            <div className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm">
+            </Link>
+            <Link to="/student/assessments" className="block bg-white rounded-lg p-6 border border-gray-200 shadow-sm transition-shadow hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-[#2563a8]">
               <div className="text-gray-600 mb-1">Pending Assessments</div>
               <div className="text-3xl">{pendingAssessments.length}</div>
-            </div>
-            <div className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm">
+            </Link>
+            <Link to="/student/assessments" className="block bg-white rounded-lg p-6 border border-gray-200 shadow-sm transition-shadow hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-[#2563a8]">
               <div className="text-gray-600 mb-1">Submitted</div>
               <div className="text-3xl">{submissions.length}</div>
-            </div>
-            <div className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm">
+            </Link>
+            <Link to="/student/assessments" className="block bg-white rounded-lg p-6 border border-gray-200 shadow-sm transition-shadow hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-[#2563a8]">
               <div className="text-gray-600 mb-1">Average Mark</div>
               <div className="text-3xl">{avgMark !== null ? `${avgMark}%` : '-'}</div>
-            </div>
+            </Link>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

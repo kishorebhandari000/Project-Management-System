@@ -5,10 +5,16 @@ import { api } from '../../lib/api';
 import ProfileAvatar from '../../components/ProfileAvatar';
 import NotificationBell from '../../components/NotificationBell';
 import { useConfirm } from '../../hooks/useConfirm';
+import ReactionBar from '../../components/ReactionBar';
 interface Person {
   _id: string;
   name: string;
   email: string;
+}
+
+interface Reaction {
+  emoji: string;
+  user: string;
 }
 
 interface Thread {
@@ -18,6 +24,7 @@ interface Thread {
   createdBy: Person;
   createdAt: string;
   project: { _id: string; title: string; supervisor: string };
+  reactions: Reaction[];
 }
 
 interface Post {
@@ -25,6 +32,7 @@ interface Post {
   content: string;
   createdBy: Person;
   createdAt: string;
+  reactions: Reaction[];
 }
 
 export default function DiscussionThread() {
@@ -81,6 +89,24 @@ export default function DiscussionThread() {
       setReplyError(err instanceof Error ? err.message : 'Failed to post reply');
     } finally {
       setSubmittingReply(false);
+    }
+  };
+
+  const handleToggleThreadReaction = async (emoji: string) => {
+    try {
+      const { reactions } = await api.post(`/discussions/${id}/react`, { emoji });
+      setThread((prev) => (prev ? { ...prev, reactions } : prev));
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Failed to react');
+    }
+  };
+
+  const handleTogglePostReaction = async (postId: string, emoji: string) => {
+    try {
+      const { reactions } = await api.post(`/discussions/${id}/posts/${postId}/react`, { emoji });
+      setPosts((prev) => prev.map((p) => (p._id === postId ? { ...p, reactions } : p)));
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Failed to react');
     }
   };
 
@@ -165,6 +191,11 @@ export default function DiscussionThread() {
                         {new Date(thread.createdAt).toLocaleString()}
                       </div>
                       <div className="text-gray-700 leading-relaxed">{thread.content}</div>
+                      <ReactionBar
+                        reactions={thread.reactions}
+                        currentUserId={userId}
+                        onToggle={handleToggleThreadReaction}
+                      />
                     </div>
                   </div>
                 </div>
@@ -194,6 +225,11 @@ export default function DiscussionThread() {
                               {new Date(post.createdAt).toLocaleString()}
                             </div>
                             <div className="text-gray-700 leading-relaxed">{post.content}</div>
+                            <ReactionBar
+                              reactions={post.reactions}
+                              currentUserId={userId}
+                              onToggle={(emoji) => handleTogglePostReaction(post._id, emoji)}
+                            />
                           </div>
                         </div>
                       </div>

@@ -1,10 +1,12 @@
 const mongoose = require('mongoose');
+const reactionSchema = require('./reactionSchema');
 
 const forumCommentSchema = new mongoose.Schema(
   {
     body: { type: String, required: true, trim: true },
     author: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
     post: { type: mongoose.Schema.Types.ObjectId, ref: 'ForumPost', required: true },
+    reactions: [reactionSchema],
   },
   { timestamps: true }
 );

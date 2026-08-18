@@ -127,28 +127,28 @@ export default function SupervisorDashboard() {
 
           {/* Stats Cards */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-            <div className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm">
+            <Link to="/supervisor/projects" className="block bg-white rounded-lg p-6 border border-gray-200 shadow-sm transition-shadow hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-[#2563a8]">
               <div className="text-gray-600 mb-1">Total Projects</div>
               <div className="text-3xl">{loading ? '—' : projects.length}</div>
-            </div>
-            <div className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm">
+            </Link>
+            <div className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm transition-shadow hover:shadow-lg">
               <div className="text-gray-600 mb-1">Active Students</div>
               <div className="text-3xl">{loading ? '—' : activeStudentIds.size}</div>
             </div>
-            <div className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm">
+            <div className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm transition-shadow hover:shadow-lg">
               <div className="text-gray-600 mb-1 flex items-center">
                 Pending Requests
                 <SectionHint text={sectionHints.supervisorStatPendingRequests} />
               </div>
               <div className="text-3xl text-orange-600">{loading ? '—' : pendingRequests.length}</div>
             </div>
-            <div className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm">
+            <Link to="/supervisor/assessments" className="block bg-white rounded-lg p-6 border border-gray-200 shadow-sm transition-shadow hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-[#2563a8]">
               <div className="text-gray-600 mb-1 flex items-center">
                 To Review
                 <SectionHint text={sectionHints.supervisorStatToReview} />
               </div>
               <div className="text-3xl text-orange-600">{loading ? '—' : pendingReviews.length}</div>
-            </div>
+            </Link>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
