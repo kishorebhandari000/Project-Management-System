@@ -70,13 +70,38 @@ const getAllAssessments = asyncHandler(async (req, res) => {
 
 // ─── STUDENT ─────────────────────────────────────────────────────────────────
 
-// Assessment templates currently released (visible: true) to a project.
+// Assessment templates currently released (visible: true) to a project, with
+// each one's dueDate replaced by that project's extended deadline if a
+// supervisor has set one - callers should never need to look at the raw
+// template date once this has run. originalDueDate/extendedDueDate are also
+// included so the frontend can show "extended from X" if it wants to.
 async function getVisibleAssessmentsForProject(projectId) {
   if (!projectId) return [];
-  const visRecords = await AssessmentVisibility.find({ project: projectId, visible: true }).select('assessment');
+  const visRecords = await AssessmentVisibility.find({ project: projectId, visible: true }).select(
+    'assessment extendedDueDate'
+  );
+  if (visRecords.length === 0) return [];
+
   const assessmentIds = visRecords.map((v) => v.assessment);
-  if (assessmentIds.length === 0) return [];
-  return Assessment.find({ _id: { $in: assessmentIds } }).sort({ dueDate: 1, createdAt: -1 });
+  const extendedByAssessment = new Map(visRecords.map((v) => [String(v.assessment), v.extendedDueDate || null]));
+
+  const assessments = await Assessment.find({ _id: { $in: assessmentIds } });
+
+  return assessments
+    .map((a) => {
+      const extendedDueDate = extendedByAssessment.get(String(a._id)) || null;
+      return {
+        ...a.toObject(),
+        dueDate: extendedDueDate || a.dueDate,
+        originalDueDate: a.dueDate,
+        extendedDueDate,
+      };
+    })
+    .sort((a, b) => {
+      const aTime = a.dueDate ? new Date(a.dueDate).getTime() : Infinity;
+      const bTime = b.dueDate ? new Date(b.dueDate).getTime() : Infinity;
+      return aTime - bTime;
+    });
 }
 
 // @desc   Student gets assessment templates released for their current project
@@ -111,6 +136,7 @@ const getSupervisorAssessments = asyncHandler(async (req, res) => {
   ]);
 
   const visibleByKey = new Map(visRecords.map((v) => [`${v.assessment}:${v.project}`, v.visible]));
+  const extendedByKey = new Map(visRecords.map((v) => [`${v.assessment}:${v.project}`, v.extendedDueDate || null]));
 
   const assessmentsWithVisibility = assessments.map((a) => ({
     ...a.toObject(),
@@ -118,6 +144,7 @@ const getSupervisorAssessments = asyncHandler(async (req, res) => {
       _id: p._id,
       title: p.title,
       visible: visibleByKey.get(`${a._id}:${p._id}`) || false,
+      extendedDueDate: extendedByKey.get(`${a._id}:${p._id}`) || null,
     })),
   }));
 
@@ -180,6 +207,74 @@ const setAssessmentVisibility = asyncHandler(async (req, res) => {
   res.json({ visibility });
 });
 
+// @desc   Supervisor extends an assessment's effective deadline for ONE of
+//         their own projects only - never the shared template's own dueDate,
+//         and never any other project. Admin cannot do this at all (excluded
+//         at the route's roleGuard, not just here). Notifies every approved
+//         student on that project.
+// @route  PUT /api/assessments/:id/extend-deadline
+// @access Private/Supervisor
+const extendDeadline = asyncHandler(async (req, res) => {
+  const { projectId, newDueDate } = req.body;
+  if (!projectId || !newDueDate) {
+    return res.status(400).json({ message: 'projectId and newDueDate are required' });
+  }
+
+  const assessment = await Assessment.findById(req.params.id);
+  if (!assessment) return res.status(404).json({ message: 'Assessment not found' });
+
+  const project = await Project.findById(projectId);
+  if (!project) return res.status(404).json({ message: 'Project not found' });
+
+  const isOwner = project.supervisor && project.supervisor.toString() === req.user._id.toString();
+  if (!isOwner) {
+    return res.status(403).json({ message: 'Only the project supervisor can extend this deadline' });
+  }
+
+  if (!assessment.dueDate) {
+    return res.status(400).json({ message: 'This assessment has no due date to extend' });
+  }
+
+  const parsedNewDate = new Date(newDueDate);
+  if (isNaN(parsedNewDate.getTime())) {
+    return res.status(400).json({ message: 'newDueDate is not a valid date' });
+  }
+  if (parsedNewDate.getTime() <= assessment.dueDate.getTime()) {
+    return res.status(400).json({ message: 'newDueDate must be strictly after the original due date' });
+  }
+
+  const visibility = await AssessmentVisibility.findOneAndUpdate(
+    { assessment: assessment._id, project: project._id },
+    { extendedDueDate: parsedNewDate },
+    { upsert: true, new: true, setDefaultsOnInsert: true }
+  );
+
+  // Only notify if the assessment is actually visible on this project right
+  // now - same condition setAssessmentVisibility uses to decide whether to
+  // notify. extendedDueDate is still saved either way.
+  if (visibility.visible) {
+    const approvedAllocations = await Allocation.find({ project: project._id, status: 'approved' }).populate(
+      'student',
+      'name email'
+    );
+    await Promise.all(
+      approvedAllocations
+        .filter((alloc) => alloc.student)
+        .map((alloc) =>
+          createNotification({
+            user: alloc.student._id,
+            type: 'deadline_extended',
+            title: 'Deadline Extended',
+            message: `The deadline for "${assessment.title}" has been extended to ${parsedNewDate.toLocaleDateString()}.`,
+            link: '/student/assessments',
+          }).catch(() => {})
+        )
+    );
+  }
+
+  res.json({ visibility });
+});
+
 module.exports = {
   createAssessment,
   addAssessmentFile,
@@ -187,4 +282,5 @@ module.exports = {
   getMyAssessments,
   getSupervisorAssessments,
   setAssessmentVisibility,
+  extendDeadline,
 };

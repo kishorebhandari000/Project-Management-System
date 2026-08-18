@@ -20,6 +20,7 @@ interface Assessment {
   description: string;
   category: AssessmentCategory;
   dueDate?: string;
+  extendedDueDate?: string | null;
   files: AssessmentFile[];
 }
 
@@ -219,6 +220,7 @@ export default function Assessments() {
                         {a.dueDate && (
                           <div className="text-xs text-gray-400 mt-1">
                             Due: {new Date(a.dueDate).toLocaleDateString()}
+                            {a.extendedDueDate && <span className="text-amber-600 ml-1">(extended)</span>}
                           </div>
                         )}
                       </div>

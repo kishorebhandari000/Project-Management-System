@@ -32,6 +32,7 @@ interface Assessment {
   _id: string;
   title: string;
   dueDate?: string;
+  extendedDueDate?: string | null;
 }
 
 interface Submission {
@@ -221,6 +222,7 @@ export default function StudentDashboard() {
                       <span className="text-sm">{a.title}</span>
                       <span className="text-xs text-gray-500 shrink-0 ml-4">
                         {a.dueDate ? `Due ${new Date(a.dueDate).toLocaleDateString()}` : 'No due date'}
+                        {a.extendedDueDate && <span className="text-amber-600 ml-1">(extended)</span>}
                       </span>
                     </div>
                   ))}
