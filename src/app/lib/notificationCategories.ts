@@ -11,9 +11,7 @@ export const NOTIFICATION_CATEGORY_TYPES: Record<NotificationCategory, string[]>
     'group_membership_changed',
   ],
   assessments: ['submission_created', 'assessment_graded', 'assessment_visible'],
-  // No type values map here yet - legitimately empty until a deadline-reminder
-  // feature exists. Not a bug.
-  deadlines: [],
+  deadlines: ['deadline_extended'],
 };
 
 export const NOTIFICATION_CATEGORY_LABELS: Record<NotificationCategory, string> = {

@@ -10,6 +10,7 @@ const {
   getMyAssessments,
   getSupervisorAssessments,
   setAssessmentVisibility,
+  extendDeadline,
 } = require('../controllers/assessmentController');
 
 // Admin
@@ -25,5 +26,8 @@ router.get('/supervisor', protect, roleGuard('supervisor'), getSupervisorAssessm
 
 // Admin + Supervisor
 router.put('/:id/visibility', protect, roleGuard('admin', 'supervisor'), setAssessmentVisibility);
+
+// Supervisor only - not admin, per-project deadline extension
+router.put('/:id/extend-deadline', protect, roleGuard('supervisor'), extendDeadline);
 
 module.exports = router;

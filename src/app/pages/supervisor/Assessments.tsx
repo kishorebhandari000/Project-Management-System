@@ -18,6 +18,7 @@ interface ProjectVisibility {
   _id: string;
   title: string;
   visible: boolean;
+  extendedDueDate?: string | null;
 }
 
 interface AssessmentTemplate {
@@ -56,6 +57,10 @@ export default function SupervisorAssessments() {
   const [toast, setToast] = useState('');
   const [togglingKey, setTogglingKey] = useState<string | null>(null);
   const [categoryFilter, setCategoryFilter] = useState<AssessmentCategoryFilter>('all');
+  const [extendingKey, setExtendingKey] = useState<string | null>(null);
+  const [dueDateDraft, setDueDateDraft] = useState('');
+  const [extendSaving, setExtendSaving] = useState(false);
+  const [extendError, setExtendError] = useState('');
 
   const loadData = () => {
     setLoading(true);
@@ -130,6 +135,44 @@ export default function SupervisorAssessments() {
       alert(e instanceof Error ? e.message : 'Failed to update visibility');
     } finally {
       setTogglingKey(null);
+    }
+  };
+
+  const openExtend = (assessmentId: string, projectId: string) => {
+    const key = `${assessmentId}:${projectId}`;
+    setExtendingKey((prev) => (prev === key ? null : key));
+    setDueDateDraft('');
+    setExtendError('');
+  };
+
+  const handleExtendDeadline = async (assessmentId: string, projectId: string) => {
+    if (!dueDateDraft) return;
+    setExtendSaving(true);
+    setExtendError('');
+    try {
+      const { visibility } = await api.put(`/assessments/${assessmentId}/extend-deadline`, {
+        projectId,
+        newDueDate: dueDateDraft,
+      });
+      setTemplates((prev) =>
+        prev.map((t) =>
+          t._id !== assessmentId
+            ? t
+            : {
+                ...t,
+                projects: t.projects.map((p) =>
+                  p._id !== projectId ? p : { ...p, extendedDueDate: visibility.extendedDueDate }
+                ),
+              }
+        )
+      );
+      setExtendingKey(null);
+      setToast('Deadline extended!');
+      setTimeout(() => setToast(''), 2500);
+    } catch (e) {
+      setExtendError(e instanceof Error ? e.message : 'Failed to extend deadline');
+    } finally {
+      setExtendSaving(false);
     }
   };
 
@@ -242,19 +285,70 @@ export default function SupervisorAssessments() {
                         )}
                         {t.projects.map((p) => {
                           const key = `${t._id}:${p._id}`;
+                          const isExtending = extendingKey === key;
                           return (
-                            <div key={p._id} className="flex items-center justify-between gap-4 text-sm">
-                              <span className="text-gray-700">{p.title}</span>
-                              <button
-                                type="button"
-                                onClick={() => handleToggleVisibility(t._id, p._id, !p.visible)}
-                                disabled={togglingKey === key}
-                                className={`px-3 py-1 rounded-full text-xs transition-colors disabled:opacity-50 ${
-                                  p.visible ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'
-                                }`}
-                              >
-                                {togglingKey === key ? '...' : p.visible ? 'Visible' : 'Hidden'}
-                              </button>
+                            <div key={p._id} className="border-b border-gray-100 pb-2 last:border-b-0">
+                              <div className="flex items-center justify-between gap-4 text-sm">
+                                <span className="text-gray-700">{p.title}</span>
+                                <button
+                                  type="button"
+                                  onClick={() => handleToggleVisibility(t._id, p._id, !p.visible)}
+                                  disabled={togglingKey === key}
+                                  className={`px-3 py-1 rounded-full text-xs transition-colors disabled:opacity-50 ${
+                                    p.visible ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'
+                                  }`}
+                                >
+                                  {togglingKey === key ? '...' : p.visible ? 'Visible' : 'Hidden'}
+                                </button>
+                              </div>
+
+                              <div className="flex items-center justify-between gap-4 text-xs text-gray-500 mt-1">
+                                <span>
+                                  {p.extendedDueDate
+                                    ? `Extended to: ${new Date(p.extendedDueDate).toLocaleDateString()}`
+                                    : t.dueDate
+                                    ? `Due: ${new Date(t.dueDate).toLocaleDateString()}`
+                                    : 'No due date'}
+                                </span>
+                                {t.dueDate && (
+                                  <button
+                                    type="button"
+                                    onClick={() => openExtend(t._id, p._id)}
+                                    className="text-[#2563a8] hover:underline shrink-0"
+                                  >
+                                    Extend Deadline
+                                  </button>
+                                )}
+                              </div>
+
+                              {isExtending && (
+                                <div className="mt-2 space-y-1">
+                                  <div className="flex items-center gap-2">
+                                    <input
+                                      type="date"
+                                      value={dueDateDraft}
+                                      onChange={(e) => setDueDateDraft(e.target.value)}
+                                      className="border border-gray-300 rounded-md px-2 py-1 text-xs focus:outline-none focus:border-[#2563a8]"
+                                    />
+                                    <button
+                                      type="button"
+                                      onClick={() => handleExtendDeadline(t._id, p._id)}
+                                      disabled={!dueDateDraft || extendSaving}
+                                      className="bg-[#2563a8] text-white px-3 py-1 rounded-md text-xs hover:bg-[#1e4a8a] disabled:opacity-50"
+                                    >
+                                      {extendSaving ? 'Saving...' : 'Save'}
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => setExtendingKey(null)}
+                                      className="text-gray-500 text-xs hover:underline"
+                                    >
+                                      Cancel
+                                    </button>
+                                  </div>
+                                  {extendError && <p className="text-xs text-red-600">{extendError}</p>}
+                                </div>
+                              )}
                             </div>
                           );
                         })}
