@@ -290,16 +290,28 @@ export default function SupervisorAssessments() {
                             <div key={p._id} className="border-b border-gray-100 pb-2 last:border-b-0">
                               <div className="flex items-center justify-between gap-4 text-sm">
                                 <span className="text-gray-700">{p.title}</span>
-                                <button
-                                  type="button"
-                                  onClick={() => handleToggleVisibility(t._id, p._id, !p.visible)}
-                                  disabled={togglingKey === key}
-                                  className={`px-3 py-1 rounded-full text-xs transition-colors disabled:opacity-50 ${
-                                    p.visible ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'
-                                  }`}
-                                >
-                                  {togglingKey === key ? '...' : p.visible ? 'Visible' : 'Hidden'}
-                                </button>
+                                <div className="flex items-center gap-2 shrink-0">
+                                  <span className={`text-xs ${p.visible ? 'text-green-700' : 'text-gray-500'}`}>
+                                    {p.visible ? 'Visible' : 'Hidden'}
+                                  </span>
+                                  <button
+                                    type="button"
+                                    role="switch"
+                                    aria-checked={p.visible}
+                                    aria-label={`${p.visible ? 'Hide' : 'Show'} this assessment for ${p.title}`}
+                                    onClick={() => handleToggleVisibility(t._id, p._id, !p.visible)}
+                                    disabled={togglingKey === key}
+                                    className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors disabled:opacity-50 ${
+                                      p.visible ? 'bg-green-500' : 'bg-gray-300'
+                                    }`}
+                                  >
+                                    <span
+                                      className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-sm transition-transform ${
+                                        p.visible ? 'translate-x-4' : 'translate-x-0.5'
+                                      }`}
+                                    />
+                                  </button>
+                                </div>
                               </div>
 
                               <div className="flex items-center justify-between gap-4 text-xs text-gray-500 mt-1">
