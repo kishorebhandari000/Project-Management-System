@@ -2,6 +2,7 @@ import Sidebar from '../../components/Sidebar';
 import ProfileAvatar from '../../components/ProfileAvatar';
 import NotificationBell from '../../components/NotificationBell';
 import { useState, useRef, useEffect } from 'react';
+import { useSearchParams } from 'react-router';
 import { api } from '../../lib/api';
 import { useMessages } from '../../hooks/useMessages';
 import SendButton from '../../components/SendButton';
@@ -20,10 +21,26 @@ function ChatPanel() {
   const [search, setSearch] = useState('');
   const bottomRef = useRef<HTMLDivElement>(null);
   const userId = localStorage.getItem('userId');
+  const [searchParams, setSearchParams] = useSearchParams();
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
+
+  // Deep-link support: /student/messages?contact=<userId> opens straight
+  // into that conversation, e.g. from the "Message" button on My Group.
+  useEffect(() => {
+    const contactId = searchParams.get('contact');
+    if (!contactId || loadingContacts) return;
+    if (!contacts.some((c) => c.user._id === contactId)) return;
+    selectContact(contactId);
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      next.delete('contact');
+      return next;
+    }, { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loadingContacts, contacts]);
 
   const selected = contacts.find((c) => c.user._id === selectedId);
 

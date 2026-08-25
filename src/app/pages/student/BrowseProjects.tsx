@@ -66,6 +66,24 @@ export default function BrowseProjects() {
   const currentUserId = localStorage.getItem('userId');
   const confirm = useConfirm();
 
+  // Rejection notices are dismissible - once clicked, they're hidden for
+  // good (persisted in localStorage) instead of reappearing on every visit.
+  const [dismissedRejections, setDismissedRejections] = useState<string[]>(() => {
+    try {
+      return JSON.parse(localStorage.getItem('dismissedRejections') || '[]');
+    } catch {
+      return [];
+    }
+  });
+
+  const dismissRejection = (id: string) => {
+    setDismissedRejections((prev) => {
+      const next = [...prev, id];
+      localStorage.setItem('dismissedRejections', JSON.stringify(next));
+      return next;
+    });
+  };
+
   // Group application modal state
   const [groupModalProjectId, setGroupModalProjectId] = useState<string | null>(null);
   const [groupName, setGroupName] = useState('');
@@ -297,11 +315,16 @@ export default function BrowseProjects() {
                     </div>
                     <p className="text-gray-700 mb-4">{project.description}</p>
 
-                    {rejectedGroup && (
-                      <div className="bg-red-50 border border-red-200 rounded-md px-3 py-2 mb-4">
+                    {rejectedGroup && !dismissedRejections.includes(rejectedGroup._id) && (
+                      <button
+                        type="button"
+                        onClick={() => dismissRejection(rejectedGroup._id)}
+                        title="Click to dismiss"
+                        className="w-full text-left bg-red-50 border border-red-200 rounded-md px-3 py-2 mb-4 hover:bg-red-100 cursor-pointer"
+                      >
                         <p className="text-xs text-red-700 mb-0.5">Your previous group request was rejected</p>
                         <p className="text-sm text-red-900">{rejectedGroup.comment}</p>
-                      </div>
+                      </button>
                     )}
 
                     {project.files && project.files.length > 0 && (
@@ -319,11 +342,16 @@ export default function BrowseProjects() {
                       </div>
                     )}
 
-                    {allocation?.status === 'rejected' && allocation.comment && (
-                      <div className="bg-red-50 border border-red-200 rounded-md px-3 py-2 mb-4">
+                    {allocation?.status === 'rejected' && allocation.comment && !dismissedRejections.includes(allocation._id) && (
+                      <button
+                        type="button"
+                        onClick={() => dismissRejection(allocation._id)}
+                        title="Click to dismiss"
+                        className="w-full text-left bg-red-50 border border-red-200 rounded-md px-3 py-2 mb-4 hover:bg-red-100 cursor-pointer"
+                      >
                         <p className="text-xs text-red-700 mb-0.5">Your request was rejected</p>
                         <p className="text-sm text-red-900">{allocation.comment}</p>
-                      </div>
+                      </button>
                     )}
 
                     <div className="flex flex-wrap gap-2">

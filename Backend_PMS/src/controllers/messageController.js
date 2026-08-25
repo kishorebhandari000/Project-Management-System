@@ -2,6 +2,7 @@ const asyncHandler = require('../utils/asyncHandler');
 const Message = require('../models/Message');
 const User = require('../models/User');
 const Allocation = require('../models/Allocation');
+const Group = require('../models/Group');
 const realtime = require('../utils/realtime');
 
 // Who a user is allowed to message - based on real project relationships,
@@ -9,7 +10,8 @@ const realtime = require('../utils/realtime');
 //  - admin: anyone
 //  - supervisor: students with an approved allocation on one of their
 //    projects, plus all admins
-//  - student: the supervisor(s) of their approved allocation(s), plus all
+//  - student: the supervisor(s) of their approved allocation(s), their
+//    groupmates (any non-rejected group they're a member of), plus all
 //    admins
 async function getAllowedContacts(user) {
   if (user.role === 'admin') {
@@ -27,7 +29,12 @@ async function getAllowedContacts(user) {
   // student
   const supervisorIds = await Allocation.find({ student: user._id, status: 'approved' }).distinct('supervisor');
   const supervisors = await User.find({ _id: { $in: supervisorIds } }).select('name email role');
-  return [...supervisors, ...admins];
+
+  const memberIds = await Group.find({ members: user._id, status: { $ne: 'rejected' } }).distinct('members');
+  const teammateIds = memberIds.filter((id) => String(id) !== String(user._id));
+  const teammates = await User.find({ _id: { $in: teammateIds } }).select('name email role');
+
+  return [...supervisors, ...teammates, ...admins];
 }
 
 async function isAllowedContact(user, recipientId) {

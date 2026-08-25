@@ -5,6 +5,7 @@ import { Link } from 'react-router';
 import { useState, useEffect } from 'react';
 import { api } from '../../lib/api';
 import { useCommentPrompt } from '../../hooks/useCommentPrompt';
+import { useConfirm } from '../../hooks/useConfirm';
 
 interface ProjectFile {
   url: string;
@@ -41,6 +42,7 @@ interface ApiGroup {
   leader: { _id: string; name: string };
   members: Member[];
   comment?: string;
+  decidedBy?: string;
 }
 
 export default function ManageProjects() {
@@ -50,7 +52,10 @@ export default function ManageProjects() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [decidingGroupId, setDecidingGroupId] = useState<string | null>(null);
+  const [undoingGroupId, setUndoingGroupId] = useState<string | null>(null);
   const promptComment = useCommentPrompt();
+  const confirm = useConfirm();
+  const currentUserId = localStorage.getItem('userId');
 
   const loadData = async () => {
     setLoading(true);
@@ -99,6 +104,26 @@ export default function ManageProjects() {
     }
   };
 
+  const handleUndoDecision = async (id: string) => {
+    if (
+      !(await confirm({
+        message: 'Undo this decision and send the group back to pending review?',
+        confirmLabel: 'Undo Decision',
+      }))
+    )
+      return;
+
+    setUndoingGroupId(id);
+    try {
+      await api.put(`/groups/${id}/undo-decision`, {});
+      await loadData();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Failed to undo decision');
+    } finally {
+      setUndoingGroupId(null);
+    }
+  };
+
   const pendingGroups = groups.filter((g) => g.status === 'pending');
   const forwardedGroups = groups.filter((g) => g.status === 'supervisor_approved');
   const decidedGroups = groups.filter((g) => g.status === 'approved' || g.status === 'rejected');
@@ -127,52 +152,68 @@ export default function ManageProjects() {
     return <span className={`text-xs px-3 py-1 rounded ${map[status]}`}>{label[status]}</span>;
   };
 
-  const GroupCard = ({ group, showActions }: { group: ApiGroup; showActions: boolean }) => (
-    <div className="border border-gray-200 rounded-lg p-5">
-      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2 mb-3">
-        <div>
-          <h3 className="text-lg">{group.name || 'Untitled Group'}</h3>
-          <p className="text-sm text-gray-600">{group.project?.title || 'Deleted project'}</p>
+  const GroupCard = ({ group, showActions }: { group: ApiGroup; showActions: boolean }) => {
+    const canUndo =
+      (group.status === 'supervisor_approved' || group.status === 'rejected') &&
+      group.decidedBy === currentUserId;
+
+    return (
+      <div className="border border-gray-200 rounded-lg p-5">
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2 mb-3">
+          <div>
+            <h3 className="text-lg">{group.name || 'Untitled Group'}</h3>
+            <p className="text-sm text-gray-600">{group.project?.title || 'Deleted project'}</p>
+          </div>
+          {groupStatusBadge(group.status)}
         </div>
-        {groupStatusBadge(group.status)}
+
+        <ul className="space-y-1 mb-4">
+          {group.members.map((m) => (
+            <li key={m._id} className="text-sm text-gray-700">
+              👤 {m.name} {m._id === group.leader?._id && <span className="text-xs text-gray-400">(leader)</span>}
+              <span className="text-gray-400"> — {m.studentId || m.email}</span>
+            </li>
+          ))}
+        </ul>
+
+        {!showActions && group.comment && (
+          <div className="bg-gray-50 border border-gray-200 rounded-md px-3 py-2 mb-4">
+            <p className="text-xs text-gray-500 mb-0.5">Your comment</p>
+            <p className="text-sm text-gray-700">{group.comment}</p>
+          </div>
+        )}
+
+        {showActions && (
+          <div className="flex gap-2">
+            <button
+              onClick={() => handleGroupDecision(group._id, 'approved')}
+              disabled={decidingGroupId === group._id}
+              className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 text-sm disabled:opacity-60"
+            >
+              Recommend to Admin
+            </button>
+            <button
+              onClick={() => handleGroupDecision(group._id, 'rejected')}
+              disabled={decidingGroupId === group._id}
+              className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 text-sm disabled:opacity-60"
+            >
+              Reject
+            </button>
+          </div>
+        )}
+
+        {canUndo && (
+          <button
+            onClick={() => handleUndoDecision(group._id)}
+            disabled={undoingGroupId === group._id}
+            className="bg-gray-200 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-300 text-sm disabled:opacity-60"
+          >
+            {undoingGroupId === group._id ? 'Undoing...' : 'Undo Decision'}
+          </button>
+        )}
       </div>
-
-      <ul className="space-y-1 mb-4">
-        {group.members.map((m) => (
-          <li key={m._id} className="text-sm text-gray-700">
-            👤 {m.name} {m._id === group.leader?._id && <span className="text-xs text-gray-400">(leader)</span>}
-            <span className="text-gray-400"> — {m.studentId || m.email}</span>
-          </li>
-        ))}
-      </ul>
-
-      {!showActions && group.comment && (
-        <div className="bg-gray-50 border border-gray-200 rounded-md px-3 py-2 mb-4">
-          <p className="text-xs text-gray-500 mb-0.5">Your comment</p>
-          <p className="text-sm text-gray-700">{group.comment}</p>
-        </div>
-      )}
-
-      {showActions && (
-        <div className="flex gap-2">
-          <button
-            onClick={() => handleGroupDecision(group._id, 'approved')}
-            disabled={decidingGroupId === group._id}
-            className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 text-sm disabled:opacity-60"
-          >
-            Recommend to Admin
-          </button>
-          <button
-            onClick={() => handleGroupDecision(group._id, 'rejected')}
-            disabled={decidingGroupId === group._id}
-            className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 text-sm disabled:opacity-60"
-          >
-            Reject
-          </button>
-        </div>
-      )}
-    </div>
-  );
+    );
+  };
 
   return (
     <div className="flex flex-col md:flex-row">
@@ -185,6 +226,12 @@ export default function ManageProjects() {
               <p className="text-gray-600">Manage your project offerings and student group applications</p>
             </div>
             <div className="flex items-center gap-4">
+              <Link
+                to="/supervisor/projects/students"
+                className="bg-[#2563a8] text-white px-4 py-2 rounded-md hover:bg-[#1e4a8a] text-sm"
+              >
+                My Students
+              </Link>
               <NotificationBell role="supervisor" />
               <ProfileAvatar role="supervisor" />
             </div>

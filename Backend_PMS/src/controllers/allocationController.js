@@ -79,7 +79,7 @@ const getAllocations = asyncHandler(async (req, res) => {
 
   const allocations = await Allocation.find(filter)
     .populate('project', 'title status description maxStudents files')
-    .populate('student', 'name email')
+    .populate('student', 'name email studentId')
     .populate('supervisor', 'name email')
     .sort({ createdAt: -1 });
 

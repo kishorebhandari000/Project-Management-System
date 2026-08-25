@@ -4,6 +4,7 @@ const {
   getMyGroups,
   getGroups,
   decideGroup,
+  undoGroupDecision,
   undoGroupAllocation,
   updateGroupMembers,
   withdrawGroup,
@@ -22,6 +23,7 @@ router.post('/:id/join', roleGuard('student'), joinGroup);
 router.get('/my', roleGuard('student'), getMyGroups);
 router.get('/', roleGuard('supervisor', 'admin'), getGroups);
 router.put('/:id/decision', roleGuard('supervisor', 'admin'), decideGroup);
+router.put('/:id/undo-decision', roleGuard('supervisor'), undoGroupDecision);
 router.put('/:id/undo', roleGuard('admin'), undoGroupAllocation);
 router.put('/:id/members', roleGuard('supervisor', 'admin'), updateGroupMembers);
 router.delete('/:id/leave', roleGuard('student'), leaveGroup);
