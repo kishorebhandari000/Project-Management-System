@@ -179,8 +179,14 @@ export default function Assessments() {
           <div className="space-y-4">
             {filteredAssessments.map((a) => {
               const submission = submissionFor(a._id);
+              const isOverdue = !submission && !!a.dueDate && new Date(a.dueDate).getTime() < Date.now();
               return (
-                <div key={a._id} className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
+                <div
+                  key={a._id}
+                  className={`bg-white rounded-lg border shadow-sm overflow-hidden ${
+                    isOverdue ? 'border-red-300' : 'border-gray-200'
+                  }`}
+                >
                   <div className="p-6">
                     <div className="flex justify-between items-start mb-3">
                       <div>
@@ -214,17 +220,25 @@ export default function Assessments() {
                           <span className="text-green-600 font-medium">Graded</span>
                         ) : submission?.status === 'submitted' ? (
                           <span className="text-blue-600 font-medium">Submitted</span>
+                        ) : isOverdue ? (
+                          <span className="text-red-600 font-medium">⚠ Overdue</span>
                         ) : (
                           <span className="text-orange-500 font-medium">Not Submitted</span>
                         )}
                         {a.dueDate && (
-                          <div className="text-xs text-gray-400 mt-1">
+                          <div className={`text-xs mt-1 ${isOverdue ? 'text-red-500' : 'text-gray-400'}`}>
                             Due: {new Date(a.dueDate).toLocaleDateString()}
                             {a.extendedDueDate && <span className="text-amber-600 ml-1">(extended)</span>}
                           </div>
                         )}
                       </div>
                     </div>
+
+                    {isOverdue && (
+                      <div className="mb-4 bg-red-50 border border-red-200 rounded-lg px-4 py-3 text-sm text-red-700">
+                        ⚠ This assessment is overdue. Submit as soon as possible.
+                      </div>
+                    )}
 
                     {submission?.status === 'graded' && (
                       <div className="mt-4 bg-green-50 border border-green-200 rounded-lg p-4 space-y-4">

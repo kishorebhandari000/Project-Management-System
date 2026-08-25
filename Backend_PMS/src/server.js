@@ -6,6 +6,7 @@ const app = require('./app');
 const realtime = require('./utils/realtime');
 const connectDB = require('./config/db');
 const { corsOriginCallback } = require('./config/corsOrigin');
+const { startAssessmentReminderJob } = require('./jobs/assessmentReminders');
 
 const httpServer = http.createServer(app);
 const io = new Server(httpServer, {
@@ -19,6 +20,7 @@ connectDB()
     httpServer.listen(process.env.PORT || 5000, () =>
       console.log(`Server running on :${process.env.PORT || 5000}`)
     );
+    startAssessmentReminderJob();
   })
   .catch((err) => {
     console.error('MongoDB connection failed:', err.message);
