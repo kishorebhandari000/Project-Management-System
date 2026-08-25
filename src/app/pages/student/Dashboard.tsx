@@ -42,11 +42,19 @@ interface Submission {
   marks: number | null;
 }
 
+interface ApiGroup {
+  _id: string;
+  status: 'pending' | 'supervisor_approved' | 'approved' | 'rejected';
+  project: { _id: string } | string;
+  members: unknown[];
+}
+
 export default function StudentDashboard() {
   const [userName, setUserName] = useState('');
   const [currentAllocation, setCurrentAllocation] = useState<ApiAllocation | null>(null);
   const [assessments, setAssessments] = useState<Assessment[]>([]);
   const [submissions, setSubmissions] = useState<Submission[]>([]);
+  const [myGroups, setMyGroups] = useState<ApiGroup[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -58,6 +66,13 @@ export default function StudentDashboard() {
         setCurrentAllocation(data.allocations[0] || null);
       } catch {
         setCurrentAllocation(null);
+      }
+
+      try {
+        const groupsData = await api.get('/groups/my');
+        setMyGroups(groupsData.groups);
+      } catch {
+        setMyGroups([]);
       }
 
       // Same fetch/combine approach as student/Assessments.tsx.
@@ -79,6 +94,14 @@ export default function StudentDashboard() {
   }, []);
 
   const submissionFor = (assessmentId: string) => submissions.find((s) => s.assessment._id === assessmentId);
+
+  const currentGroup = currentAllocation
+    ? myGroups.find((g) => {
+        if (g.status === 'rejected') return false;
+        const pId = typeof g.project === 'string' ? g.project : g.project._id;
+        return pId === currentAllocation.project._id;
+      })
+    : undefined;
 
   const pendingAssessments = assessments
     .filter((a) => !submissionFor(a._id))
@@ -170,6 +193,14 @@ export default function StudentDashboard() {
                     <div className="mb-3">
                       <div className="text-gray-600">Group Size</div>
                       <div>Up to {currentAllocation.project.maxStudents} member(s)</div>
+                    </div>
+                  )}
+                  {currentGroup && (
+                    <div className="mb-3">
+                      <div className="text-gray-600">Group</div>
+                      <Link to="/student/groups" className="text-[#2563a8] hover:underline text-sm">
+                        View {currentGroup.members.length} member(s) &amp; message them
+                      </Link>
                     </div>
                   )}
                   {currentAllocation.project.description && (

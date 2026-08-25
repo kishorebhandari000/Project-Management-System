@@ -261,6 +261,7 @@ const decideGroup = asyncHandler(async (req, res) => {
     if (decision === 'rejected') {
       group.status = 'rejected';
       group.decidedAt = new Date();
+      group.decidedBy = req.user._id;
       await group.save();
       await notifyMembers(group, 'rejected', group.comment);
       return res.json({ group });
@@ -277,6 +278,7 @@ const decideGroup = asyncHandler(async (req, res) => {
     // Supervisor recommendation: forward to admin, don't lock in seats yet.
     group.status = 'supervisor_approved';
     group.decidedAt = new Date();
+    group.decidedBy = req.user._id;
     await group.save();
 
     const admins = await User.find({ role: 'admin' });
@@ -303,6 +305,7 @@ const decideGroup = asyncHandler(async (req, res) => {
     if (decision === 'rejected') {
       group.status = 'rejected';
       group.decidedAt = new Date();
+      group.decidedBy = req.user._id;
       await group.save();
       await notifyMembers(group, 'rejected');
       return res.json({ group });
@@ -315,6 +318,54 @@ const decideGroup = asyncHandler(async (req, res) => {
   }
 
   return res.status(400).json({ message: 'This group has already been decided on' });
+});
+
+// @desc   Supervisor cancels their own not-yet-finalized decision on a group
+//         (a rejection, or a recommendation forwarded to admin) and sends it
+//         back to 'pending' for a fresh look. Only undoes a decision the
+//         calling supervisor themselves made - not one an admin made (e.g.
+//         an admin rejecting a forwarded group), and not a finalized
+//         allocation (use undoGroupAllocation for that).
+// @route  PUT /api/groups/:id/undo-decision
+// @access Private/Supervisor
+const undoGroupDecision = asyncHandler(async (req, res) => {
+  const group = await Group.findById(req.params.id).populate('project', 'title supervisor');
+  if (!group) return res.status(404).json({ message: 'Group not found' });
+  if (!group.project) {
+    return res.status(409).json({ message: 'This group\'s project no longer exists' });
+  }
+
+  const isOwner = group.project.supervisor && group.project.supervisor.toString() === req.user._id.toString();
+  if (!isOwner) {
+    return res.status(403).json({ message: 'Not authorized to undo this decision' });
+  }
+
+  if (!['rejected', 'supervisor_approved'].includes(group.status)) {
+    return res.status(400).json({ message: 'Only a rejection or a recommendation to admin can be undone' });
+  }
+
+  if (!group.decidedBy || group.decidedBy.toString() !== req.user._id.toString()) {
+    return res.status(403).json({ message: 'You can only undo a decision you made yourself' });
+  }
+
+  group.status = 'pending';
+  group.comment = '';
+  group.decidedAt = undefined;
+  group.decidedBy = undefined;
+  await group.save();
+
+  const memberUsers = await User.find({ _id: { $in: group.members } });
+  for (const memberUser of memberUsers) {
+    await createNotification({
+      user: memberUser._id,
+      type: 'group_decision',
+      title: 'Group decision undone',
+      message: `Your supervisor undid their decision on your group request for "${group.project.title}" - it's back under review.`,
+      link: '/student/projects',
+    }).catch(() => {});
+  }
+
+  res.json({ group });
 });
 
 // @desc   Admin undoes a finalized ('approved') group allocation - releases
@@ -550,6 +601,7 @@ module.exports = {
   getMyGroups,
   getGroups,
   decideGroup,
+  undoGroupDecision,
   undoGroupAllocation,
   updateGroupMembers,
   withdrawGroup,

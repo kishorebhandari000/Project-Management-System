@@ -9,6 +9,7 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import AuthenticatedRoute from "./components/AuthenticatedRoute";
 import StudentDashboard from "./pages/student/Dashboard";
 import BrowseProjects from "./pages/student/BrowseProjects";
+import StudentGroups from "./pages/student/Groups";
 import Assessments from "./pages/student/Assessments";
 import StudentDiscussions from "./pages/student/Discussions";
 import StudentDiscussionThread from "./pages/student/DiscussionThread";
@@ -18,7 +19,9 @@ import StudentNotifications from "./pages/student/Notifications";
 import StudentProfile from "./pages/student/Profile";
 import SupervisorDashboard from "./pages/supervisor/Dashboard";
 import ManageProjects from "./pages/supervisor/ManageProjects";
+import SupervisorStudents from "./pages/supervisor/Students";
 import SupervisorAssessments from "./pages/supervisor/Assessments";
+import SupervisorSubmissions from "./pages/supervisor/Submissions";
 import SupervisorDiscussions from "./pages/supervisor/Discussions";
 import SupervisorDiscussionThread from "./pages/supervisor/DiscussionThread";
 import SupervisorNewDiscussion from "./pages/supervisor/NewDiscussion";
@@ -107,6 +110,10 @@ export const router = createBrowserRouter([
     Component: () => <ProtectedRoute role="student"><Assessments /></ProtectedRoute>,
   },
   {
+    path: "/student/groups",
+    Component: () => <ProtectedRoute role="student"><StudentGroups /></ProtectedRoute>,
+  },
+  {
     path: "/student/discussions",
     Component: () => <ProtectedRoute role="student"><StudentDiscussions /></ProtectedRoute>,
   },
@@ -144,8 +151,16 @@ export const router = createBrowserRouter([
     Component: () => <ProtectedRoute role="supervisor"><ManageProjects /></ProtectedRoute>,
   },
   {
+    path: "/supervisor/projects/students",
+    Component: () => <ProtectedRoute role="supervisor"><SupervisorStudents /></ProtectedRoute>,
+  },
+  {
     path: "/supervisor/assessments",
     Component: () => <ProtectedRoute role="supervisor"><SupervisorAssessments /></ProtectedRoute>,
+  },
+  {
+    path: "/supervisor/assessments/submissions",
+    Component: () => <ProtectedRoute role="supervisor"><SupervisorSubmissions /></ProtectedRoute>,
   },
   {
     path: "/supervisor/discussions",
