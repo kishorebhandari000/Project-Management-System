@@ -9,6 +9,10 @@ import {
   Award,
   ArrowRight,
   MessageCircle,
+  LogIn,
+  LayoutDashboard,
+  Bell,
+  BookOpen,
 } from 'lucide-react';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
@@ -25,6 +29,29 @@ interface ForumPost {
   createdBy: { name: string; email: string };
   createdAt: string;
 }
+
+const HOW_IT_WORKS = [
+  {
+    icon: LogIn,
+    title: 'Sign In',
+    description: 'Use the @pms.edu login your administrator created for you — there\'s no self sign-up.',
+  },
+  {
+    icon: LayoutDashboard,
+    title: 'Go to Your Dashboard',
+    description: 'Students browse and apply for projects, supervisors manage their students, admins oversee it all.',
+  },
+  {
+    icon: ClipboardCheck,
+    title: 'Work Through Your Flow',
+    description: 'Apply, get allocated, submit assessments, and receive feedback — every step tracked in one place.',
+  },
+  {
+    icon: Bell,
+    title: 'Stay in the Loop',
+    description: 'Get notified the moment something changes: approvals, new assessments, marks, and messages.',
+  },
+];
 
 const FEATURES = [
   {
@@ -209,6 +236,65 @@ export default function Homepage() {
         </a>
       </section>
 
+      {/* How It Works */}
+      <section className="py-20 px-6 bg-[#f4f6f8]">
+        <div className="max-w-6xl mx-auto">
+          <motion.div
+            initial="hidden"
+            whileInView="show"
+            viewport={{ once: true, margin: '-100px' }}
+            variants={fadeUp}
+            transition={{ duration: 0.5 }}
+            className="text-center mb-14"
+          >
+            <span className="text-[#2563a8] text-sm font-medium tracking-wide uppercase">New here?</span>
+            <h2 className="text-3xl mt-3">How It Works</h2>
+            <p className="text-gray-600 mt-3 max-w-xl mx-auto">
+              Four steps to get from first login to your first submission.
+            </p>
+          </motion.div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 mb-12">
+            {HOW_IT_WORKS.map(({ icon: Icon, title, description }, i) => (
+              <motion.div
+                key={title}
+                initial="hidden"
+                whileInView="show"
+                viewport={{ once: true, margin: '-80px' }}
+                variants={fadeUp}
+                transition={{ duration: 0.5, delay: i * 0.1 }}
+                className="relative text-center"
+              >
+                <div className="w-14 h-14 mx-auto rounded-full bg-white border border-[#2563a8]/20 text-[#2563a8] flex items-center justify-center mb-4 shadow-sm">
+                  <Icon className="w-6 h-6" />
+                </div>
+                <div className="text-xs text-gray-400 mb-1">Step {i + 1}</div>
+                <h3 className="text-lg mb-2">{title}</h3>
+                <p className="text-sm text-gray-600">{description}</p>
+              </motion.div>
+            ))}
+          </div>
+
+          <motion.div
+            initial="hidden"
+            whileInView="show"
+            viewport={{ once: true, margin: '-80px' }}
+            variants={fadeUp}
+            transition={{ duration: 0.5, delay: 0.3 }}
+            className="text-center"
+          >
+            <Link
+              to="/guide"
+              className="group inline-flex items-center gap-2 bg-white border border-gray-200 text-[#2563a8] px-6 py-3 rounded-md shadow-sm hover:shadow-md hover:border-[#2563a8]/30 transition-[box-shadow,border-color]"
+            >
+              <BookOpen className="w-4 h-4" />
+              Read the Full Guide
+              <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
+            </Link>
+          </motion.div>
+        </div>
+      </section>
+
       {/* Features Section */}
       <section id="features" className="py-20 px-6 bg-white scroll-mt-[88px]">
         <div className="max-w-6xl mx-auto">
@@ -387,7 +473,7 @@ export default function Homepage() {
       >
         <h2 className="text-2xl sm:text-3xl mb-3">Ready to take the stress out of your final year project?</h2>
         <p className="text-white/90 mb-8 max-w-xl mx-auto">
-          Create your account and see everything in one place — projects, submissions, and feedback.
+          Sign in to your account and see everything in one place — projects, submissions, and feedback.
         </p>
         <GetStartedButton as={Link} to="/login">
           Get Started

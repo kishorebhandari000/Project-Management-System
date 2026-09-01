@@ -11,6 +11,7 @@ export default function Footer() {
             <Link to="/#features" className="hover:text-gray-300">Features</Link>
             <Link to="/#about" className="hover:text-gray-300">About</Link>
             <Link to="/#contact" className="hover:text-gray-300">Contact</Link>
+            <Link to="/guide" className="hover:text-gray-300">Guide</Link>
           </div>
         </div>
         <div className="text-gray-400 text-sm text-center pt-4 border-t border-gray-600">

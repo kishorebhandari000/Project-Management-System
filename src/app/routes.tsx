@@ -46,6 +46,7 @@ import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
 import CreateAssessment from "./pages/admin/CreateAssessment";
 import SupervisorViewProject from './pages/supervisor/ViewProject';
+import Guide from "./pages/Guide";
 export const router = createBrowserRouter([
 
   {
@@ -68,6 +69,10 @@ export const router = createBrowserRouter([
   {
     path: "/login",
     Component: Login,
+  },
+  {
+    path: "/guide",
+    Component: Guide,
   },
   {
     path: "/about",

@@ -29,6 +29,9 @@ export default function Navbar() {
           <Link to="/#contact" className="text-gray-700 hover:text-[#2563a8] transition-colors">
             Contact
           </Link>
+          <Link to="/guide" className="text-gray-700 hover:text-[#2563a8] transition-colors">
+            Guide
+          </Link>
 
           {isLoggedIn ? (
             <Link
