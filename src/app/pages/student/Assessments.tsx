@@ -1,8 +1,11 @@
 import { useEffect, useState } from 'react';
 import Sidebar from '../../components/Sidebar';
+import { motion, AnimatePresence } from 'motion/react';
+import { ClipboardList, Upload, CheckCircle2, Award } from 'lucide-react';
 import { api } from '../../lib/api';
 import ProfileAvatar from '../../components/ProfileAvatar';
 import NotificationBell from '../../components/NotificationBell';
+import StatCard from '../../components/StatCard';
 import AssessmentCategoryTabs, {
   ASSESSMENT_CATEGORY_LABELS,
   type AssessmentCategory,
@@ -129,30 +132,31 @@ export default function Assessments() {
           </div>
         </div>
 
-        {toast && (
-          <div className="fixed top-6 right-6 bg-[#2563a8] text-white px-5 py-3 rounded-lg shadow-lg z-50">
-            {toast}
-          </div>
-        )}
+        <AnimatePresence>
+          {toast && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              transition={{ duration: 0.3 }}
+              className="fixed top-6 right-6 bg-[#2563a8] text-white px-5 py-3 rounded-lg shadow-lg z-50"
+            >
+              {toast}
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         <div className="p-8">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-            <div className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm">
-              <div className="text-gray-600 mb-1">Total</div>
-              <div className="text-3xl">{total}</div>
-            </div>
-            <div className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm">
-              <div className="text-gray-600 mb-1">Submitted</div>
-              <div className="text-3xl text-blue-600">{submittedCount}</div>
-            </div>
-            <div className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm">
-              <div className="text-gray-600 mb-1">Graded</div>
-              <div className="text-3xl text-green-600">{gradedCount}</div>
-            </div>
-            <div className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm">
-              <div className="text-gray-600 mb-1">Average Mark</div>
-              <div className="text-3xl text-[#2563a8]">{avgMark !== null ? `${avgMark}%` : '—'}</div>
-            </div>
+            <StatCard icon={ClipboardList} label="Total" value={total} delay={0} />
+            <StatCard icon={Upload} label="Submitted" value={submittedCount} delay={0.06} />
+            <StatCard icon={CheckCircle2} label="Graded" value={gradedCount} delay={0.12} />
+            <StatCard
+              icon={Award}
+              label="Average Mark"
+              value={avgMark !== null ? `${avgMark}%` : '—'}
+              delay={0.18}
+            />
           </div>
 
           {loading && <div className="text-center py-20 text-gray-500">Loading assessments...</div>}
@@ -177,12 +181,15 @@ export default function Assessments() {
           )}
 
           <div className="space-y-4">
-            {filteredAssessments.map((a) => {
+            {filteredAssessments.map((a, i) => {
               const submission = submissionFor(a._id);
               const isOverdue = !submission && !!a.dueDate && new Date(a.dueDate).getTime() < Date.now();
               return (
-                <div
+                <motion.div
                   key={a._id}
+                  initial={{ opacity: 0, x: -12 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ duration: 0.3, delay: Math.min(i, 8) * 0.05 }}
                   className={`bg-white rounded-lg border shadow-sm overflow-hidden ${
                     isOverdue ? 'border-red-300' : 'border-gray-200'
                   }`}
@@ -292,13 +299,15 @@ export default function Assessments() {
                               className="w-full border border-gray-300 rounded-md px-4 py-2 text-sm"
                             />
                             <div className="flex gap-3">
-                              <button
+                              <motion.button
+                                whileHover={{ scale: 1.03 }}
+                                whileTap={{ scale: 0.97 }}
                                 onClick={() => handleUpload(a._id)}
                                 disabled={submitting === a._id || !file}
                                 className="bg-[#2563a8] text-white px-5 py-2 rounded-md hover:bg-[#1e4a8a] disabled:opacity-50 text-sm"
                               >
                                 {submitting === a._id ? 'Submitting...' : 'Submit File'}
-                              </button>
+                              </motion.button>
                               <button
                                 onClick={() => { setActiveUpload(null); setFile(null); }}
                                 className="bg-gray-200 text-gray-700 px-5 py-2 rounded-md hover:bg-gray-300 text-sm"
@@ -308,17 +317,19 @@ export default function Assessments() {
                             </div>
                           </div>
                         ) : (
-                          <button
+                          <motion.button
+                            whileHover={{ scale: 1.03 }}
+                            whileTap={{ scale: 0.97 }}
                             onClick={() => setActiveUpload(a._id)}
                             className="bg-[#2563a8] text-white px-5 py-2 rounded-md hover:bg-[#1e4a8a] text-sm"
                           >
                             Submit File
-                          </button>
+                          </motion.button>
                         )}
                       </div>
                     )}
                   </div>
-                </div>
+                </motion.div>
               );
             })}
           </div>

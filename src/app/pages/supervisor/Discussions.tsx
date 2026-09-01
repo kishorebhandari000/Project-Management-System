@@ -1,6 +1,8 @@
 import Sidebar from '../../components/Sidebar';
 import { Link } from 'react-router';
 import { useEffect, useState } from 'react';
+import { motion } from 'motion/react';
+import { MessageCircle } from 'lucide-react';
 import { api } from '../../lib/api';
 import { useMyProjects } from '../../hooks/useMyProjects';
 import ProfileAvatar from '../../components/ProfileAvatar';
@@ -139,26 +141,38 @@ export default function Discussions() {
                 </div>
               ) : (
                 <div className="space-y-4">
-                  {display.map((d) => (
-                    <Link key={d._id} to={`/supervisor/discussions/${d._id}`} className="block">
-                      <div className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
-                        <div className="flex justify-between items-start mb-3">
-                          <div className="flex-1">
-                            <div className="flex items-center gap-3 mb-2">
-                              <h3 className="text-lg">{d.title}</h3>
+                  {display.map((d, i) => (
+                    <motion.div
+                      key={d._id}
+                      initial={{ opacity: 0, x: -12 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ duration: 0.3, delay: Math.min(i, 8) * 0.05 }}
+                    >
+                      <Link to={`/supervisor/discussions/${d._id}`} className="block">
+                        <div className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
+                          <div className="flex justify-between items-start mb-3">
+                            <div className="flex items-start gap-4 flex-1">
+                              <div className="hidden sm:flex flex-shrink-0 w-10 h-10 rounded-full bg-[#2563a8]/10 text-[#2563a8] items-center justify-center">
+                                <MessageCircle className="w-5 h-5" />
+                              </div>
+                              <div>
+                                <div className="flex items-center gap-3 mb-2">
+                                  <h3 className="text-lg">{d.title}</h3>
+                                </div>
+                                <div className="flex items-center gap-4 text-sm text-gray-600">
+                                  <span>Posted by <span className="text-gray-800">{d.createdBy.name}</span></span>
+                                  <span className="bg-gray-100 text-gray-700 px-3 py-1 rounded text-xs">{d.projectTitle}</span>
+                                </div>
+                              </div>
                             </div>
-                            <div className="flex items-center gap-4 text-sm text-gray-600">
-                              <span>Posted by <span className="text-gray-800">{d.createdBy.name}</span></span>
-                              <span className="bg-gray-100 text-gray-700 px-3 py-1 rounded text-xs">{d.projectTitle}</span>
+                            <div className="text-right text-sm">
+                              <div className="text-gray-600 mb-1">{d.repliesCount} {d.repliesCount === 1 ? 'reply' : 'replies'}</div>
+                              <div className="text-gray-500 text-xs">{new Date(d.createdAt).toLocaleDateString()}</div>
                             </div>
-                          </div>
-                          <div className="text-right text-sm">
-                            <div className="text-gray-600 mb-1">{d.repliesCount} {d.repliesCount === 1 ? 'reply' : 'replies'}</div>
-                            <div className="text-gray-500 text-xs">{new Date(d.createdAt).toLocaleDateString()}</div>
                           </div>
                         </div>
-                      </div>
-                    </Link>
+                      </Link>
+                    </motion.div>
                   ))}
                 </div>
               )}

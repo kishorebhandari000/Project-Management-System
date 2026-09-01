@@ -4,6 +4,8 @@ import Sidebar from '../components/Sidebar';
 import ProfileAvatar from '../components/ProfileAvatar';
 import { Link, useParams, useNavigate } from 'react-router';
 import { useEffect, useState } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
+import { ArrowLeft } from 'lucide-react';
 import { api } from '../lib/api';
 import NotificationBell from '../components/NotificationBell';
 import { useConfirm } from '../hooks/useConfirm';
@@ -145,8 +147,12 @@ export default function ForumThread() {
 
   const content = (
     <div className="max-w-4xl mx-auto">
-      <Link to={isLoggedIn ? '/forum' : '/'} className="text-[#2563a8] hover:underline mb-6 inline-block">
-        {isLoggedIn ? '← Back to Forum' : '← Back to Homepage'}
+      <Link
+        to={isLoggedIn ? '/forum' : '/'}
+        className="group text-[#2563a8] hover:underline mb-6 inline-flex items-center gap-1.5"
+      >
+        <ArrowLeft className="w-4 h-4 transition-transform group-hover:-translate-x-1" />
+        {isLoggedIn ? 'Back to Forum' : 'Back to Homepage'}
       </Link>
 
       {loading ? (
@@ -160,7 +166,12 @@ export default function ForumThread() {
           ) : post ? (
             <>
               {/* Post Header */}
-              <div className="bg-white rounded-lg p-8 border border-gray-200 shadow-sm mb-6">
+              <motion.div
+                initial={{ opacity: 0, y: 16 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.4 }}
+                className="bg-white rounded-lg p-8 border border-gray-200 shadow-sm mb-6"
+              >
                 <div className="flex items-center justify-between gap-3 mb-4">
                   <span className="text-sm text-gray-500">
                     Posted {new Date(post.createdAt).toLocaleDateString()} by {post.createdBy?.name ?? 'Unknown'}
@@ -191,18 +202,29 @@ export default function ForumThread() {
                     onToggle={handleTogglePostReaction}
                   />
                 </div>
-              </div>
+              </motion.div>
 
               {/* Comments Section */}
-              <div className="bg-white rounded-lg p-8 border border-gray-200 shadow-sm mb-6">
+              <motion.div
+                initial={{ opacity: 0, y: 16 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.4, delay: 0.08 }}
+                className="bg-white rounded-lg p-8 border border-gray-200 shadow-sm mb-6"
+              >
                 <h2 className="text-xl mb-6">{comments.length} Replies</h2>
 
                 {comments.length === 0 ? (
                   <p className="text-gray-500">No replies yet. Be the first to comment.</p>
                 ) : (
                   <div className="space-y-6">
-                    {comments.map((comment) => (
-                      <div key={comment._id} className="border-b border-gray-200 pb-6 last:border-b-0">
+                    {comments.map((comment, i) => (
+                      <motion.div
+                        key={comment._id}
+                        initial={{ opacity: 0, x: -12 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ duration: 0.3, delay: 0.12 + Math.min(i, 8) * 0.05 }}
+                        className="border-b border-gray-200 pb-6 last:border-b-0"
+                      >
                         <div className="flex items-start gap-4">
                           <div className="w-10 h-10 rounded-full flex items-center justify-center text-white flex-shrink-0 bg-gray-600">
                             {initials(comment.author?.name ?? '?')}
@@ -232,14 +254,19 @@ export default function ForumThread() {
                             />
                           </div>
                         </div>
-                      </div>
+                      </motion.div>
                     ))}
                   </div>
                 )}
-              </div>
+              </motion.div>
 
               {/* Add Comment Form */}
-              <div className="bg-white rounded-lg p-8 border border-gray-200 shadow-sm">
+              <motion.div
+                initial={{ opacity: 0, y: 16 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.4, delay: 0.16 }}
+                className="bg-white rounded-lg p-8 border border-gray-200 shadow-sm"
+              >
                 <h3 className="text-lg mb-4">Add a Reply</h3>
                 {isLoggedIn ? (
                   <form onSubmit={handleSubmitComment} className="space-y-4">
@@ -250,29 +277,40 @@ export default function ForumThread() {
                       <span className="text-gray-800">{userName}</span>
                     </div>
 
-                    {commentError && (
-                      <div className="bg-red-50 border border-red-200 text-red-700 rounded-md px-4 py-3 text-sm">
-                        {commentError}
-                      </div>
-                    )}
+                    <AnimatePresence>
+                      {commentError && (
+                        <motion.div
+                          initial={{ opacity: 0, scale: 0.95 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          exit={{ opacity: 0, scale: 0.95 }}
+                          transition={{ duration: 0.3 }}
+                          className="bg-red-50 border border-red-200 text-red-700 rounded-md px-4 py-3 text-sm"
+                        >
+                          {commentError}
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
 
                     <div>
-                      <textarea
+                      <motion.textarea
+                        whileFocus={{ scale: 1.01 }}
                         value={newComment}
                         onChange={(e) => setNewComment(e.target.value)}
                         className="w-full border border-gray-300 rounded-md px-4 py-3 h-32 focus:outline-none focus:border-[#2563a8]"
                         placeholder="Share your thoughts, ask questions, or provide feedback..."
                         required
-                      ></textarea>
+                      ></motion.textarea>
                     </div>
                     <div className="flex justify-end">
-                      <button
+                      <motion.button
+                        whileHover={{ scale: 1.03 }}
+                        whileTap={{ scale: 0.97 }}
                         type="submit"
                         disabled={submitting}
                         className="bg-[#2563a8] text-white px-6 py-3 rounded-md hover:bg-[#1e4a8a] disabled:opacity-50"
                       >
                         {submitting ? 'Posting...' : 'Post Reply'}
-                      </button>
+                      </motion.button>
                     </div>
                   </form>
                 ) : (
@@ -286,7 +324,7 @@ export default function ForumThread() {
                     </Link>
                   </div>
                 )}
-              </div>
+              </motion.div>
             </>
           ) : null}
     </div>

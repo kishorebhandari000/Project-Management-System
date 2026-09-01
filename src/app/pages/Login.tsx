@@ -1,5 +1,6 @@
 import { Link, useNavigate } from 'react-router';
 import { useState } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
 import { Eye, EyeOff, Home } from 'lucide-react';
 import Logo from '../components/Logo';
 import { api } from '../lib/api';
@@ -49,7 +50,12 @@ export default function Login() {
         <span>Home</span>
       </Link>
 
-      <div className="bg-white rounded-lg shadow-lg p-10 w-full max-w-md">
+      <motion.div
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4 }}
+        className="bg-white rounded-lg shadow-lg p-10 w-full max-w-md"
+      >
         <div className="text-center mb-8">
           <div className="flex justify-center mb-3">
             <Logo size="medium" />
@@ -58,15 +64,24 @@ export default function Login() {
         </div>
 
         <form onSubmit={handleLogin} className="space-y-5">
-          {error && (
-            <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-md px-4 py-3">
-              {error}
-            </div>
-          )}
+          <AnimatePresence>
+            {error && (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                transition={{ duration: 0.3 }}
+                className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-md px-4 py-3"
+              >
+                {error}
+              </motion.div>
+            )}
+          </AnimatePresence>
 
           <div>
             <label className="block text-gray-700 mb-2">Email</label>
-            <input
+            <motion.input
+              whileFocus={{ scale: 1.01 }}
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
@@ -79,7 +94,8 @@ export default function Login() {
           <div>
             <label className="block text-gray-700 mb-2">Password</label>
             <div className="relative">
-              <input
+              <motion.input
+                whileFocus={{ scale: 1.01 }}
                 type={showPassword ? 'text' : 'password'}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
@@ -99,19 +115,21 @@ export default function Login() {
             </div>
           </div>
 
-          <button
+          <motion.button
+            whileHover={{ scale: 1.03 }}
+            whileTap={{ scale: 0.97 }}
             type="submit"
             disabled={loading}
             className="w-full bg-[#2563a8] text-white px-6 py-3 rounded-md hover:bg-[#1e4a8a] mt-2 disabled:opacity-60"
           >
             {loading ? 'Logging in...' : 'Login'}
-          </button>
+          </motion.button>
         </form>
 
         <div className="text-center mt-6">
           <Link to="/forgot-password" className="text-[#2563a8] hover:underline">Forgot Password?</Link>
         </div>
-      </div>
+      </motion.div>
     </div>
   );
 }

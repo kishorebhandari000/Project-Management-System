@@ -1,9 +1,12 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router';
+import { motion } from 'motion/react';
+import { ClipboardList, CheckCircle2, Paperclip } from 'lucide-react';
 import Sidebar from '../../components/Sidebar';
 import { api } from '../../lib/api';
 import ProfileAvatar from '../../components/ProfileAvatar';
 import NotificationBell from '../../components/NotificationBell';
+import StatCard from '../../components/StatCard';
 import AssessmentCategoryTabs, {
   ASSESSMENT_CATEGORY_LABELS,
   type AssessmentCategory,
@@ -66,14 +69,13 @@ export default function AdminAssessments() {
 
         <div className="p-8">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-8">
-            <div className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm">
-              <div className="text-gray-600 mb-1">Total Templates</div>
-              <div className="text-3xl">{filteredAssessments.length}</div>
-            </div>
-            <div className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm">
-              <div className="text-gray-600 mb-1">Released to at Least One Project</div>
-              <div className="text-3xl text-green-600">{released}</div>
-            </div>
+            <StatCard icon={ClipboardList} label="Total Templates" value={filteredAssessments.length} delay={0} />
+            <StatCard
+              icon={CheckCircle2}
+              label="Released to at Least One Project"
+              value={released}
+              delay={0.06}
+            />
           </div>
 
           {loading && <div className="text-center py-20 text-gray-500">Loading...</div>}
@@ -97,8 +99,14 @@ export default function AdminAssessments() {
 
           {filteredAssessments.length > 0 && (
             <div className="space-y-4">
-              {filteredAssessments.map((a) => (
-                <div key={a._id} className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
+              {filteredAssessments.map((a, i) => (
+                <motion.div
+                  key={a._id}
+                  initial={{ opacity: 0, x: -12 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ duration: 0.3, delay: Math.min(i, 8) * 0.05 }}
+                  className="bg-white rounded-lg border border-gray-200 shadow-sm p-6"
+                >
                   <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-3">
                     <div>
                       <div className="flex items-center gap-2 mb-1">
@@ -121,9 +129,9 @@ export default function AdminAssessments() {
                               href={f.url}
                               target="_blank"
                               rel="noreferrer"
-                              className="text-[#2563a8] hover:underline text-sm"
+                              className="inline-flex items-center gap-1 text-[#2563a8] hover:underline text-sm"
                             >
-                              📎 {f.name}
+                              <Paperclip className="w-3.5 h-3.5" /> {f.name}
                             </a>
                           ))}
                         </div>
@@ -137,7 +145,7 @@ export default function AdminAssessments() {
                         : 'Not released yet'}
                     </span>
                   </div>
-                </div>
+                </motion.div>
               ))}
             </div>
           )}

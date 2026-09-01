@@ -1,5 +1,6 @@
 import Sidebar from '../../components/Sidebar';
 import { useState, useEffect } from 'react';
+import { motion } from 'motion/react';
 import { api } from '../../lib/api';
 import ProfileAvatar from '../../components/ProfileAvatar';
 import NotificationBell from '../../components/NotificationBell';
@@ -72,7 +73,12 @@ export default function SupervisorAllocations() {
 
           {!loading && (
             <>
-              <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden mb-6">
+              <motion.div
+                initial={{ opacity: 0, y: 16 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.4 }}
+                className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden mb-6"
+              >
                 <div className="px-6 py-4 border-b border-gray-200 bg-gray-50">
                   <h2 className="text-xl">Pending ({pending.length})</h2>
                 </div>
@@ -92,33 +98,48 @@ export default function SupervisorAllocations() {
                         </td>
                       </tr>
                     )}
-                    {pending.map((allocation) => (
-                      <tr key={allocation._id} className="border-b border-gray-200">
+                    {pending.map((allocation, i) => (
+                      <motion.tr
+                        key={allocation._id}
+                        initial={{ opacity: 0, x: -12 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ duration: 0.3, delay: Math.min(i, 8) * 0.05 }}
+                        className="border-b border-gray-200"
+                      >
                         <td className="px-6 py-4">{allocation.student?.name}</td>
                         <td className="px-6 py-4">{allocation.project?.title}</td>
                         <td className="px-6 py-4">
                           <div className="flex gap-2">
-                            <button
+                            <motion.button
+                              whileHover={{ scale: 1.03 }}
+                              whileTap={{ scale: 0.97 }}
                               onClick={() => handleDecision(allocation._id, 'approved')}
                               className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700"
                             >
                               Approve
-                            </button>
-                            <button
+                            </motion.button>
+                            <motion.button
+                              whileHover={{ scale: 1.03 }}
+                              whileTap={{ scale: 0.97 }}
                               onClick={() => handleDecision(allocation._id, 'rejected')}
                               className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700"
                             >
                               Reject
-                            </button>
+                            </motion.button>
                           </div>
                         </td>
-                      </tr>
+                      </motion.tr>
                     ))}
                   </tbody>
                 </table>
-              </div>
+              </motion.div>
 
-              <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
+              <motion.div
+                initial={{ opacity: 0, y: 16 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.4, delay: 0.08 }}
+                className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden"
+              >
                 <div className="px-6 py-4 border-b border-gray-200 bg-gray-50">
                   <h2 className="text-xl">Decided</h2>
                 </div>
@@ -139,8 +160,14 @@ export default function SupervisorAllocations() {
                         </td>
                       </tr>
                     )}
-                    {decided.map((allocation) => (
-                      <tr key={allocation._id} className="border-b border-gray-200">
+                    {decided.map((allocation, i) => (
+                      <motion.tr
+                        key={allocation._id}
+                        initial={{ opacity: 0, x: -12 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ duration: 0.3, delay: Math.min(i, 8) * 0.05 }}
+                        className="border-b border-gray-200"
+                      >
                         <td className="px-6 py-4">{allocation.student?.name}</td>
                         <td className="px-6 py-4">{allocation.project?.title}</td>
                         <td className="px-6 py-4">
@@ -156,11 +183,11 @@ export default function SupervisorAllocations() {
                             Undo
                           </button>
                         </td>
-                      </tr>
+                      </motion.tr>
                     ))}
                   </tbody>
                 </table>
-              </div>
+              </motion.div>
             </>
           )}
         </div>

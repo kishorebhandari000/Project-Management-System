@@ -1,6 +1,7 @@
 import Sidebar from '../../components/Sidebar';
 import { useNavigate } from 'react-router';
 import { useState, type FormEvent } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
 import { api } from '../../lib/api';
 import ProfileAvatar from '../../components/ProfileAvatar';
 import NotificationBell from '../../components/NotificationBell';
@@ -64,12 +65,25 @@ export default function CreateAssessment() {
 
         <div className="p-8">
           <div className="max-w-4xl mx-auto">
-            <div className="bg-white rounded-lg p-8 border border-gray-200 shadow-sm">
-              {error && (
-                <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-md px-4 py-3 mb-4">
-                  {error}
-                </div>
-              )}
+            <motion.div
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4 }}
+              className="bg-white rounded-lg p-8 border border-gray-200 shadow-sm"
+            >
+              <AnimatePresence>
+                {error && (
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.95 }}
+                    transition={{ duration: 0.3 }}
+                    className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-md px-4 py-3 mb-4"
+                  >
+                    {error}
+                  </motion.div>
+                )}
+              </AnimatePresence>
 
               <form onSubmit={handleSubmit} className="space-y-6">
                 <div>
@@ -157,16 +171,18 @@ export default function CreateAssessment() {
                   >
                     Cancel
                   </button>
-                  <button
+                  <motion.button
+                    whileHover={{ scale: 1.03 }}
+                    whileTap={{ scale: 0.97 }}
                     type="submit"
                     disabled={submitting}
                     className="bg-[#2563a8] text-white px-6 py-3 rounded-md hover:bg-[#1e4a8a] disabled:opacity-60"
                   >
                     {submitting ? 'Creating...' : 'Create Assessment'}
-                  </button>
+                  </motion.button>
                 </div>
               </form>
-            </div>
+            </motion.div>
           </div>
         </div>
       </div>

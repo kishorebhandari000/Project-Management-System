@@ -1,9 +1,12 @@
 import Sidebar from '../components/Sidebar';
 import { Link } from 'react-router';
 import { useEffect, useState } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
+import { MessageCircle } from 'lucide-react';
 import { api } from '../lib/api';
 import ProfileAvatar from '../components/ProfileAvatar';
 import NotificationBell from '../components/NotificationBell';
+import StatCard from '../components/StatCard';
 import { useConfirm } from '../hooks/useConfirm';
 
 type Role = 'admin' | 'supervisor' | 'student';
@@ -65,12 +68,14 @@ export default function Forum() {
               <p className="text-gray-600">Public discussion threads visible to everyone</p>
             </div>
             <div className="flex items-center gap-4">
-              <Link
-                to="/forum/new"
-                className="bg-[#2563a8] text-white px-5 py-2 rounded-md hover:bg-[#1e4a8a]"
-              >
-                New Thread
-              </Link>
+              <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}>
+                <Link
+                  to="/forum/new"
+                  className="bg-[#2563a8] text-white px-5 py-2 rounded-md hover:bg-[#1e4a8a] inline-block"
+                >
+                  New Thread
+                </Link>
+              </motion.div>
               <NotificationBell role={role} />
 
               <ProfileAvatar role={role} />
@@ -79,18 +84,23 @@ export default function Forum() {
         </div>
 
         <div className="p-8">
-          <div className="mb-8">
-            <div className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm inline-block">
-              <div className="text-gray-600 mb-2">Total Threads</div>
-              <div className="text-3xl text-[#2563a8]">{posts.length}</div>
-            </div>
+          <div className="mb-8 max-w-xs">
+            <StatCard icon={MessageCircle} label="Total Threads" value={posts.length} delay={0} />
           </div>
 
-          {error && (
-            <div className="mb-6 bg-red-50 border border-red-200 text-red-700 rounded-md px-4 py-3">
-              {error}
-            </div>
-          )}
+          <AnimatePresence>
+            {error && (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                transition={{ duration: 0.3 }}
+                className="mb-6 bg-red-50 border border-red-200 text-red-700 rounded-md px-4 py-3"
+              >
+                {error}
+              </motion.div>
+            )}
+          </AnimatePresence>
 
           {loading ? (
             <div className="text-gray-500">Loading threads...</div>
@@ -100,9 +110,12 @@ export default function Forum() {
             </div>
           ) : (
             <div className="space-y-4">
-              {posts.map((post) => (
-                <div
+              {posts.map((post, i) => (
+                <motion.div
                   key={post._id}
+                  initial={{ opacity: 0, x: -12 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ duration: 0.3, delay: Math.min(i, 8) * 0.05 }}
                   className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm hover:shadow-md transition-shadow"
                 >
                   <div className="flex justify-between items-start mb-3">
@@ -132,7 +145,7 @@ export default function Forum() {
                       )}
                     </div>
                   </div>
-                </div>
+                </motion.div>
               ))}
             </div>
           )}

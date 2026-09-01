@@ -1,11 +1,22 @@
 import { useEffect, useState } from 'react';
 import Sidebar from '../../components/Sidebar';
 import { Link } from 'react-router';
+import { motion } from 'motion/react';
+import { Users, UserCog, FolderKanban, Clock, UserPlus, FolderPlus, Link2, FileEdit, BarChart3 } from 'lucide-react';
 import { api } from '../../lib/api';
 import ProfileAvatar from '../../components/ProfileAvatar';
 import NotificationBell from '../../components/NotificationBell';
 import SectionHint from '../../components/SectionHint';
+import StatCard from '../../components/StatCard';
 import { sectionHints } from '../../lib/sectionHints';
+
+const QUICK_ACTIONS = [
+  { icon: UserPlus, label: 'Manage Users', to: '/admin/users' },
+  { icon: FolderPlus, label: 'Create Project', to: '/admin/projects/create' },
+  { icon: Link2, label: 'Manage Allocation', to: '/admin/allocation' },
+  { icon: FileEdit, label: 'Create Assessment', to: '/admin/assessments/create' },
+  { icon: BarChart3, label: 'View Reports', to: '/admin/reports' },
+];
 
 interface ActivityItem {
   text: string;
@@ -110,29 +121,45 @@ export default function AdminDashboard() {
 
         <div className="p-8">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-            <Link to="/admin/users" className="block bg-white rounded-lg p-6 border border-gray-200 shadow-sm transition-shadow hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-[#2563a8]">
-              <div className="text-gray-600 mb-1">Total Students</div>
-              <div className="text-3xl">{loading ? '—' : stats.totalStudents}</div>
-            </Link>
-            <Link to="/admin/users" className="block bg-white rounded-lg p-6 border border-gray-200 shadow-sm transition-shadow hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-[#2563a8]">
-              <div className="text-gray-600 mb-1">Supervisors</div>
-              <div className="text-3xl">{loading ? '—' : stats.supervisors}</div>
-            </Link>
-            <Link to="/admin/projects" className="block bg-white rounded-lg p-6 border border-gray-200 shadow-sm transition-shadow hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-[#2563a8]">
-              <div className="text-gray-600 mb-1">Active Projects</div>
-              <div className="text-3xl">{loading ? '—' : stats.activeProjects}</div>
-            </Link>
-            <Link to="/admin/allocation" className="block bg-white rounded-lg p-6 border border-gray-200 shadow-sm transition-shadow hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-[#2563a8]">
-              <div className="text-gray-600 mb-1 flex items-center">
-                Pending Allocations
-                <SectionHint text={sectionHints.adminStatPendingAllocations} />
-              </div>
-              <div className="text-3xl text-orange-600">{loading ? '—' : stats.pendingAllocations}</div>
-            </Link>
+            <StatCard
+              icon={Users}
+              label="Total Students"
+              value={loading ? '—' : stats.totalStudents}
+              to="/admin/users"
+              delay={0}
+            />
+            <StatCard
+              icon={UserCog}
+              label="Supervisors"
+              value={loading ? '—' : stats.supervisors}
+              to="/admin/users"
+              delay={0.06}
+            />
+            <StatCard
+              icon={FolderKanban}
+              label="Active Projects"
+              value={loading ? '—' : stats.activeProjects}
+              to="/admin/projects"
+              delay={0.12}
+            />
+            <StatCard
+              icon={Clock}
+              label="Pending Allocations"
+              value={loading ? '—' : stats.pendingAllocations}
+              to="/admin/allocation"
+              accent="warning"
+              delay={0.18}
+              hint={<SectionHint text={sectionHints.adminStatPendingAllocations} />}
+            />
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm">
+            <motion.div
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4, delay: 0.24 }}
+              className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm"
+            >
               <h2 className="text-xl mb-5">Recent Activity</h2>
               <div className="space-y-4">
                 {loading ? (
@@ -141,43 +168,53 @@ export default function AdminDashboard() {
                   <p className="text-gray-400 text-sm">No recent activity yet.</p>
                 ) : (
                   activity.map((item, i) => (
-                    <div key={i} className="flex justify-between items-center pb-3 border-b border-gray-100 last:border-b-0">
+                    <motion.div
+                      key={i}
+                      initial={{ opacity: 0, x: -12 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ duration: 0.3, delay: 0.28 + i * 0.05 }}
+                      className="flex justify-between items-center pb-3 border-b border-gray-100 last:border-b-0"
+                    >
                       <span className="text-gray-700">{item.text}</span>
                       <span className="text-xs text-gray-400 ml-4 whitespace-nowrap">{item.time}</span>
-                    </div>
+                    </motion.div>
                   ))
                 )}
               </div>
-            </div>
+            </motion.div>
 
-            <div className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm">
+            <motion.div
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4, delay: 0.3 }}
+              className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm"
+            >
               <h2 className="text-xl mb-5 flex items-center">
                 Quick Actions
                 <SectionHint text={sectionHints.adminQuickActions} />
               </h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <Link to="/admin/users" className="bg-gray-50 border border-gray-200 rounded-lg p-4 hover:bg-gray-100 text-center">
-                  <div className="text-2xl mb-2">👤</div>
-                  <div className="text-sm">Manage Users</div>
-                </Link>
-                <Link to="/admin/projects/create" className="bg-gray-50 border border-gray-200 rounded-lg p-4 hover:bg-gray-100 text-center">
-                  <div className="text-2xl mb-2">📁</div>
-                  <div className="text-sm">Create Project</div>
-                </Link>
-                <Link to="/admin/allocation" className="bg-gray-50 border border-gray-200 rounded-lg p-4 hover:bg-gray-100 text-center">
-                  <div className="text-2xl mb-2">🔗</div>
-                  <div className="text-sm">Manage Allocation</div>
-                </Link>
-                <Link to="/admin/assessments/create" className="bg-gray-50 border border-gray-200 rounded-lg p-4 hover:bg-gray-100 text-center">
-                  <div className="text-2xl mb-2">📝</div>
-                  <div className="text-sm">Create Assessment</div>
-                </Link>
-                <Link to="/admin/reports" className="bg-gray-50 border border-gray-200 rounded-lg p-4 hover:bg-gray-100 text-center">
-                  <div className="text-2xl mb-2">📊</div>
-                  <div className="text-sm">View Reports</div>
-                </Link>
+                {QUICK_ACTIONS.map(({ icon: Icon, label, to }, i) => (
+                  <motion.div
+                    key={to}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.3, delay: 0.34 + i * 0.05 }}
+                    whileHover={{ y: -2 }}
+                  >
+                    <Link
+                      to={to}
+                      className="group flex flex-col items-center bg-gray-50 border border-gray-200 rounded-lg p-4 hover:bg-white hover:border-[#2563a8]/30 hover:shadow-sm transition-colors text-center"
+                    >
+                      <div className="w-10 h-10 rounded-lg bg-[#2563a8]/10 text-[#2563a8] flex items-center justify-center mb-2 transition-colors group-hover:bg-[#2563a8] group-hover:text-white">
+                        <Icon className="w-5 h-5" />
+                      </div>
+                      <div className="text-sm">{label}</div>
+                    </Link>
+                  </motion.div>
+                ))}
               </div>
-            </div>
+            </motion.div>
           </div>
         </div>
       </div>

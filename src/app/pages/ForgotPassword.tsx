@@ -1,5 +1,6 @@
 import { Link } from 'react-router';
 import { useState, type FormEvent } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
 import { api } from '../lib/api';
 
 export default function ForgotPassword() {
@@ -25,23 +26,43 @@ export default function ForgotPassword() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-[#f4f6f8]">
-      <div className="bg-white rounded-lg p-8 border border-gray-200 shadow-sm w-full max-w-md">
+      <motion.div
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4 }}
+        className="bg-white rounded-lg p-8 border border-gray-200 shadow-sm w-full max-w-md"
+      >
         <h1 className="text-2xl mb-2">Forgot Password</h1>
         <p className="text-gray-600 mb-6">Enter your email and we'll send you a reset link.</p>
 
-        {message && (
-          <div className="bg-green-50 border border-green-200 text-green-700 text-sm rounded-md px-4 py-3 mb-4">
-            {message}
-          </div>
-        )}
-        {error && (
-          <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-md px-4 py-3 mb-4">
-            {error}
-          </div>
-        )}
+        <AnimatePresence>
+          {message && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              transition={{ duration: 0.3 }}
+              className="bg-green-50 border border-green-200 text-green-700 text-sm rounded-md px-4 py-3 mb-4"
+            >
+              {message}
+            </motion.div>
+          )}
+          {error && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              transition={{ duration: 0.3 }}
+              className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-md px-4 py-3 mb-4"
+            >
+              {error}
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          <input
+          <motion.input
+            whileFocus={{ scale: 1.01 }}
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
@@ -49,19 +70,21 @@ export default function ForgotPassword() {
             className="w-full border border-gray-300 rounded-md px-4 py-3 focus:outline-none focus:border-[#2563a8]"
             required
           />
-          <button
+          <motion.button
+            whileHover={{ scale: 1.03 }}
+            whileTap={{ scale: 0.97 }}
             type="submit"
             disabled={submitting}
             className="w-full bg-[#2563a8] text-white px-6 py-3 rounded-md hover:bg-[#1e4a8a] disabled:opacity-60"
           >
             {submitting ? 'Sending...' : 'Send Reset Link'}
-          </button>
+          </motion.button>
         </form>
 
         <Link to="/login" className="block text-center text-sm text-[#2563a8] hover:underline mt-4">
           Back to login
         </Link>
-      </div>
+      </motion.div>
     </div>
   );
 }

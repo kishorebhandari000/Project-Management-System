@@ -1,8 +1,11 @@
 import React, { useEffect, useState } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
+import { Clock, CheckCircle2, MessageSquare, Paperclip } from 'lucide-react';
 import Sidebar from '../../components/Sidebar';
 import { api } from '../../lib/api';
 import ProfileAvatar from '../../components/ProfileAvatar';
 import NotificationBell from '../../components/NotificationBell';
+import StatCard from '../../components/StatCard';
 import AssessmentCategoryTabs, {
   ASSESSMENT_CATEGORY_LABELS,
   type AssessmentCategory,
@@ -111,26 +114,25 @@ export default function SupervisorSubmissions() {
           </div>
         </div>
 
-        {toast && (
-          <div className="fixed top-6 right-6 bg-green-600 text-white px-5 py-3 rounded-lg shadow-lg z-50">
-            {toast}
-          </div>
-        )}
+        <AnimatePresence>
+          {toast && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              transition={{ duration: 0.3 }}
+              className="fixed top-6 right-6 bg-green-600 text-white px-5 py-3 rounded-lg shadow-lg z-50"
+            >
+              {toast}
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         <div className="p-8">
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-8">
-            <div className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm">
-              <div className="text-gray-600 mb-1">Pending Review</div>
-              <div className="text-3xl text-orange-600">{pending.length}</div>
-            </div>
-            <div className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm">
-              <div className="text-gray-600 mb-1">Graded</div>
-              <div className="text-3xl text-green-600">{graded.length}</div>
-            </div>
-            <div className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm">
-              <div className="text-gray-600 mb-1">Feedback Given</div>
-              <div className="text-3xl text-[#2563a8]">{feedbackGiven.length}</div>
-            </div>
+            <StatCard icon={Clock} label="Pending Review" value={pending.length} accent="warning" delay={0} />
+            <StatCard icon={CheckCircle2} label="Graded" value={graded.length} delay={0.06} />
+            <StatCard icon={MessageSquare} label="Feedback Given" value={feedbackGiven.length} delay={0.12} />
           </div>
 
           {error && <div className="bg-red-50 border border-red-200 text-red-700 p-4 rounded-lg mb-6">{error}</div>}
@@ -181,11 +183,16 @@ export default function SupervisorSubmissions() {
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredSubmissions.map((s) => {
+                    {filteredSubmissions.map((s, i) => {
                       const isExpanded = expandedId === s._id;
                       return (
                         <React.Fragment key={s._id}>
-                          <tr className="border-t border-gray-200 hover:bg-gray-50">
+                          <motion.tr
+                            initial={{ opacity: 0, x: -12 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ duration: 0.3, delay: Math.min(i, 8) * 0.05 }}
+                            className="border-t border-gray-200 hover:bg-gray-50"
+                          >
                             <td className="px-6 py-4">{s.student?.name}</td>
                             <td className="px-6 py-4">{s.assessment?.title}</td>
                             <td className="px-6 py-4 text-gray-500 text-sm">
@@ -222,7 +229,7 @@ export default function SupervisorSubmissions() {
                                 {isExpanded ? 'Close' : s.status === 'submitted' ? 'Grade' : 'Edit'}
                               </button>
                             </td>
-                          </tr>
+                          </motion.tr>
 
                           {isExpanded && (
                             <tr className="border-t border-gray-200 bg-gray-50">
@@ -234,14 +241,22 @@ export default function SupervisorSubmissions() {
                                     rel="noopener noreferrer"
                                     className="inline-flex items-center gap-2 text-[#2563a8] hover:underline bg-white border border-gray-200 rounded-lg px-4 py-2 text-sm"
                                   >
-                                    📎 {s.fileName}
+                                    <Paperclip className="w-4 h-4" /> {s.fileName}
                                   </a>
 
-                                  {saveError && (
-                                    <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-md px-4 py-3">
-                                      {saveError}
-                                    </div>
-                                  )}
+                                  <AnimatePresence>
+                                    {saveError && (
+                                      <motion.div
+                                        initial={{ opacity: 0, scale: 0.95 }}
+                                        animate={{ opacity: 1, scale: 1 }}
+                                        exit={{ opacity: 0, scale: 0.95 }}
+                                        transition={{ duration: 0.3 }}
+                                        className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-md px-4 py-3"
+                                      >
+                                        {saveError}
+                                      </motion.div>
+                                    )}
+                                  </AnimatePresence>
 
                                   <div>
                                     <label className="block text-gray-700 mb-2 text-sm">
@@ -267,13 +282,15 @@ export default function SupervisorSubmissions() {
                                     />
                                   </div>
                                   <div className="flex gap-3">
-                                    <button
+                                    <motion.button
+                                      whileHover={{ scale: 1.03 }}
+                                      whileTap={{ scale: 0.97 }}
                                       onClick={() => handleSave(s._id)}
                                       disabled={saving || !markDraft}
                                       className="bg-[#2563a8] text-white px-6 py-2 rounded-md hover:bg-[#1e4a8a] disabled:opacity-50 text-sm"
                                     >
                                       {saving ? 'Saving...' : s.status === 'graded' ? 'Update Grade' : 'Submit Grade'}
-                                    </button>
+                                    </motion.button>
                                     <button
                                       onClick={() => setExpandedId(null)}
                                       className="bg-gray-200 text-gray-700 px-6 py-2 rounded-md hover:bg-gray-300 text-sm"

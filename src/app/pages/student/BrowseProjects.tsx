@@ -1,5 +1,6 @@
 import Sidebar from '../../components/Sidebar';
 import { useState, useEffect, useRef } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
 import { api } from '../../lib/api';
 import NotificationBell from '../../components/NotificationBell';
 import ProfileAvatar from '../../components/ProfileAvatar';
@@ -275,18 +276,26 @@ export default function BrowseProjects() {
           </div>
 
           {loading && <p className="text-gray-500">Loading projects...</p>}
-          {error && (
-            <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-md px-4 py-3 mb-4">
-              {error}
-            </div>
-          )}
+          <AnimatePresence>
+            {error && (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                transition={{ duration: 0.3 }}
+                className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-md px-4 py-3 mb-4"
+              >
+                {error}
+              </motion.div>
+            )}
+          </AnimatePresence>
 
           {!loading && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {projects.length === 0 && (
                 <p className="text-gray-500 col-span-full">No open projects available right now.</p>
               )}
-              {projects.map((project) => {
+              {projects.map((project, i) => {
                 const allocation = getAllocationForProject(project._id);
                 const group = getGroupForProject(project._id);
                 const isLeader = !!group && group.leader._id === currentUserId;
@@ -297,7 +306,13 @@ export default function BrowseProjects() {
                 const rejectedGroup = !group ? getRejectedGroupForProject(project._id) : undefined;
 
                 return (
-                  <div key={project._id} className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm">
+                  <motion.div
+                    key={project._id}
+                    initial={{ opacity: 0, x: -12 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ duration: 0.3, delay: Math.min(i, 8) * 0.05 }}
+                    className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm"
+                  >
                     <div className="flex justify-between items-start mb-3">
                       <h3 className="text-lg pr-4">{project.title}</h3>
                       <span className={`text-sm px-3 py-1 rounded ${
@@ -400,26 +415,30 @@ export default function BrowseProjects() {
                       )}
 
                       {!allocation && !group && project.status === 'open' && !isFull && project.openGroups.map((og) => (
-                        <button
+                        <motion.button
+                          whileHover={{ scale: 1.03 }}
+                          whileTap={{ scale: 0.97 }}
                           key={og.id}
                           onClick={() => handleJoinGroup(og.id)}
                           disabled={joiningId === og.id}
                           className="px-5 py-2 rounded-md bg-[#2563a8] text-white hover:bg-[#1e4a8a] disabled:opacity-60"
                         >
                           {joiningId === og.id ? 'Joining...' : `Join "${og.name || 'Group'}" (${og.memberCount}/${project.maxStudents})`}
-                        </button>
+                        </motion.button>
                       ))}
 
                       {canApply && (
-                        <button
+                        <motion.button
+                          whileHover={{ scale: 1.03 }}
+                          whileTap={{ scale: 0.97 }}
                           onClick={() => openGroupModal(project._id)}
                           className="px-5 py-2 rounded-md bg-[#2563a8] text-white hover:bg-[#1e4a8a]"
                         >
                           {project.openGroups.length > 0 ? 'Start a New Group' : 'Apply as a Group'}
-                        </button>
+                        </motion.button>
                       )}
                     </div>
-                  </div>
+                  </motion.div>
                 );
               })}
             </div>
@@ -427,9 +446,21 @@ export default function BrowseProjects() {
         </div>
       </div>
 
-      {groupModalProjectId && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4">
-          <div className="bg-white rounded-lg shadow-lg p-8 w-full max-w-md">
+      <AnimatePresence>
+        {groupModalProjectId && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4"
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 8 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 8 }}
+              transition={{ duration: 0.2 }}
+              className="bg-white rounded-lg shadow-lg p-8 w-full max-w-md"
+            >
             <h2 className="text-xl mb-1">Apply as a Group</h2>
             <p className="text-gray-600 text-sm mb-5">
               {activeProject?.title} — max {activeProject?.maxStudents} student(s)
@@ -531,18 +562,21 @@ export default function BrowseProjects() {
                 >
                   Cancel
                 </button>
-                <button
+                <motion.button
+                  whileHover={{ scale: 1.03 }}
+                  whileTap={{ scale: 0.97 }}
                   type="submit"
                   disabled={groupSubmitting}
                   className="flex-1 bg-[#2563a8] text-white px-5 py-2 rounded-md hover:bg-[#1e4a8a] disabled:opacity-60"
                 >
                   {groupSubmitting ? 'Submitting...' : 'Submit Request'}
-                </button>
+                </motion.button>
               </div>
             </form>
-          </div>
-        </div>
-      )}
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

@@ -1,6 +1,8 @@
 import Sidebar from '../../components/Sidebar';
 import { Link } from 'react-router';
 import { useState, useEffect, useMemo, useRef } from 'react';
+import { motion } from 'motion/react';
+import { Paperclip } from 'lucide-react';
 import { api } from '../../lib/api';
 import ProfileAvatar from '../../components/ProfileAvatar';
 import NotificationBell from '../../components/NotificationBell';
@@ -225,8 +227,14 @@ export default function ManageProjects() {
                   </button>
                 </div>
               )}
-              {filteredProjects.map((project) => (
-                <div key={project._id} className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
+              {filteredProjects.map((project, i) => (
+                <motion.div
+                  key={project._id}
+                  initial={{ opacity: 0, x: -12 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ duration: 0.3, delay: Math.min(i, 8) * 0.05 }}
+                  className="bg-white rounded-lg border border-gray-200 shadow-sm p-6"
+                >
                   <div className="flex justify-between items-start mb-3">
                     <div>
                       <h3 className="text-lg">{project.title}</h3>
@@ -278,15 +286,15 @@ export default function ManageProjects() {
                       <ul className="space-y-1">
                        {project.files.map((f, idx) => (
                           <li key={idx}>
-                            <a href={f.url} target="_blank" rel="noopener noreferrer" className="text-[#2563a8] hover:underline text-sm">
-                              📎 {f.name}
+                            <a href={f.url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-[#2563a8] hover:underline text-sm">
+                              <Paperclip className="w-3.5 h-3.5" /> {f.name}
                             </a>
                           </li>
                         ))}
                       </ul>
                     )}
                   </div>
-                </div>
+                </motion.div>
               ))}
               </div>
             </>

@@ -1,5 +1,7 @@
 import Sidebar from '../../components/Sidebar';
 import { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
+import { User } from 'lucide-react';
 import { api } from '../../lib/api';
 import ProfileAvatar from '../../components/ProfileAvatar';
 import NotificationBell from '../../components/NotificationBell';
@@ -203,8 +205,14 @@ export default function ManageAllocation() {
                 {awaitingFinalAllocation.length === 0 && (
                   <p className="text-gray-400 text-sm">Nothing waiting on final allocation right now.</p>
                 )}
-                {awaitingFinalAllocation.map((group) => (
-                  <div key={group._id} className="border border-gray-200 rounded-lg p-5">
+                {awaitingFinalAllocation.map((group, i) => (
+                  <motion.div
+                    key={group._id}
+                    initial={{ opacity: 0, x: -12 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ duration: 0.3, delay: Math.min(i, 8) * 0.05 }}
+                    className="border border-gray-200 rounded-lg p-5"
+                  >
                     <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2 mb-3">
                       <div>
                         <h3 className="text-lg">{group.name || 'Untitled Group'}</h3>
@@ -219,8 +227,8 @@ export default function ManageAllocation() {
 
                     <ul className="space-y-1 mb-4">
                       {group.members.map((m) => (
-                        <li key={m._id} className="text-sm text-gray-700">
-                          👤 {m.name} {m._id === group.leader._id && <span className="text-xs text-gray-400">(leader)</span>}
+                        <li key={m._id} className="flex items-center gap-1 text-sm text-gray-700">
+                          <User className="w-3.5 h-3.5 text-gray-400" /> {m.name} {m._id === group.leader._id && <span className="text-xs text-gray-400">(leader)</span>}
                           <span className="text-gray-400"> — {m.studentId || m.email}</span>
                         </li>
                       ))}
@@ -234,22 +242,26 @@ export default function ManageAllocation() {
                     )}
 
                     <div className="flex gap-2">
-                      <button
+                      <motion.button
+                        whileHover={{ scale: 1.03 }}
+                        whileTap={{ scale: 0.97 }}
                         onClick={() => handleGroupDecision(group._id, 'approved')}
                         disabled={decidingGroupId === group._id}
                         className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 text-sm disabled:opacity-60"
                       >
                         {decidingGroupId === group._id ? 'Allocating...' : 'Approve Final Allocation'}
-                      </button>
-                      <button
+                      </motion.button>
+                      <motion.button
+                        whileHover={{ scale: 1.03 }}
+                        whileTap={{ scale: 0.97 }}
                         onClick={() => handleGroupDecision(group._id, 'rejected')}
                         disabled={decidingGroupId === group._id}
                         className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 text-sm disabled:opacity-60"
                       >
                         Reject
-                      </button>
+                      </motion.button>
                     </div>
-                  </div>
+                  </motion.div>
                 ))}
               </div>
             </div>
@@ -266,8 +278,14 @@ export default function ManageAllocation() {
                 {approvedGroups.length === 0 && (
                   <p className="text-gray-400 text-sm">No finalized group allocations right now.</p>
                 )}
-                {approvedGroups.map((group) => (
-                  <div key={group._id} className="border border-gray-200 rounded-lg p-5">
+                {approvedGroups.map((group, i) => (
+                  <motion.div
+                    key={group._id}
+                    initial={{ opacity: 0, x: -12 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ duration: 0.3, delay: Math.min(i, 8) * 0.05 }}
+                    className="border border-gray-200 rounded-lg p-5"
+                  >
                     <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2 mb-3">
                       <div>
                         <h3 className="text-lg">{group.name || 'Untitled Group'}</h3>
@@ -282,8 +300,8 @@ export default function ManageAllocation() {
 
                     <ul className="space-y-1 mb-4">
                       {group.members.map((m) => (
-                        <li key={m._id} className="text-sm text-gray-700">
-                          👤 {m.name} {m._id === group.leader._id && <span className="text-xs text-gray-400">(leader)</span>}
+                        <li key={m._id} className="flex items-center gap-1 text-sm text-gray-700">
+                          <User className="w-3.5 h-3.5 text-gray-400" /> {m.name} {m._id === group.leader._id && <span className="text-xs text-gray-400">(leader)</span>}
                           <span className="text-gray-400"> — {m.studentId || m.email}</span>
                         </li>
                       ))}
@@ -296,7 +314,7 @@ export default function ManageAllocation() {
                     >
                       {undoingGroupId === group._id ? 'Undoing...' : 'Undo Allocation'}
                     </button>
-                  </div>
+                  </motion.div>
                 ))}
               </div>
             </div>
@@ -309,16 +327,30 @@ export default function ManageAllocation() {
               already-approved allocation - use it as a safety net. Any other approved allocation the student
               currently holds is cleared.
             </p>
-            {assignError && (
-              <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-md px-4 py-3 mb-4">
-                {assignError}
-              </div>
-            )}
-            {assignSuccess && (
-              <div className="bg-green-50 border border-green-200 text-green-700 text-sm rounded-md px-4 py-3 mb-4">
-                {assignSuccess}
-              </div>
-            )}
+            <AnimatePresence>
+              {assignError && (
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.95 }}
+                  transition={{ duration: 0.3 }}
+                  className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-md px-4 py-3 mb-4"
+                >
+                  {assignError}
+                </motion.div>
+              )}
+              {assignSuccess && (
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.95 }}
+                  transition={{ duration: 0.3 }}
+                  className="bg-green-50 border border-green-200 text-green-700 text-sm rounded-md px-4 py-3 mb-4"
+                >
+                  {assignSuccess}
+                </motion.div>
+              )}
+            </AnimatePresence>
             <form onSubmit={handleForceAssign} className="flex flex-wrap items-end gap-4">
               <div className="w-full sm:w-auto">
                 <label className="block text-gray-700 mb-2 text-sm">Student</label>
@@ -348,13 +380,15 @@ export default function ManageAllocation() {
                   ))}
                 </select>
               </div>
-              <button
+              <motion.button
+                whileHover={{ scale: 1.03 }}
+                whileTap={{ scale: 0.97 }}
                 type="submit"
                 disabled={assigning || !assignProjectId || !assignStudentId}
                 className="w-full sm:w-auto bg-[#2563a8] text-white px-6 py-2 rounded-md hover:bg-[#1e4a8a] disabled:opacity-50"
               >
                 {assigning ? 'Assigning...' : 'Assign & Approve'}
-              </button>
+              </motion.button>
             </form>
           </div>
 
@@ -381,8 +415,14 @@ export default function ManageAllocation() {
                       </td>
                     </tr>
                   )}
-                  {allocations.map((allocation) => (
-                    <tr key={allocation._id} className="border-b border-gray-200">
+                  {allocations.map((allocation, i) => (
+                    <motion.tr
+                      key={allocation._id}
+                      initial={{ opacity: 0, x: -12 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ duration: 0.3, delay: Math.min(i, 8) * 0.05 }}
+                      className="border-b border-gray-200"
+                    >
                       <td className="px-6 py-4">{allocation.student?.name}</td>
                       <td className="px-6 py-4">{allocation.project?.title}</td>
                       <td className="px-6 py-4">{allocation.supervisor?.name}</td>
@@ -427,7 +467,7 @@ export default function ManageAllocation() {
                           )}
                         </div>
                       </td>
-                    </tr>
+                    </motion.tr>
                   ))}
                 </tbody>
               </table></div>

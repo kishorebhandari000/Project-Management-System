@@ -1,5 +1,6 @@
 import Sidebar from '../../components/Sidebar';
 import { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
 import { api } from '../../lib/api';
 import { validatePasswordStrength, PASSWORD_REQUIREMENTS_HINT } from '../../lib/validatePassword';
 import ProfileAvatar from '../../components/ProfileAvatar';
@@ -169,12 +170,14 @@ export default function ManageUsers() {
               <p className="text-gray-600">Manage students and supervisors</p>
             </div>
             <div className="flex items-center gap-4">
-              <button
+              <motion.button
+                whileHover={{ scale: 1.03 }}
+                whileTap={{ scale: 0.97 }}
                 onClick={openModal}
                 className="bg-[#2563a8] text-white px-5 py-2 rounded-md hover:bg-[#1e4a8a]"
               >
                 Add User
-              </button>
+              </motion.button>
               <NotificationBell role="admin" />
 
               <ProfileAvatar role="admin" />
@@ -245,8 +248,14 @@ export default function ManageUsers() {
                       </td>
                     </tr>
                   )}
-                  {filteredStudents.map((student) => (
-                    <tr key={student.id} className="border-b border-gray-200">
+                  {filteredStudents.map((student, i) => (
+                    <motion.tr
+                      key={student.id}
+                      initial={{ opacity: 0, x: -12 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ duration: 0.3, delay: Math.min(i, 8) * 0.05 }}
+                      className="border-b border-gray-200"
+                    >
                       <td className="px-6 py-4 text-gray-600">{student.studentId || '—'}</td>
                       <td className="px-6 py-4">{student.name}</td>
                       <td className="px-6 py-4">{student.email}</td>
@@ -266,7 +275,7 @@ export default function ManageUsers() {
                           </button>
                         </div>
                       </td>
-                    </tr>
+                    </motion.tr>
                   ))}
                 </tbody>
               </table></div>
@@ -293,8 +302,14 @@ export default function ManageUsers() {
                       </td>
                     </tr>
                   )}
-                  {filteredSupervisors.map((supervisor) => (
-                    <tr key={supervisor.id} className="border-b border-gray-200">
+                  {filteredSupervisors.map((supervisor, i) => (
+                    <motion.tr
+                      key={supervisor.id}
+                      initial={{ opacity: 0, x: -12 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ duration: 0.3, delay: Math.min(i, 8) * 0.05 }}
+                      className="border-b border-gray-200"
+                    >
                       <td className="px-6 py-4">{supervisor.name}</td>
                       <td className="px-6 py-4">{supervisor.email}</td>
                       <td className="px-6 py-4">
@@ -313,7 +328,7 @@ export default function ManageUsers() {
                           </button>
                         </div>
                       </td>
-                    </tr>
+                    </motion.tr>
                   ))}
                 </tbody>
               </table></div>
@@ -322,9 +337,21 @@ export default function ManageUsers() {
         </div>
       </div>
 
-      {showModal && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4">
-          <div className="bg-white rounded-lg shadow-lg p-8 w-full max-w-md">
+      <AnimatePresence>
+        {showModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4"
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 8 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 8 }}
+              transition={{ duration: 0.2 }}
+              className="bg-white rounded-lg shadow-lg p-8 w-full max-w-md"
+            >
             {createdUser ? (
               <>
                 <h2 className="text-xl mb-5">User Created</h2>
@@ -347,12 +374,14 @@ export default function ManageUsers() {
                   )}
                   <p className="text-sm text-green-700">Make sure to share these details with the user.</p>
                 </div>
-                <button
+                <motion.button
+                  whileHover={{ scale: 1.03 }}
+                  whileTap={{ scale: 0.97 }}
                   onClick={closeModal}
                   className="w-full bg-[#2563a8] text-white px-5 py-2 rounded-md hover:bg-[#1e4a8a]"
                 >
                   Done
-                </button>
+                </motion.button>
               </>
             ) : (
               <>
@@ -422,24 +451,39 @@ export default function ManageUsers() {
                     >
                       Cancel
                     </button>
-                    <button
+                    <motion.button
+                      whileHover={{ scale: 1.03 }}
+                      whileTap={{ scale: 0.97 }}
                       type="submit"
                       disabled={submitting}
                       className="flex-1 bg-[#2563a8] text-white px-5 py-2 rounded-md hover:bg-[#1e4a8a] disabled:opacity-60"
                     >
                       {submitting ? 'Creating...' : 'Create User'}
-                    </button>
+                    </motion.button>
                   </div>
                 </form>
               </>
             )}
-          </div>
-        </div>
-      )}
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
-      {showEditModal && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4">
-          <div className="bg-white rounded-lg shadow-lg p-8 w-full max-w-md">
+      <AnimatePresence>
+        {showEditModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4"
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 8 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 8 }}
+              transition={{ duration: 0.2 }}
+              className="bg-white rounded-lg shadow-lg p-8 w-full max-w-md"
+            >
             <h2 className="text-xl mb-5">Edit User</h2>
 
             <form onSubmit={handleUpdateUser} className="space-y-4">
@@ -491,18 +535,21 @@ export default function ManageUsers() {
                 >
                   Cancel
                 </button>
-                <button
+                <motion.button
+                  whileHover={{ scale: 1.03 }}
+                  whileTap={{ scale: 0.97 }}
                   type="submit"
                   disabled={editSubmitting}
                   className="flex-1 bg-[#2563a8] text-white px-5 py-2 rounded-md hover:bg-[#1e4a8a] disabled:opacity-60"
                 >
                   {editSubmitting ? 'Saving...' : 'Save Changes'}
-                </button>
+                </motion.button>
               </div>
             </form>
-          </div>
-        </div>
-      )}
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

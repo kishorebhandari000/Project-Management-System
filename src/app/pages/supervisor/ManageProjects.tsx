@@ -3,6 +3,8 @@ import ProfileAvatar from '../../components/ProfileAvatar';
 import NotificationBell from '../../components/NotificationBell';
 import { Link } from 'react-router';
 import { useState, useEffect } from 'react';
+import { motion } from 'motion/react';
+import { User, Paperclip } from 'lucide-react';
 import { api } from '../../lib/api';
 import { useCommentPrompt } from '../../hooks/useCommentPrompt';
 import { useConfirm } from '../../hooks/useConfirm';
@@ -169,8 +171,9 @@ export default function ManageProjects() {
 
         <ul className="space-y-1 mb-4">
           {group.members.map((m) => (
-            <li key={m._id} className="text-sm text-gray-700">
-              👤 {m.name} {m._id === group.leader?._id && <span className="text-xs text-gray-400">(leader)</span>}
+            <li key={m._id} className="text-sm text-gray-700 flex items-center gap-1.5">
+              <User className="w-3.5 h-3.5 text-gray-400" />
+              {m.name} {m._id === group.leader?._id && <span className="text-xs text-gray-400">(leader)</span>}
               <span className="text-gray-400"> — {m.studentId || m.email}</span>
             </li>
           ))}
@@ -185,31 +188,37 @@ export default function ManageProjects() {
 
         {showActions && (
           <div className="flex gap-2">
-            <button
+            <motion.button
+              whileHover={{ scale: 1.03 }}
+              whileTap={{ scale: 0.97 }}
               onClick={() => handleGroupDecision(group._id, 'approved')}
               disabled={decidingGroupId === group._id}
               className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 text-sm disabled:opacity-60"
             >
               Recommend to Admin
-            </button>
-            <button
+            </motion.button>
+            <motion.button
+              whileHover={{ scale: 1.03 }}
+              whileTap={{ scale: 0.97 }}
               onClick={() => handleGroupDecision(group._id, 'rejected')}
               disabled={decidingGroupId === group._id}
               className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 text-sm disabled:opacity-60"
             >
               Reject
-            </button>
+            </motion.button>
           </div>
         )}
 
         {canUndo && (
-          <button
+          <motion.button
+            whileHover={{ scale: 1.03 }}
+            whileTap={{ scale: 0.97 }}
             onClick={() => handleUndoDecision(group._id)}
             disabled={undoingGroupId === group._id}
             className="bg-gray-200 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-300 text-sm disabled:opacity-60"
           >
             {undoingGroupId === group._id ? 'Undoing...' : 'Undo Decision'}
-          </button>
+          </motion.button>
         )}
       </div>
     );
@@ -248,7 +257,12 @@ export default function ManageProjects() {
 
           {!loading && (
             <>
-              <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden mb-6">
+              <motion.div
+                initial={{ opacity: 0, y: 16 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.4 }}
+                className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden mb-6"
+              >
                 <div className="px-6 py-4 border-b border-gray-200 bg-gray-50">
                   <h2 className="text-xl">Pending Your Review ({pendingGroups.length})</h2>
                 </div>
@@ -256,14 +270,26 @@ export default function ManageProjects() {
                   {pendingGroups.length === 0 && (
                     <p className="text-gray-400 text-sm">No pending group requests.</p>
                   )}
-                  {pendingGroups.map((g) => (
-                    <GroupCard key={g._id} group={g} showActions />
+                  {pendingGroups.map((g, i) => (
+                    <motion.div
+                      key={g._id}
+                      initial={{ opacity: 0, x: -12 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ duration: 0.3, delay: Math.min(i, 8) * 0.05 }}
+                    >
+                      <GroupCard group={g} showActions />
+                    </motion.div>
                   ))}
                 </div>
-              </div>
+              </motion.div>
 
               {forwardedGroups.length > 0 && (
-                <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden mb-6">
+                <motion.div
+                  initial={{ opacity: 0, y: 16 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.4, delay: 0.08 }}
+                  className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden mb-6"
+                >
                   <div className="px-6 py-4 border-b border-gray-200 bg-gray-50">
                     <h2 className="text-xl">Awaiting Admin Allocation ({forwardedGroups.length})</h2>
                   </div>
@@ -272,11 +298,16 @@ export default function ManageProjects() {
                       <GroupCard key={g._id} group={g} showActions={false} />
                     ))}
                   </div>
-                </div>
+                </motion.div>
               )}
 
               {decidedGroups.length > 0 && (
-                <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden mb-6">
+                <motion.div
+                  initial={{ opacity: 0, y: 16 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.4, delay: 0.16 }}
+                  className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden mb-6"
+                >
                   <div className="px-6 py-4 border-b border-gray-200 bg-gray-50">
                     <h2 className="text-xl">Decided ({decidedGroups.length})</h2>
                   </div>
@@ -285,7 +316,7 @@ export default function ManageProjects() {
                       <GroupCard key={g._id} group={g} showActions={false} />
                     ))}
                   </div>
-                </div>
+                </motion.div>
               )}
 
               <div className="space-y-4">
@@ -294,10 +325,16 @@ export default function ManageProjects() {
                     No projects assigned to you yet.
                   </div>
                 )}
-                {projects.map((project) => {
+                {projects.map((project, i) => {
                   const enrolled = getEnrolledStudents(project._id);
                   return (
-                    <div key={project._id} className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
+                    <motion.div
+                      key={project._id}
+                      initial={{ opacity: 0, y: 16 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.4, delay: 0.24 + Math.min(i, 8) * 0.05 }}
+                      className="bg-white rounded-lg border border-gray-200 shadow-sm p-6"
+                    >
                       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3 mb-3">
                         <div>
                           <h3 className="text-lg">{project.title}</h3>
@@ -322,8 +359,9 @@ export default function ManageProjects() {
                         ) : (
                           <ul className="space-y-1">
                             {enrolled.map((a) => (
-                              <li key={a._id} className="text-sm text-gray-700">
-                                👤 {a.student.name} <span className="text-gray-400">({a.student.email})</span>
+                              <li key={a._id} className="text-sm text-gray-700 flex items-center gap-1.5">
+                                <User className="w-3.5 h-3.5 text-gray-400" />
+                                {a.student.name} <span className="text-gray-400">({a.student.email})</span>
                               </li>
                             ))}
                           </ul>
@@ -339,15 +377,15 @@ export default function ManageProjects() {
                           <ul className="space-y-1">
                             {project.files.map((f, idx) => (
                               <li key={idx}>
-                                <a href={f.url} target="_blank" rel="noopener noreferrer" className="text-[#2563a8] hover:underline text-sm">
-                                  📎 {f.name}
+                                <a href={f.url} target="_blank" rel="noopener noreferrer" className="text-[#2563a8] hover:underline text-sm inline-flex items-center gap-1">
+                                  <Paperclip className="w-3.5 h-3.5" /> {f.name}
                                 </a>
                               </li>
                             ))}
                           </ul>
                         )}
                       </div>
-                    </div>
+                    </motion.div>
                   );
                 })}
               </div>

@@ -1,6 +1,7 @@
 import Sidebar from '../../components/Sidebar';
 import { Link, useNavigate } from 'react-router';
 import { useEffect, useState } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
 import { api } from '../../lib/api';
 import NotificationBell from '../../components/NotificationBell';
 import ProfileAvatar from '../../components/ProfileAvatar';
@@ -77,11 +78,19 @@ export default function StudentGroups() {
         <div className="p-8">
           {loading && <p className="text-gray-500">Loading...</p>}
 
-          {error && (
-            <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-md px-4 py-3 mb-4">
-              {error}
-            </div>
-          )}
+          <AnimatePresence>
+            {error && (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                transition={{ duration: 0.3 }}
+                className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-md px-4 py-3 mb-4"
+              >
+                {error}
+              </motion.div>
+            )}
+          </AnimatePresence>
 
           {!loading && !error && groups.length === 0 && (
             <div className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm">
@@ -93,8 +102,14 @@ export default function StudentGroups() {
           )}
 
           <div className="space-y-6">
-            {groups.map((group) => (
-              <div key={group._id} className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm">
+            {groups.map((group, gi) => (
+              <motion.div
+                key={group._id}
+                initial={{ opacity: 0, y: 16 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.4, delay: gi * 0.08 }}
+                className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm"
+              >
                 <div className="flex justify-between items-start mb-5">
                   <div>
                     <h2 className="text-xl">{group.name || group.project.title}</h2>
@@ -110,12 +125,15 @@ export default function StudentGroups() {
                 </div>
 
                 <div className="space-y-3">
-                  {group.members.map((member) => {
+                  {group.members.map((member, mi) => {
                     const isSelf = member._id === currentUserId;
                     const isLeader = member._id === group.leader._id;
                     return (
-                      <div
+                      <motion.div
                         key={member._id}
+                        initial={{ opacity: 0, x: -12 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ duration: 0.3, delay: Math.min(mi, 8) * 0.05 }}
                         className="flex items-center justify-between gap-4 border border-gray-100 rounded-md px-4 py-3"
                       >
                         <div className="flex items-center gap-3 min-w-0">
@@ -144,11 +162,11 @@ export default function StudentGroups() {
                             Message
                           </button>
                         )}
-                      </div>
+                      </motion.div>
                     );
                   })}
                 </div>
-              </div>
+              </motion.div>
             ))}
           </div>
         </div>

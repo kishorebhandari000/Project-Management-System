@@ -1,5 +1,6 @@
 import { Link, useNavigate, useParams } from 'react-router';
 import { useState, type FormEvent } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
 import { api } from '../lib/api';
 import { validatePasswordStrength, PASSWORD_REQUIREMENTS_HINT } from '../lib/validatePassword';
 
@@ -39,19 +40,33 @@ export default function ResetPassword() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-[#f4f6f8]">
-      <div className="bg-white rounded-lg p-8 border border-gray-200 shadow-sm w-full max-w-md">
+      <motion.div
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4 }}
+        className="bg-white rounded-lg p-8 border border-gray-200 shadow-sm w-full max-w-md"
+      >
         <h1 className="text-2xl mb-2">Reset Password</h1>
         <p className="text-gray-600 mb-6">Enter a new password for your account.</p>
 
-        {error && (
-          <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-md px-4 py-3 mb-4">
-            {error}
-          </div>
-        )}
+        <AnimatePresence>
+          {error && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              transition={{ duration: 0.3 }}
+              className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-md px-4 py-3 mb-4"
+            >
+              {error}
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <input
+            <motion.input
+              whileFocus={{ scale: 1.01 }}
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
@@ -62,7 +77,8 @@ export default function ResetPassword() {
             />
             <p className="text-xs text-gray-400 mt-1">{PASSWORD_REQUIREMENTS_HINT}</p>
           </div>
-          <input
+          <motion.input
+            whileFocus={{ scale: 1.01 }}
             type="password"
             value={confirmPassword}
             onChange={(e) => setConfirmPassword(e.target.value)}
@@ -71,19 +87,21 @@ export default function ResetPassword() {
             required
             minLength={8}
           />
-          <button
+          <motion.button
+            whileHover={{ scale: 1.03 }}
+            whileTap={{ scale: 0.97 }}
             type="submit"
             disabled={submitting}
             className="w-full bg-[#2563a8] text-white px-6 py-3 rounded-md hover:bg-[#1e4a8a] disabled:opacity-60"
           >
             {submitting ? 'Resetting...' : 'Reset Password'}
-          </button>
+          </motion.button>
         </form>
 
         <Link to="/login" className="block text-center text-sm text-[#2563a8] hover:underline mt-4">
           Back to login
         </Link>
-      </div>
+      </motion.div>
     </div>
   );
 }

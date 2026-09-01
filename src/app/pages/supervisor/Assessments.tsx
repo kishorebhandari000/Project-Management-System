@@ -1,9 +1,12 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router';
+import { motion, AnimatePresence } from 'motion/react';
+import { ClipboardList, Paperclip } from 'lucide-react';
 import Sidebar from '../../components/Sidebar';
 import { api } from '../../lib/api';
 import ProfileAvatar from '../../components/ProfileAvatar';
 import NotificationBell from '../../components/NotificationBell';
+import StatCard from '../../components/StatCard';
 import AssessmentCategoryTabs, {
   ASSESSMENT_CATEGORY_LABELS,
   type AssessmentCategory,
@@ -142,18 +145,23 @@ export default function SupervisorAssessments() {
           </div>
         </div>
 
-        {toast && (
-          <div className="fixed top-6 right-6 bg-green-600 text-white px-5 py-3 rounded-lg shadow-lg z-50">
-            {toast}
-          </div>
-        )}
+        <AnimatePresence>
+          {toast && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              transition={{ duration: 0.3 }}
+              className="fixed top-6 right-6 bg-green-600 text-white px-5 py-3 rounded-lg shadow-lg z-50"
+            >
+              {toast}
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         <div className="p-8">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-            <div className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm">
-              <div className="text-gray-600 mb-1">Templates</div>
-              <div className="text-3xl">{filteredTemplates.length}</div>
-            </div>
+            <StatCard icon={ClipboardList} label="Templates" value={filteredTemplates.length} delay={0} />
           </div>
 
           {error && <div className="bg-red-50 border border-red-200 text-red-700 p-4 rounded-lg mb-6">{error}</div>}
@@ -163,7 +171,12 @@ export default function SupervisorAssessments() {
           )}
 
           {/* Assessment templates + per-project visibility */}
-          <div className="bg-white rounded-lg border border-gray-200 shadow-sm mb-8">
+          <motion.div
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4, delay: 0.08 }}
+            className="bg-white rounded-lg border border-gray-200 shadow-sm mb-8"
+          >
             <div className="px-6 py-4 border-b border-gray-200">
               <h2 className="text-xl">Assessment Templates</h2>
               <p className="text-sm text-gray-500">Turn an assessment on for your project(s) to release it to your students.</p>
@@ -183,8 +196,14 @@ export default function SupervisorAssessments() {
 
             {filteredTemplates.length > 0 && (
               <div className="divide-y divide-gray-200">
-                {filteredTemplates.map((t) => (
-                  <div key={t._id} className="px-6 py-5">
+                {filteredTemplates.map((t, i) => (
+                  <motion.div
+                    key={t._id}
+                    initial={{ opacity: 0, x: -12 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ duration: 0.3, delay: Math.min(i, 8) * 0.05 }}
+                    className="px-6 py-5"
+                  >
                     <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-4">
                       <div>
                         <div className="flex items-center gap-2">
@@ -207,9 +226,9 @@ export default function SupervisorAssessments() {
                                 href={f.url}
                                 target="_blank"
                                 rel="noreferrer"
-                                className="text-[#2563a8] hover:underline text-sm"
+                                className="text-[#2563a8] hover:underline text-sm inline-flex items-center gap-1"
                               >
-                                📎 {f.name}
+                                <Paperclip className="w-3.5 h-3.5" /> {f.name}
                               </a>
                             ))}
                           </div>
@@ -303,11 +322,11 @@ export default function SupervisorAssessments() {
                         })}
                       </div>
                     </div>
-                  </div>
+                  </motion.div>
                 ))}
               </div>
             )}
-          </div>
+          </motion.div>
         </div>
       </div>
     </div>

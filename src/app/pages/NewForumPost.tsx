@@ -1,6 +1,8 @@
 import Sidebar from '../components/Sidebar';
 import { useNavigate } from 'react-router';
 import { useState } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
+import { ArrowLeft } from 'lucide-react';
 import { api } from '../lib/api';
 import ProfileAvatar from '../components/ProfileAvatar';
 import NotificationBell from '../components/NotificationBell';
@@ -39,9 +41,10 @@ export default function NewForumPost() {
             <div>
               <button
                 onClick={() => navigate('/forum')}
-                className="text-[#2563a8] hover:underline mb-2 text-sm"
+                className="group text-[#2563a8] hover:underline mb-2 text-sm inline-flex items-center gap-1.5"
               >
-                ← Back to Forum
+                <ArrowLeft className="w-3.5 h-3.5 transition-transform group-hover:-translate-x-1" />
+                Back to Forum
               </button>
               <h1 className="text-2xl">New Forum Thread</h1>
               <p className="text-gray-600">Post a thread visible to everyone on the homepage</p>
@@ -55,17 +58,31 @@ export default function NewForumPost() {
 
         <div className="p-8">
           <div className="max-w-4xl mx-auto">
-            <div className="bg-white rounded-lg p-8 border border-gray-200 shadow-sm">
-              {error && (
-                <div className="mb-6 bg-red-50 border border-red-200 text-red-700 rounded-md px-4 py-3">
-                  {error}
-                </div>
-              )}
+            <motion.div
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4 }}
+              className="bg-white rounded-lg p-8 border border-gray-200 shadow-sm"
+            >
+              <AnimatePresence>
+                {error && (
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.95 }}
+                    transition={{ duration: 0.3 }}
+                    className="mb-6 bg-red-50 border border-red-200 text-red-700 rounded-md px-4 py-3"
+                  >
+                    {error}
+                  </motion.div>
+                )}
+              </AnimatePresence>
 
               <form onSubmit={handleSubmit} className="space-y-6">
                 <div>
                   <label className="block text-gray-700 mb-2">Thread Title</label>
-                  <input
+                  <motion.input
+                    whileFocus={{ scale: 1.01 }}
                     type="text"
                     value={title}
                     onChange={(e) => setTitle(e.target.value)}
@@ -77,13 +94,14 @@ export default function NewForumPost() {
 
                 <div>
                   <label className="block text-gray-700 mb-2">Content</label>
-                  <textarea
+                  <motion.textarea
+                    whileFocus={{ scale: 1.01 }}
                     value={body}
                     onChange={(e) => setBody(e.target.value)}
                     className="w-full border border-gray-300 rounded-md px-4 py-3 h-64 focus:outline-none focus:border-[#2563a8]"
                     placeholder="Write your announcement or discussion topic here..."
                     required
-                  ></textarea>
+                  ></motion.textarea>
                 </div>
 
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
@@ -102,16 +120,18 @@ export default function NewForumPost() {
                   >
                     Cancel
                   </button>
-                  <button
+                  <motion.button
+                    whileHover={{ scale: 1.03 }}
+                    whileTap={{ scale: 0.97 }}
                     type="submit"
                     disabled={submitting}
                     className="bg-[#2563a8] text-white px-6 py-3 rounded-md hover:bg-[#1e4a8a] disabled:opacity-50"
                   >
                     {submitting ? 'Publishing...' : 'Publish Thread'}
-                  </button>
+                  </motion.button>
                 </div>
               </form>
-            </div>
+            </motion.div>
           </div>
         </div>
       </div>

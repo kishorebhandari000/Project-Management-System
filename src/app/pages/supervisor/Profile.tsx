@@ -2,6 +2,7 @@ import { Link } from 'react-router';
 import Sidebar from '../../components/Sidebar';
 import NotificationBell from '../../components/NotificationBell';
 import { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
 import { api } from '../../lib/api';
 
 export default function SupervisorProfile() {
@@ -70,7 +71,12 @@ export default function SupervisorProfile() {
           {loading ? (
             <p className="text-gray-500">Loading profile...</p>
           ) : (
-            <div className="bg-white rounded-lg p-8 border border-gray-200 shadow-sm">
+            <motion.div
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4 }}
+              className="bg-white rounded-lg p-8 border border-gray-200 shadow-sm"
+            >
               <div className="flex items-center gap-6 mb-8 pb-8 border-b border-gray-200">
                 <div className="w-20 h-20 bg-[#2563a8] rounded-full flex items-center justify-center text-white text-3xl">
                   {initial}
@@ -81,16 +87,32 @@ export default function SupervisorProfile() {
                 </div>
               </div>
 
-              {message && (
-                <div className="bg-green-50 border border-green-200 text-green-700 text-sm rounded-md px-4 py-3 mb-5">
-                  {message}
-                </div>
-              )}
-              {error && (
-                <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-md px-4 py-3 mb-5">
-                  {error}
-                </div>
-              )}
+              <AnimatePresence>
+                {message && (
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.95 }}
+                    transition={{ duration: 0.3 }}
+                    className="bg-green-50 border border-green-200 text-green-700 text-sm rounded-md px-4 py-3 mb-5"
+                  >
+                    {message}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+              <AnimatePresence>
+                {error && (
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.95 }}
+                    transition={{ duration: 0.3 }}
+                    className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-md px-4 py-3 mb-5"
+                  >
+                    {error}
+                  </motion.div>
+                )}
+              </AnimatePresence>
 
               <form onSubmit={handleSave} className="space-y-5">
                 <div>
@@ -149,26 +171,33 @@ export default function SupervisorProfile() {
                 </div>
 
                 <div className="pt-4">
-                  <button
+                  <motion.button
+                    whileHover={{ scale: 1.03 }}
+                    whileTap={{ scale: 0.97 }}
                     type="submit"
                     disabled={saving}
                     className="bg-[#2563a8] text-white px-6 py-3 rounded-md hover:bg-[#1e4a8a] transition-colors disabled:opacity-60"
                   >
                     {saving ? 'Saving...' : 'Save Changes'}
-                  </button>
+                  </motion.button>
                 </div>
               </form>
-            </div>
+            </motion.div>
           )}
 
-          <div className="bg-white rounded-lg p-8 border border-gray-200 shadow-sm">
+          <motion.div
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4, delay: 0.08 }}
+            className="bg-white rounded-lg p-8 border border-gray-200 shadow-sm"
+          >
             <div className="flex items-center justify-between">
               <h2 className="text-xl">Password</h2>
               <Link to="/forgot-password" className="text-[#2563a8] hover:underline text-sm">
                 Change Password
               </Link>
             </div>
-          </div>
+          </motion.div>
         </div>
       </div>
     </div>

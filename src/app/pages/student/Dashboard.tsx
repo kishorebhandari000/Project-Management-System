@@ -1,10 +1,13 @@
 import Sidebar from '../../components/Sidebar';
 import { Link } from 'react-router';
 import { useState, useEffect } from 'react';
+import { motion } from 'motion/react';
+import { FolderKanban, ClipboardList, CheckCircle2, Award } from 'lucide-react';
 import { api } from '../../lib/api';
 import NotificationBell from '../../components/NotificationBell';
 import ProfileAvatar from '../../components/ProfileAvatar';
 import SectionHint from '../../components/SectionHint';
+import StatCard from '../../components/StatCard';
 import { sectionHints } from '../../lib/sectionHints';
 
 interface ProjectFile {
@@ -138,27 +141,44 @@ export default function StudentDashboard() {
         <div className="p-8">
           {/* Stats Cards */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-            <Link to="/student/projects" className="block bg-white rounded-lg p-6 border border-gray-200 shadow-sm transition-shadow hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-[#2563a8]">
-              <div className="text-gray-600 mb-1">Current Project</div>
-              <div className="text-3xl">{currentAllocation ? 1 : 0}</div>
-            </Link>
-            <Link to="/student/assessments" className="block bg-white rounded-lg p-6 border border-gray-200 shadow-sm transition-shadow hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-[#2563a8]">
-              <div className="text-gray-600 mb-1">Pending Assessments</div>
-              <div className="text-3xl">{pendingAssessments.length}</div>
-            </Link>
-            <Link to="/student/assessments" className="block bg-white rounded-lg p-6 border border-gray-200 shadow-sm transition-shadow hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-[#2563a8]">
-              <div className="text-gray-600 mb-1">Submitted</div>
-              <div className="text-3xl">{submissions.length}</div>
-            </Link>
-            <Link to="/student/assessments" className="block bg-white rounded-lg p-6 border border-gray-200 shadow-sm transition-shadow hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-[#2563a8]">
-              <div className="text-gray-600 mb-1">Average Mark</div>
-              <div className="text-3xl">{avgMark !== null ? `${avgMark}%` : '-'}</div>
-            </Link>
+            <StatCard
+              icon={FolderKanban}
+              label="Current Project"
+              value={currentAllocation ? 1 : 0}
+              to="/student/projects"
+              delay={0}
+            />
+            <StatCard
+              icon={ClipboardList}
+              label="Pending Assessments"
+              value={pendingAssessments.length}
+              to="/student/assessments"
+              delay={0.06}
+            />
+            <StatCard
+              icon={CheckCircle2}
+              label="Submitted"
+              value={submissions.length}
+              to="/student/assessments"
+              delay={0.12}
+            />
+            <StatCard
+              icon={Award}
+              label="Average Mark"
+              value={avgMark !== null ? `${avgMark}%` : '-'}
+              to="/student/assessments"
+              delay={0.18}
+            />
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Current Project */}
-            <div className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm">
+            <motion.div
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4, delay: 0.24 }}
+              className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm"
+            >
               <h2 className="text-xl mb-5 flex items-center">
                 Current Project
                 <SectionHint text={sectionHints.studentCurrentProject} />
@@ -231,10 +251,15 @@ export default function StudentDashboard() {
                   </div>
                 </>
               )}
-            </div>
+            </motion.div>
 
             {/* Upcoming Deadlines */}
-            <div className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm">
+            <motion.div
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4, delay: 0.3 }}
+              className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm"
+            >
               <h2 className="text-xl mb-5">Upcoming Deadlines</h2>
 
               {loading && <p className="text-gray-500">Loading...</p>}
@@ -245,9 +270,12 @@ export default function StudentDashboard() {
 
               {!loading && upcomingPreview.length > 0 && (
                 <div className="space-y-3">
-                  {upcomingPreview.map((a) => (
-                    <div
+                  {upcomingPreview.map((a, i) => (
+                    <motion.div
                       key={a._id}
+                      initial={{ opacity: 0, x: -12 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ duration: 0.3, delay: 0.34 + i * 0.05 }}
                       className="flex justify-between items-center pb-3 border-b border-gray-200 last:border-b-0"
                     >
                       <span className="text-sm">{a.title}</span>
@@ -255,7 +283,7 @@ export default function StudentDashboard() {
                         {a.dueDate ? `Due ${new Date(a.dueDate).toLocaleDateString()}` : 'No due date'}
                         {a.extendedDueDate && <span className="text-amber-600 ml-1">(extended)</span>}
                       </span>
-                    </div>
+                    </motion.div>
                   ))}
                 </div>
               )}
@@ -265,7 +293,7 @@ export default function StudentDashboard() {
                   View all
                 </Link>
               )}
-            </div>
+            </motion.div>
           </div>
         </div>
       </div>

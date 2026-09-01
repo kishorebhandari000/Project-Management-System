@@ -1,6 +1,7 @@
 import Sidebar from '../../components/Sidebar';
 import { useNavigate, useParams } from 'react-router';
 import { useEffect, useState } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
 import { api } from '../../lib/api';
 import NotificationBell from '../../components/NotificationBell';
 import ProfileAvatar from '../../components/ProfileAvatar';
@@ -168,7 +169,12 @@ export default function AdminDiscussionThread() {
               </div>
             ) : thread ? (
               <>
-                <div className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm mb-6">
+                <motion.div
+                  initial={{ opacity: 0, y: 16 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.4 }}
+                  className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm mb-6"
+                >
                   <div className="flex items-start gap-4">
                     <div className="w-12 h-12 bg-[#2563a8] rounded-full flex items-center justify-center text-white flex-shrink-0">
                       {initials(thread.createdBy.name)}
@@ -198,13 +204,19 @@ export default function AdminDiscussionThread() {
                       />
                     </div>
                   </div>
-                </div>
+                </motion.div>
 
                 <div className="mb-6">
                   <h2 className="text-xl mb-4">{posts.length} {posts.length === 1 ? 'Reply' : 'Replies'}</h2>
                   <div className="space-y-4">
-                    {posts.map((post) => (
-                      <div key={post._id} className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm">
+                    {posts.map((post, i) => (
+                      <motion.div
+                        key={post._id}
+                        initial={{ opacity: 0, x: -12 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ duration: 0.3, delay: 0.06 + Math.min(i, 8) * 0.05 }}
+                        className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm"
+                      >
                         <div className="flex items-start gap-4">
                           <div className="w-12 h-12 rounded-full flex items-center justify-center text-white flex-shrink-0 bg-gray-500">
                             {initials(post.createdBy.name)}
@@ -232,7 +244,7 @@ export default function AdminDiscussionThread() {
                             />
                           </div>
                         </div>
-                      </div>
+                      </motion.div>
                     ))}
                     {posts.length === 0 && (
                       <div className="bg-white rounded-lg p-6 border border-gray-200 text-center text-gray-500">
@@ -242,13 +254,26 @@ export default function AdminDiscussionThread() {
                   </div>
                 </div>
 
-                <div className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm">
+                <motion.div
+                  initial={{ opacity: 0, y: 16 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.4, delay: 0.1 }}
+                  className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm"
+                >
                   <h3 className="text-lg mb-4">Post a Reply</h3>
-                  {replyError && (
-                    <div className="mb-4 bg-red-50 border border-red-200 text-red-700 rounded-md px-4 py-3 text-sm">
-                      {replyError}
-                    </div>
-                  )}
+                  <AnimatePresence>
+                    {replyError && (
+                      <motion.div
+                        initial={{ opacity: 0, scale: 0.95 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={{ opacity: 0, scale: 0.95 }}
+                        transition={{ duration: 0.3 }}
+                        className="mb-4 bg-red-50 border border-red-200 text-red-700 rounded-md px-4 py-3 text-sm"
+                      >
+                        {replyError}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
                   <form onSubmit={handleSubmitReply}>
                     <div className="mb-4">
                       <textarea
@@ -267,16 +292,18 @@ export default function AdminDiscussionThread() {
                       >
                         Cancel
                       </button>
-                      <button
+                      <motion.button
+                        whileHover={{ scale: 1.03 }}
+                        whileTap={{ scale: 0.97 }}
                         type="submit"
                         disabled={submittingReply}
                         className="bg-[#2563a8] text-white px-6 py-3 rounded-md hover:bg-[#1e4a8a] disabled:opacity-50"
                       >
                         {submittingReply ? 'Posting...' : 'Post Reply'}
-                      </button>
+                      </motion.button>
                     </div>
                   </form>
-                </div>
+                </motion.div>
               </>
             ) : null}
           </div>

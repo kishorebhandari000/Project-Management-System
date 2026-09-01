@@ -1,6 +1,7 @@
 import Sidebar from '../../components/Sidebar';
 import { useNavigate, useParams } from 'react-router';
 import { useState, useEffect } from 'react';
+import { motion } from 'motion/react';
 import { api } from '../../lib/api';
 import NotificationBell from '../../components/NotificationBell';
 
@@ -59,7 +60,12 @@ export default function ViewProject() {
                 {error}
               </div>
             ) : project ? (
-              <div className="bg-white rounded-lg p-8 border border-gray-200 shadow-sm space-y-6">
+              <motion.div
+                initial={{ opacity: 0, y: 16 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.4 }}
+                className="bg-white rounded-lg p-8 border border-gray-200 shadow-sm space-y-6"
+              >
                 <div>
                   <p className="text-sm text-gray-500 mb-1">Project Title</p>
                   <p className="text-lg">{project.title}</p>
@@ -94,7 +100,7 @@ export default function ViewProject() {
                     Back
                   </button>
                 </div>
-              </div>
+              </motion.div>
             ) : null}
           </div>
         </div>

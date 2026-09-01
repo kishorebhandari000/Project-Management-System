@@ -3,8 +3,11 @@ import ProfileAvatar from '../../components/ProfileAvatar';
 import NotificationBell from '../../components/NotificationBell';
 import { Link } from 'react-router';
 import { useEffect, useState } from 'react';
+import { motion } from 'motion/react';
+import { FolderKanban, Users, Clock, ClipboardCheck } from 'lucide-react';
 import { api } from '../../lib/api';
 import SectionHint from '../../components/SectionHint';
+import StatCard from '../../components/StatCard';
 import { sectionHints } from '../../lib/sectionHints';
 import { useCommentPrompt } from '../../hooks/useCommentPrompt';
 
@@ -127,33 +130,46 @@ export default function SupervisorDashboard() {
 
           {/* Stats Cards */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-            <Link to="/supervisor/projects" className="block bg-white rounded-lg p-6 border border-gray-200 shadow-sm transition-shadow hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-[#2563a8]">
-              <div className="text-gray-600 mb-1">Total Projects</div>
-              <div className="text-3xl">{loading ? '—' : projects.length}</div>
-            </Link>
-            <div className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm transition-shadow hover:shadow-lg">
-              <div className="text-gray-600 mb-1">Active Students</div>
-              <div className="text-3xl">{loading ? '—' : activeStudentIds.size}</div>
-            </div>
-            <div className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm transition-shadow hover:shadow-lg">
-              <div className="text-gray-600 mb-1 flex items-center">
-                Pending Requests
-                <SectionHint text={sectionHints.supervisorStatPendingRequests} />
-              </div>
-              <div className="text-3xl text-orange-600">{loading ? '—' : pendingRequests.length}</div>
-            </div>
-            <Link to="/supervisor/assessments" className="block bg-white rounded-lg p-6 border border-gray-200 shadow-sm transition-shadow hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-[#2563a8]">
-              <div className="text-gray-600 mb-1 flex items-center">
-                To Review
-                <SectionHint text={sectionHints.supervisorStatToReview} />
-              </div>
-              <div className="text-3xl text-orange-600">{loading ? '—' : pendingReviews.length}</div>
-            </Link>
+            <StatCard
+              icon={FolderKanban}
+              label="Total Projects"
+              value={loading ? '—' : projects.length}
+              to="/supervisor/projects"
+              delay={0}
+            />
+            <StatCard
+              icon={Users}
+              label="Active Students"
+              value={loading ? '—' : activeStudentIds.size}
+              delay={0.06}
+            />
+            <StatCard
+              icon={Clock}
+              label="Pending Requests"
+              value={loading ? '—' : pendingRequests.length}
+              accent="warning"
+              delay={0.12}
+              hint={<SectionHint text={sectionHints.supervisorStatPendingRequests} />}
+            />
+            <StatCard
+              icon={ClipboardCheck}
+              label="To Review"
+              value={loading ? '—' : pendingReviews.length}
+              to="/supervisor/assessments"
+              accent="warning"
+              delay={0.18}
+              hint={<SectionHint text={sectionHints.supervisorStatToReview} />}
+            />
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* My Students */}
-            <div className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm">
+            <motion.div
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4, delay: 0.24 }}
+              className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm"
+            >
               <h2 className="text-xl mb-5 flex items-center">
                 My Students
                 <SectionHint text={sectionHints.supervisorMyStudents} />
@@ -164,28 +180,41 @@ export default function SupervisorDashboard() {
                 ) : approvedAllocations.length === 0 ? (
                   <p className="text-gray-400 text-sm">No students allocated yet.</p>
                 ) : (
-                  approvedAllocations.map((a) => {
+                  approvedAllocations.map((a, i) => {
                     const progress = getStudentProgress(a.student!._id);
                     return (
-                      <div key={a._id} className="pb-4 border-b border-gray-200 last:border-b-0">
+                      <motion.div
+                        key={a._id}
+                        initial={{ opacity: 0, x: -12 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ duration: 0.3, delay: 0.28 + i * 0.05 }}
+                        className="pb-4 border-b border-gray-200 last:border-b-0"
+                      >
                         <div className="mb-2">{a.student?.name || 'Unknown student'}</div>
                         <div className="text-sm text-gray-600 mb-2">{a.project?.title || 'Deleted project'}</div>
-                        <div className="bg-gray-200 h-2 rounded-full">
-                          <div
+                        <div className="bg-gray-200 h-2 rounded-full overflow-hidden">
+                          <motion.div
                             className="bg-[#2563a8] h-2 rounded-full"
-                            style={{ width: `${progress}%` }}
-                          ></div>
+                            initial={{ width: 0 }}
+                            animate={{ width: `${progress}%` }}
+                            transition={{ duration: 0.6, delay: 0.4 + i * 0.05, ease: 'easeOut' }}
+                          />
                         </div>
                         <div className="text-xs text-gray-600 mt-1">{progress}% Complete</div>
-                      </div>
+                      </motion.div>
                     );
                   })
                 )}
               </div>
-            </div>
+            </motion.div>
 
             {/* Student Requests */}
-            <div className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm">
+            <motion.div
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4, delay: 0.3 }}
+              className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm"
+            >
               <h2 className="text-xl mb-5">Student Requests</h2>
               <div className="space-y-4">
                 {loading ? (
@@ -201,30 +230,39 @@ export default function SupervisorDashboard() {
                         Requested: {new Date(req.createdAt).toLocaleDateString()}
                       </div>
                       <div className="flex gap-2">
-                        <button
+                        <motion.button
+                          whileHover={{ scale: 1.03 }}
+                          whileTap={{ scale: 0.97 }}
                           onClick={() => handleDecision(req._id, 'approved')}
                           disabled={decidingId === req._id}
                           className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 text-sm disabled:opacity-60"
                         >
                           Approve
-                        </button>
-                        <button
+                        </motion.button>
+                        <motion.button
+                          whileHover={{ scale: 1.03 }}
+                          whileTap={{ scale: 0.97 }}
                           onClick={() => handleDecision(req._id, 'rejected')}
                           disabled={decidingId === req._id}
                           className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 text-sm disabled:opacity-60"
                         >
                           Reject
-                        </button>
+                        </motion.button>
                       </div>
                     </div>
                   ))
                 )}
               </div>
-            </div>
+            </motion.div>
           </div>
 
           {/* Pending Reviews */}
-          <div className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm mt-6">
+          <motion.div
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4, delay: 0.36 }}
+            className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm mt-6"
+          >
             <h2 className="text-xl mb-5">Pending Reviews</h2>
             <div className="space-y-3">
               {loading ? (
@@ -250,7 +288,7 @@ export default function SupervisorDashboard() {
                 ))
               )}
             </div>
-          </div>
+          </motion.div>
         </div>
       </div>
     </div>

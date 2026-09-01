@@ -1,9 +1,11 @@
 import Sidebar from '../../components/Sidebar';
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router';
+import { motion } from 'motion/react';
+import { FolderKanban, CheckCircle2, Award, Clock } from 'lucide-react';
 import { api } from '../../lib/api';
 import ProfileAvatar from '../../components/ProfileAvatar';
 import NotificationBell from '../../components/NotificationBell';
+import StatCard from '../../components/StatCard';
 
 interface AssessmentStat {
   title: string;
@@ -32,7 +34,6 @@ interface Summary {
 const LIVE_REFRESH_MS = 10000;
 
 export default function Reports() {
-  const navigate = useNavigate();
   const [summary, setSummary] = useState<Summary | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -93,37 +94,41 @@ export default function Reports() {
             <>
               {/* Summary Cards */}
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-                <div
-                  role="button"
-                  tabIndex={0}
-                  onClick={() => navigate('/admin/projects')}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                      e.preventDefault();
-                      navigate('/admin/projects');
-                    }
-                  }}
-                  className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm cursor-pointer transition-shadow hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-[#2563a8]"
-                >
-                  <div className="text-gray-600 mb-2">Total Projects</div>
-                  <div className="text-4xl text-[#2563a8]">{summary.totalProjects}</div>
-                </div>
-                <div className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm transition-shadow hover:shadow-lg">
-                  <div className="text-gray-600 mb-2">Allocation Completion</div>
-                  <div className="text-4xl text-green-600">{summary.completionRate}%</div>
-                </div>
-                <div className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm transition-shadow hover:shadow-lg">
-                  <div className="text-gray-600 mb-2">Avg Grade</div>
-                  <div className="text-4xl text-[#2563a8]">{summary.avgGrade || '—'}</div>
-                </div>
-                <div className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm transition-shadow hover:shadow-lg">
-                  <div className="text-gray-600 mb-2">Pending Reviews</div>
-                  <div className="text-4xl text-orange-600">{summary.pendingReviews}</div>
-                </div>
+                <StatCard
+                  icon={FolderKanban}
+                  label="Total Projects"
+                  value={summary.totalProjects}
+                  to="/admin/projects"
+                  delay={0}
+                />
+                <StatCard
+                  icon={CheckCircle2}
+                  label="Allocation Completion"
+                  value={`${summary.completionRate}%`}
+                  delay={0.06}
+                />
+                <StatCard
+                  icon={Award}
+                  label="Avg Grade"
+                  value={summary.avgGrade || '—'}
+                  delay={0.12}
+                />
+                <StatCard
+                  icon={Clock}
+                  label="Pending Reviews"
+                  value={summary.pendingReviews}
+                  accent="warning"
+                  delay={0.18}
+                />
               </div>
 
               {/* Submission Statistics */}
-              <div className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm mb-6">
+              <motion.div
+                initial={{ opacity: 0, y: 16 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.4, delay: 0.24 }}
+                className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm mb-6"
+              >
                 <div className="flex items-center gap-2 mb-6">
                   <h2 className="text-xl">Submission Statistics</h2>
                   <span className="flex items-center gap-1.5 text-xs text-green-600">
@@ -136,7 +141,12 @@ export default function Reports() {
                 ) : (
                   <div className="space-y-5">
                     {summary.assessmentStats.map((stat, index) => (
-                      <div key={index}>
+                      <motion.div
+                        key={index}
+                        initial={{ opacity: 0, x: -12 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ duration: 0.3, delay: 0.3 + Math.min(index, 8) * 0.05 }}
+                      >
                         <div className="flex justify-between mb-2">
                           <span>{stat.title}</span>
                           <span className="text-gray-600">
@@ -144,37 +154,50 @@ export default function Reports() {
                             {stat.released > 0 && <span className="text-gray-400"> &bull; {stat.graded} graded</span>}
                           </span>
                         </div>
-                        <div className="bg-gray-200 h-4 rounded-full">
-                          <div
+                        <div className="bg-gray-200 h-4 rounded-full overflow-hidden">
+                          <motion.div
                             className="bg-[#2563a8] h-4 rounded-full"
-                            style={{ width: `${stat.percentage}%` }}
-                          ></div>
+                            initial={{ width: 0 }}
+                            animate={{ width: `${stat.percentage}%` }}
+                            transition={{ duration: 0.6, delay: 0.4 + Math.min(index, 8) * 0.05, ease: 'easeOut' }}
+                          />
                         </div>
                         {stat.released === 0 && (
                           <p className="text-xs text-gray-400 mt-1">Not released to any project yet.</p>
                         )}
-                      </div>
+                      </motion.div>
                     ))}
                   </div>
                 )}
-              </div>
+              </motion.div>
 
               {/* Project Breakdown */}
-              <div className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm">
+              <motion.div
+                initial={{ opacity: 0, y: 16 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.4, delay: 0.3 }}
+                className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm"
+              >
                 <h2 className="text-xl mb-6">Project Breakdown by Category</h2>
                 {summary.projectCategories.length === 0 ? (
                   <p className="text-gray-500">No projects created yet.</p>
                 ) : (
                   <div className="space-y-3">
                     {summary.projectCategories.map((category, index) => (
-                      <div key={index} className="flex justify-between items-center pb-3 border-b border-gray-200 last:border-b-0">
+                      <motion.div
+                        key={index}
+                        initial={{ opacity: 0, x: -12 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ duration: 0.3, delay: 0.36 + Math.min(index, 8) * 0.05 }}
+                        className="flex justify-between items-center pb-3 border-b border-gray-200 last:border-b-0"
+                      >
                         <span>{category.category}</span>
                         <span className="text-lg">{category.count} projects</span>
-                      </div>
+                      </motion.div>
                     ))}
                   </div>
                 )}
-              </div>
+              </motion.div>
             </>
           )}
         </div>

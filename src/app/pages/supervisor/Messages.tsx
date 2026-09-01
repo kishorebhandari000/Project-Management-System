@@ -3,6 +3,7 @@ import ProfileAvatar from '../../components/ProfileAvatar';
 import NotificationBell from '../../components/NotificationBell';
 import { useState, useRef, useEffect } from 'react';
 import { useSearchParams } from 'react-router';
+import { motion, AnimatePresence } from 'motion/react';
 import { api } from '../../lib/api';
 import { useMessages } from '../../hooks/useMessages';
 import SendButton from '../../components/SendButton';
@@ -87,9 +88,12 @@ function ChatPanel() {
         ) : filteredContacts.length === 0 ? (
           <p className="p-5 text-gray-500 text-sm">No contacts found.</p>
         ) : (
-          filteredContacts.map((c) => (
-            <button
+          filteredContacts.map((c, i) => (
+            <motion.button
               key={c.user._id}
+              initial={{ opacity: 0, x: -12 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.3, delay: Math.min(i, 8) * 0.05 }}
               onClick={() => selectContact(c.user._id)}
               className={`w-full text-left px-5 py-4 border-b border-gray-100 hover:bg-gray-50 ${selectedId === c.user._id ? 'bg-blue-50' : ''}`}
             >
@@ -114,7 +118,7 @@ function ChatPanel() {
                   </span>
                 )}
               </div>
-            </button>
+            </motion.button>
           ))
         )}
         </div>
@@ -205,20 +209,41 @@ function EmailPanel() {
 
   return (
     <div className="max-w-3xl mx-auto">
-      <div className="bg-white rounded-lg p-8 border border-gray-200 shadow-sm">
+      <motion.div
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4 }}
+        className="bg-white rounded-lg p-8 border border-gray-200 shadow-sm"
+      >
         <h2 className="text-xl mb-6">Send Email</h2>
 
-        {successMessage && (
-          <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-6">
-            {successMessage}
-          </div>
-        )}
+        <AnimatePresence>
+          {successMessage && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              transition={{ duration: 0.3 }}
+              className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-6"
+            >
+              {successMessage}
+            </motion.div>
+          )}
+        </AnimatePresence>
 
-        {errorMessage && (
-          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-6">
-            {errorMessage}
-          </div>
-        )}
+        <AnimatePresence>
+          {errorMessage && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              transition={{ duration: 0.3 }}
+              className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-6"
+            >
+              {errorMessage}
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>
@@ -279,16 +304,18 @@ function EmailPanel() {
             >
               Clear
             </button>
-            <button
+            <motion.button
+              whileHover={{ scale: 1.03 }}
+              whileTap={{ scale: 0.97 }}
               type="submit"
               className="bg-[#2563a8] text-white px-6 py-3 rounded-md hover:bg-[#1e4a8a] disabled:bg-gray-400"
               disabled={sending}
             >
               {sending ? 'Sending...' : 'Send Email'}
-            </button>
+            </motion.button>
           </div>
         </form>
-      </div>
+      </motion.div>
     </div>
   );
 }

@@ -1,5 +1,6 @@
 import Sidebar from '../../components/Sidebar';
 import { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
 import { api } from '../../lib/api';
 import NotificationBell from '../../components/NotificationBell';
 import ProfileAvatar from '../../components/ProfileAvatar';
@@ -92,11 +93,19 @@ export default function Notifications() {
         <div className="p-8">
           <div className="max-w-4xl mx-auto">
             {loading && <p className="text-gray-500">Loading notifications...</p>}
-            {error && (
-              <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-md px-4 py-3 mb-4">
-                {error}
-              </div>
-            )}
+            <AnimatePresence>
+              {error && (
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.95 }}
+                  transition={{ duration: 0.3 }}
+                  className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-md px-4 py-3 mb-4"
+                >
+                  {error}
+                </motion.div>
+              )}
+            </AnimatePresence>
 
             {!loading && (
               <>
@@ -106,9 +115,12 @@ export default function Notifications() {
                   {visibleNotifications.length === 0 && (
                     <p className="text-gray-500">No notifications to show.</p>
                   )}
-                  {visibleNotifications.map((notification) => (
-                    <div
+                  {visibleNotifications.map((notification, i) => (
+                    <motion.div
                       key={notification._id}
+                      initial={{ opacity: 0, x: -12 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ duration: 0.3, delay: Math.min(i, 8) * 0.05 }}
                       className={`bg-white rounded-lg p-5 border border-gray-200 shadow-sm ${
                         unreadIdsThisVisit.has(notification._id) ? 'border-l-4 border-l-[#2563a8]' : ''
                       }`}
@@ -125,7 +137,7 @@ export default function Notifications() {
                         <span className="text-sm text-gray-500">{timeAgo(notification.createdAt)}</span>
                       </div>
                       <p className="text-gray-700 mb-3">{notification.message}</p>
-                    </div>
+                    </motion.div>
                   ))}
                 </div>
               </>

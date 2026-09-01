@@ -1,6 +1,7 @@
 import { Link } from 'react-router';
 import Sidebar from '../../components/Sidebar';
 import { useState, useEffect, type FormEvent } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
 import { api } from '../../lib/api';
 import NotificationBell from '../../components/NotificationBell';
 
@@ -74,7 +75,12 @@ export default function Profile() {
           {loading && <p className="text-gray-500">Loading profile...</p>}
 
           {!loading && (
-            <div className="bg-white rounded-lg p-8 border border-gray-200 shadow-sm">
+            <motion.div
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4 }}
+              className="bg-white rounded-lg p-8 border border-gray-200 shadow-sm"
+            >
               <div className="flex items-center gap-6 mb-8 pb-8 border-b border-gray-200">
                 <div className="w-20 h-20 bg-[#2563a8] rounded-full flex items-center justify-center text-white text-3xl">
                   {name ? getInitials(name) : '?'}
@@ -85,16 +91,30 @@ export default function Profile() {
                 </div>
               </div>
 
-              {saveError && (
-                <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-md px-4 py-3 mb-4">
-                  {saveError}
-                </div>
-              )}
-              {saveMessage && (
-                <div className="bg-green-50 border border-green-200 text-green-700 text-sm rounded-md px-4 py-3 mb-4">
-                  {saveMessage}
-                </div>
-              )}
+              <AnimatePresence>
+                {saveError && (
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.95 }}
+                    transition={{ duration: 0.3 }}
+                    className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-md px-4 py-3 mb-4"
+                  >
+                    {saveError}
+                  </motion.div>
+                )}
+                {saveMessage && (
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.95 }}
+                    transition={{ duration: 0.3 }}
+                    className="bg-green-50 border border-green-200 text-green-700 text-sm rounded-md px-4 py-3 mb-4"
+                  >
+                    {saveMessage}
+                  </motion.div>
+                )}
+              </AnimatePresence>
 
               <form onSubmit={handleSaveProfile} className="space-y-5">
                 <div>
@@ -148,16 +168,18 @@ export default function Profile() {
                   />
                 </div>
                 <div className="pt-4">
-                  <button
+                  <motion.button
+                    whileHover={{ scale: 1.03 }}
+                    whileTap={{ scale: 0.97 }}
                     type="submit"
                     disabled={saving}
                     className="bg-[#2563a8] text-white px-6 py-3 rounded-md hover:bg-[#1e4a8a] transition-colors disabled:opacity-60"
                   >
                     {saving ? 'Saving...' : 'Save Changes'}
-                  </button>
+                  </motion.button>
                 </div>
               </form>
-            </div>
+            </motion.div>
           )}
 
           <div className="bg-white rounded-lg p-8 border border-gray-200 shadow-sm">

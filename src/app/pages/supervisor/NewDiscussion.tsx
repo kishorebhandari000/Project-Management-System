@@ -1,6 +1,7 @@
 import Sidebar from '../../components/Sidebar';
 import { Link, useNavigate } from 'react-router';
 import { useState } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
 import { api } from '../../lib/api';
 import { useMyProjects } from '../../hooks/useMyProjects';
 import ProfileAvatar from '../../components/ProfileAvatar';
@@ -68,12 +69,25 @@ export default function SupervisorNewDiscussion() {
               <p className="text-gray-500">You can start a discussion once you supervise a project.</p>
             </div>
           ) : (
-            <div className="bg-white rounded-lg p-8 border border-gray-200 shadow-sm">
-              {error && (
-                <div className="mb-5 bg-red-50 border border-red-200 text-red-700 rounded-md px-4 py-3">
-                  {error}
-                </div>
-              )}
+            <motion.div
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4 }}
+              className="bg-white rounded-lg p-8 border border-gray-200 shadow-sm"
+            >
+              <AnimatePresence>
+                {error && (
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.95 }}
+                    transition={{ duration: 0.3 }}
+                    className="mb-5 bg-red-50 border border-red-200 text-red-700 rounded-md px-4 py-3"
+                  >
+                    {error}
+                  </motion.div>
+                )}
+              </AnimatePresence>
 
               <form onSubmit={handleSubmit} className="space-y-5">
                 <div>
@@ -112,19 +126,21 @@ export default function SupervisorNewDiscussion() {
                   ></textarea>
                 </div>
                 <div className="flex gap-3">
-                  <button
+                  <motion.button
+                    whileHover={{ scale: 1.03 }}
+                    whileTap={{ scale: 0.97 }}
                     type="submit"
                     disabled={!isValid || submitting}
                     className="bg-[#2563a8] text-white px-6 py-3 rounded-md hover:bg-[#1e4a8a] disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {submitting ? 'Posting...' : 'Post Discussion'}
-                  </button>
+                  </motion.button>
                   <Link to="/supervisor/discussions" className="bg-gray-200 text-gray-700 px-6 py-3 rounded-md hover:bg-gray-300">
                     Cancel
                   </Link>
                 </div>
               </form>
-            </div>
+            </motion.div>
           )}
         </div>
       </div>

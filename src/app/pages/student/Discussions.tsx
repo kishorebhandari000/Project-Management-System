@@ -1,6 +1,7 @@
 import Sidebar from '../../components/Sidebar';
 import { Link } from 'react-router';
 import { useEffect, useState } from 'react';
+import { motion } from 'motion/react';
 import { api } from '../../lib/api';
 import { useMyProjects } from '../../hooks/useMyProjects';
 import ProfileAvatar from '../../components/ProfileAvatar';
@@ -121,8 +122,14 @@ export default function StudentDiscussions() {
               </div>
 
               <div className="space-y-4">
-                {display.map((d) => (
-                  <Link key={d._id} to={`/student/discussions/${d._id}`} className="block">
+                {display.map((d, i) => (
+                  <motion.div
+                    key={d._id}
+                    initial={{ opacity: 0, x: -12 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ duration: 0.3, delay: Math.min(i, 8) * 0.05 }}
+                  >
+                  <Link to={`/student/discussions/${d._id}`} className="block">
                     <div className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
                       <div className="flex justify-between items-start">
                         <div className="flex-1">
@@ -141,6 +148,7 @@ export default function StudentDiscussions() {
                       </div>
                     </div>
                   </Link>
+                  </motion.div>
                 ))}
                 {display.length === 0 && (
                   <div className="bg-white rounded-lg p-12 border border-gray-200 text-center text-gray-500">
