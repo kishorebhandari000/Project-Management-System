@@ -5,7 +5,9 @@
 
   ## Running the code
 
-  Run `npm i` to install the dependencies.
+  Run `pnpm i` to install the dependencies.
 
-  Run `npm run dev` to start the development server.
+-- RUNNING IN 2 TERMINALS  --
+  Run `pnpm run dev` to start the development server.
+  Right click on `Backend_PMS` folder and select Open In Integrated Terminal then run `pnpm run dev`
   
